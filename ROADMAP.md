@@ -1,82 +1,116 @@
-# Lộ trình hoàn thiện dự án (Phase 1)
+# Roadmap — vieclam88
 
-Phạm vi: **Phase 1** theo CLAUDE.md mục 1.1 — web công khai đầy đủ + trang quản lý nội bộ rút
-gọn. Không đưa Phase 2 (mục 6 đầy đủ) vào lộ trình này. Cập nhật trạng thái từng giai đoạn ở
-đây; tiến độ tổng quát vẫn ghi ở CLAUDE.md mục 16 theo đúng quy trình mục 15.
+Lộ trình 8 giai đoạn. Trạng thái tiến độ chi tiết nhất luôn nằm ở `docs/PROJECT-STATUS.md` —
+file này chỉ giữ checklist theo giai đoạn, cập nhật `[x]` khi hoàn thành, không viết thêm ghi
+chú tiến độ dài ở đây (tránh trùng với `docs/PROJECT-STATUS.md`).
 
-## Giai đoạn 0 — Nền tảng kỹ thuật
+## Giai đoạn 0 — Chuẩn hóa tài liệu và môi trường
 
-- [x] Commit git lần đầu.
-- [ ] `composer create-project` Laravel bản mới nhất, PHP 8.2/8.3 (`.claude/rules/tech-stack.md`
-      mục 2). Cài Vite + Bootstrap 5 + Alpine.js.
-- [ ] Cấu hình `.env` kết nối MySQL/MariaDB (XAMPP local).
-- [ ] Chốt cơ chế routing HR: domain (`hr.tencongty.vn`) vs path (`/hr`) — quyết định còn treo
-      trong CLAUDE.md mục 16.
+- [x] Audit repository.
+- [x] Chuẩn hóa tài liệu (`CLAUDE.md`, `.claude/rules/*.md`, `docs/*.md`).
+- [ ] Review và chốt ERD (`docs/ERD.md`).
+- [ ] Review và chốt database dictionary (`docs/DATABASE-DICTIONARY.md`).
+- [ ] Review và chốt foreign key, check constraint và delete policy.
+- [ ] Review và chốt index, unique và quy tắc primary duy nhất.
+- [ ] Cài PHP 8.4.
+- [ ] Kiểm tra Composer.
+- [ ] Kiểm tra Node LTS.
+- [ ] Kiểm tra MariaDB.
+- [ ] Xác nhận các enum đánh dấu **[đề xuất]** trong `docs/DATABASE-DICTIONARY.md`
+      (`jobs.employment_type`, `jobs.close_reason`, `pages.status`, `settings.type`,
+      `company_contacts.status`).
 
-## Giai đoạn 1 — Dữ liệu nền (mục 8, `data-model.md`)
+Chưa tạo mã nguồn trong giai đoạn này.
 
-- [ ] Migration cho toàn bộ bảng cốt lõi: users, roles/permissions, provinces, industrial_parks,
-      companies, company_locations, jobs, candidates, applications (kèm `assigned_to` nullable),
-      application_status_histories, application_notes, candidate_sources/referrers, favorites,
-      pages, faqs, settings, audit_logs. Thiết kế đủ cho cả Phase 1 và Phase 2 (mục 1.1).
-- [ ] Model + relationship + index/FK/unique constraint đúng theo mục 8.
-- [ ] Seeder + factory để có dữ liệu mẫu chạy thử ngay (mục 14).
+## Giai đoạn 1 — Database foundation
 
-## Giai đoạn 2 — Auth & phân quyền cơ bản (mục 4)
+- [ ] Khởi tạo Laravel 13.x project, PHP 8.4.x (`.claude/rules/tech-stack.md`).
+- [ ] Migration cho 25 bảng theo đúng `docs/DATABASE-DICTIONARY.md`.
+- [ ] Enum (PHP backed enum) cho mọi cột trạng thái.
+- [ ] Model + relationship khớp `docs/ERD.md`.
+- [ ] Factory.
+- [ ] Seeder (`work_shifts`, `recruitment_sources`, `administrative_units` dữ liệu mẫu).
+- [ ] Database test (foreign key, unique constraint, soft delete).
 
-- [ ] Đăng ký/đăng nhập `candidate` (không bắt buộc để ứng tuyển — mục 5.6).
-- [ ] Đăng nhập nhân viên `staff`/`admin`, tách biệt khỏi candidate.
-- [ ] Middleware/Policy chặn route HR khi chưa đăng nhập hoặc không đủ quyền (mục 3).
+**Điều kiện hoàn thành:**
 
-## Giai đoạn 3 — Website công khai (mục 5, `public-site.md`)
+```bash
+php artisan migrate:fresh --seed
+php artisan test
+```
 
-Theo đúng thứ tự phụ thuộc:
+## Giai đoạn 2 — Company và job
 
-- [ ] Header (5.1)
-- [ ] Trang chủ (5.2)
-- [ ] Danh sách + lọc việc làm (5.3, tham khảo `05.3-bo-loc-viec-lam.png`)
-- [ ] Chi tiết việc làm (5.4, tham khảo `05.4-*.png`)
-- [ ] Công ty danh sách + chi tiết (5.5)
-- [ ] Form ứng tuyển (5.6, tham khảo `05.6-*.png`, **loại bỏ** các trường CCCD/Dân tộc/Tình
-      trạng hôn nhân/Ngoại ngữ theo cảnh báo trong UI-REFERENCE.md)
-- [ ] Tài khoản ứng viên (5.7)
+- [ ] Authentication admin/staff (`/hr/dang-nhap`).
+- [ ] Company CRUD (`docs/ROUTE-MAP.md` phần "HR công ty").
+- [ ] Location CRUD (`company_locations`).
+- [ ] Contact CRUD (`company_contacts`).
+- [ ] Job CRUD (`docs/ROUTE-MAP.md` phần "HR việc làm").
+- [ ] Publish/pause/close job, nhân bản job.
+- [ ] Public listing (`/viec-lam`).
+- [ ] Job detail (`/viec-lam/{slug}`).
+- [ ] Job verification (`job_verifications`, transaction "Verify job" trong `.claude/rules/data-model.md`).
 
-Áp quy tắc chống trùng SĐT và chống ứng tuyển lặp (mục 7) ngay từ form ứng tuyển.
+## Giai đoạn 3 — Candidate, application và lead
 
-## Giai đoạn 4 — Trang quản lý nội bộ rút gọn (mục 1.1, KHÔNG phải mục 6 đầy đủ)
+- [ ] Candidate matching (phát hiện trùng theo `candidate_contacts` + họ tên + ngày sinh).
+- [ ] Contact normalization (`normalized_value`).
+- [ ] Guest application (transaction "Apply" trong `.claude/rules/data-model.md`).
+- [ ] Snapshot (`submission_snapshot`, `job_snapshot`).
+- [ ] Consent (`consent_version`, `consent_text_hash`, `consented_at`, `consent_ip`).
+- [ ] Lead request (`/lien-he/tu-van`).
+- [ ] Duplicate prevention (unique `candidate_id + job_id`).
+- [ ] Merge candidate (transaction "Merge candidate" trong `.claude/rules/data-model.md`).
 
-- [ ] CRUD công ty + việc làm (6.2), dùng chung logic soft delete với mục 7.
-- [ ] Danh sách + chi tiết hồ sơ ứng tuyển, lọc theo việc làm/công ty/ngày.
-- [ ] Trạng thái đơn giản `new`/`contacted`/`done` + ghi chú nội bộ tự do.
-- [ ] Nhân viên tự nhận xử lý qua `assigned_to` (chưa enforce quyền xem theo mục 1.1).
-- [ ] Xuất Excel danh sách ứng viên.
+## Giai đoạn 4 — HR workflow
 
-## Giai đoạn 5 — Hoàn thiện chất lượng (mục 9, 10, 11)
+- [ ] Application list + filter (`docs/ROUTE-MAP.md` phần "HR hồ sơ và lead").
+- [ ] Assignment (tự nhận + admin gán lại, transaction "Assign" trong `.claude/rules/data-model.md`).
+- [ ] Stage (đổi giai đoạn, transaction "Change stage" trong `.claude/rules/data-model.md`).
+- [ ] History (status, assignment, contact attempts).
+- [ ] Contact attempts.
+- [ ] Notes (`application_notes`, không public — `.claude/rules/hr-admin.md`).
+- [ ] CSV export + `export_logs` (`.claude/rules/hr-admin.md`).
+- [ ] Dashboard cơ bản (KPI phải được chốt trước khi code — xem `.claude/rules/hr-admin.md`).
 
-- [ ] UI polish: mobile-first, màu sắc, form ngắn theo `ui-guidelines.md` và pattern đã học ở
-      UI-REFERENCE.md.
-- [ ] Bảo mật: CSRF, rate limit, CAPTCHA form công khai, kiểm soát upload, chống IDOR/mass
-      assignment (`security-seo-testing.md` mục 10).
-- [ ] SEO: slug thân thiện, meta/canonical/OG, structured data JobPosting, sitemap, ảnh WebP,
-      tránh N+1 (mục 11).
+## Giai đoạn 5 — Public site
 
-## Giai đoạn 6 — Kiểm thử (mục 12)
+- [ ] Home (`.claude/rules/public-site.md`).
+- [ ] Search + filter (`.claude/rules/scope-standards.md`).
+- [ ] Company pages.
+- [ ] Industrial park pages.
+- [ ] FAQ.
+- [ ] Contact + lead form.
+- [ ] SEO (`.claude/rules/security-seo-testing.md`).
+- [ ] Responsive.
 
-- [ ] Feature test theo đúng checklist mục 12 (guest ứng tuyển, chống trùng, soft delete, staff
-      giới hạn quyền theo Phase 1...).
-- [ ] README hướng dẫn cài XAMPP + deploy VPS (mục 14, cần bổ sung phần VPS vì trước đây README
-      chỉ nhắc XAMPP trong khi production đã xác nhận chạy VPS riêng).
+## Giai đoạn 6 — Candidate account
 
-## Giai đoạn 7 — Deploy VPS
+- [ ] Register/Login (`docs/ROUTE-MAP.md` phần "Candidate account").
+- [ ] Profile.
+- [ ] Favorites.
+- [ ] Applied jobs (hiển thị rút gọn, không lộ pipeline nội bộ — `.claude/rules/scope-standards.md`).
+- [ ] Link guest candidate vào tài khoản mới đăng ký (`candidates.user_id`).
 
-- [ ] Cài PHP 8.2/8.3 trên VPS, cấu hình domain/subdomain theo quyết định ở Giai đoạn 0.
-- [ ] Deploy, migrate, seed dữ liệu production ban đầu (tỉnh, KCN, danh mục).
+## Giai đoạn 7 — Test và deploy
+
+- [ ] Feature test đầy đủ theo `docs/ACCEPTANCE-CRITERIA.md`.
+- [ ] Security review (`.claude/rules/security-seo-testing.md`).
+- [ ] SEO review (`.claude/rules/security-seo-testing.md`).
+- [ ] Responsive review.
+- [ ] Backup.
+- [ ] Cron/Scheduler (xác nhận còn tuyển — `.claude/rules/roles-business-rules.md`).
+- [ ] SSL.
+- [ ] Log rotation.
+- [ ] Deploy VPS, cấu hình path `/hr` theo `.claude/rules/tech-stack.md`.
 
 ## Ghi chú áp dụng lộ trình
 
-- Có phụ thuộc thứ tự: Giai đoạn 1 (schema) phải xong trước 2–4; Giai đoạn 2 (auth) nên xong
-  trước Giai đoạn 4 (HR cần đăng nhập).
-- Mỗi giai đoạn nên là 1 hoặc vài session riêng — không cố làm hết trong 1 lần.
-- Cập nhật CLAUDE.md mục 16 (Trạng thái dự án) sau khi hoàn thành mỗi giai đoạn, theo đúng
-  quy trình đã thống nhất ở mục 15.
-- Không mở rộng sang Phase 2 hay các hạng mục mục 13 (Ngoài phạm vi MVP) trong lộ trình này.
+- Có phụ thuộc thứ tự: Giai đoạn 1 (schema) phải xong trước 2–6; Giai đoạn 2 (company/job)
+  nên xong trước Giai đoạn 3 (application cần job tồn tại); Giai đoạn 4 (HR workflow) cần
+  Giai đoạn 3 xong (cần có application để xử lý).
+- Mỗi giai đoạn nên là 1 hoặc vài session riêng.
+- Cập nhật `docs/PROJECT-STATUS.md` sau khi hoàn thành mỗi giai đoạn, theo quy trình ở
+  `.claude/skills/handoff/SKILL.md`.
+- Không mở rộng sang các hạng mục "Ngoài phạm vi"
+  (`.claude/rules/scope-standards.md`) trong lộ trình này.

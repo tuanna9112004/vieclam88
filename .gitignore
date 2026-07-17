@@ -1,0 +1,11 @@
+/.env
+/.env.*
+!/.env.example
+/CLAUDE.local.md
+/.claude/settings.local.json
+/vendor/
+/node_modules/
+/public/build/
+/storage/*.key
+/storage/app/private/
+/storage/logs/*.log

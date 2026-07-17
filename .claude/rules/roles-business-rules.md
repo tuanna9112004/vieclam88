@@ -1,24 +1,19 @@
-## 4. Vai trò
+---
+paths:
+  - "app/**/*.php"
+  - "routes/**/*.php"
+  - "tests/Feature/**/*.php"
+---
 
-- `guest`: xem và ứng tuyển không cần tài khoản.
-- `candidate`: lưu việc, xem việc đã ứng tuyển, sửa hồ sơ cơ bản.
-- `staff`: xử lý ứng viên được phân công.
-- `manager`: xem báo cáo và quản lý nghiệp vụ.
-- `admin`: toàn quyền cấu hình, tài khoản và dữ liệu.
+# Nghiệp vụ cốt lõi
 
-Chưa xây giao diện cộng tác viên trong MVP nhưng database phải hỗ trợ nguồn và người giới thiệu.
+- Guest được ứng tuyển; public form không thu CCCD, ngân hàng, dân tộc, tôn giáo, tình trạng hôn nhân hoặc hồ sơ sức khỏe chi tiết.
+- Chuẩn hóa contact nhưng giữ cả giá trị gốc và normalized value; không tự merge người chỉ vì trùng số.
+- Application/lead phải lưu consent version, hash, time, IP và user agent.
+- Staff Phase 1 xem toàn bộ application; được claim hồ sơ chưa gán. Admin được reassign. Mọi assignment có history.
+- Job status: `draft`, `published`, `paused`, `closed`; chỉ `published`, chưa hết hạn, chưa deleted mới public.
+- Một job là một đợt tuyển. Đợt mới phải duplicate job, không reopen job cũ.
+- Job verification: cảnh báo sau 7 ngày, có thể pause sau 14 ngày; giá trị nằm trong settings, scheduler xử lý, mỗi lần có history.
+- Candidate không thấy pipeline/notes nội bộ.
 
-Lưu ý Phase 1 (xem mục 1.1): chưa cần `manager` riêng, staff chưa bị giới hạn xem theo phân
-công (`assigned_to`) — mô tả "xử lý ứng viên được phân công" ở trên là mục tiêu Phase 2.
-
-## 7. Quy tắc nghiệp vụ
-
-- Chuẩn hóa số điện thoại trước khi tìm hoặc lưu.
-- Không tạo ứng viên mới nếu số điện thoại đã tồn tại; cập nhật thông tin phù hợp.
-- Ngăn ứng tuyển lặp cùng một việc làm; cho phép admin mở lại khi cần.
-- Mọi hồ sơ mới phải xuất hiện trong HR.
-- Mọi thay đổi trạng thái phải có lịch sử.
-- Ghi chú nội bộ không xuất hiện ở website công khai.
-- Công ty và việc làm dùng soft delete.
-- Chỉ việc làm `published`, còn hạn và chưa xóa mới được hiển thị.
-- Dữ liệu nguồn/người giới thiệu phải được lưu từ đầu để mở rộng cộng tác viên sau này.
+Chi tiết trạng thái, cột và transaction: `.claude/rules/data-model.md`, `docs/DATABASE-DICTIONARY.md`.

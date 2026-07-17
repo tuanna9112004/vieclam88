@@ -1,22 +1,34 @@
-## 13. Ngoài phạm vi MVP
+---
+paths:
+  - "app/**/*.php"
+  - "database/**/*.php"
+  - "routes/**/*.php"
+  - "resources/**/*"
+  - "tests/**/*.php"
+---
 
-Chưa xây:
+# Phạm vi Phase 1
 
-- App mobile hoặc Zalo Mini App.
-- Chấm công, hợp đồng điện tử, quản lý nghỉ phép.
-- Xu/điểm thưởng.
-- Cổng doanh nghiệp đối tác.
-- Cộng tác viên, hoa hồng, xác thực danh tính và tài khoản ngân hàng.
-- Đánh giá công ty bằng sao.
+## Public
 
-Chỉ mở rộng các phần này sau khi website và quy trình HR hoạt động ổn định.
+- Trang chủ; danh sách/chi tiết việc; tìm kiếm và lọc.
+- Danh sách/chi tiết công ty; trang KCN.
+- Gọi, Zalo, ứng tuyển guest, form yêu cầu tư vấn.
+- Giới thiệu, liên hệ, FAQ, SEO, sitemap, responsive.
 
-## 14. Quy chuẩn thực thi
+## HR
 
-- Code rõ ràng, nhất quán, tránh lặp nghiệp vụ giữa controller.
-- Controller mỏng; validation ở Form Request; nghiệp vụ ở Service.
-- Authorization bằng Policy/Middleware.
-- Dùng migration, seeder và factory; không phụ thuộc SQL thủ công.
-- Có dữ liệu mẫu để chạy thử ngay.
-- Có README hướng dẫn cài trên XAMPP, cấu hình `.env`, migrate, seed, storage link và chạy test.
-- Không tự thêm chức năng ngoài phạm vi khi chưa có yêu cầu.
+- Auth staff/admin, dashboard cơ bản.
+- Quản lý địa giới, KCN, công ty, location/contact, job.
+- Quản lý application/lead; filter, assignment, stage, contact attempt, note và histories.
+- Xác nhận job còn tuyển, CSV + export log, soft-delete/restore, tài khoản staff.
+
+## Candidate account
+
+Làm sau khi guest + HR ổn định: register/login, profile, favorites, applied jobs và liên kết candidate cũ.
+
+## Ngoài phạm vi
+
+Không tự thêm: Zalo Mini App, app riêng, cộng tác viên/hoa hồng/referral, thanh toán, hợp đồng, chấm công/lương, realtime chat, SMS/Zalo automation, AI matching, KPI/dashboard nâng cao, blog đầy đủ, RBAC nhiều tầng, full audit log, hồ sơ/CCCD upload.
+
+Ảnh ở `docs/ui-reference/out-of-scope/` không phải yêu cầu chức năng.

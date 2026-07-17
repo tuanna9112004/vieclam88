@@ -1,0 +1,35 @@
+{
+  "autoCompactEnabled": true,
+  "autoMemoryEnabled": false,
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(php artisan test*)",
+      "Bash(php artisan route:list*)",
+      "Bash(php artisan about*)",
+      "Bash(npm run build*)",
+      "Bash(composer validate*)",
+      "Bash(python scripts/check-claude-config.py*)"
+    ],
+    "ask": [
+      "Bash(composer create-project*)",
+      "Bash(composer update*)",
+      "Bash(php artisan migrate:fresh*)",
+      "Bash(php artisan migrate:rollback*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(rm *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./storage/app/private/**)",
+      "Bash(curl * | sh*)",
+      "Bash(curl * | bash*)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)"
+    ]
+  }
+}

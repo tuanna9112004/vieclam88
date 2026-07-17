@@ -1,21 +1,28 @@
-## 2. Công nghệ
+---
+paths:
+  - "app/**/*.php"
+  - "bootstrap/**/*.php"
+  - "config/**/*.php"
+  - "database/**/*.php"
+  - "routes/**/*.php"
+  - "resources/**/*.{php,blade.php,js,css}"
+  - "tests/**/*.php"
+  - "composer.json"
+  - "package.json"
+  - "vite.config.*"
+---
 
-- PHP 8.2 hoặc 8.3 (dev local dùng bản XAMPP có kèm PHP 8.2/8.3 để đồng bộ với production; production chạy trên VPS riêng nên không bị giới hạn phiên bản PHP như shared hosting).
-- Laravel bản ổn định mới nhất tương thích với PHP đã chọn (không khóa cứng theo PHP 8.0 như trước — PHP 8.0 và Laravel 9 đều đã EOL, không còn nhận vá bảo mật).
-- MySQL hoặc MariaDB.
-- Blade, Bootstrap 5, JavaScript thuần hoặc Alpine.js.
-- Vite để build asset CSS/JS (Bootstrap/Alpine). Vite cần Node.js chỉ ở bước build lúc dev/deploy, không phải Node chạy như backend server lúc runtime — không vi phạm nguyên tắc "không dùng Node.js backend" bên dưới.
-- Intervention Image (hoặc thư viện tương đương) để xử lý/convert ảnh upload sang WebP theo yêu cầu SEO ở mục 11.
-- Eloquent, Form Request, Service, Middleware, Policy.
-- Authentication bằng session.
-- PHPUnit/Feature Test.
+# Stack và kiến trúc
 
-Không dùng React, Vue, Next.js, Node.js backend, Docker, Redis hoặc Elasticsearch trong MVP.
+- PHP 8.4.x, Laravel 13.x, MariaDB; khóa major version.
+- Blade + Bootstrap 5.3 + Alpine.js; Node LTS chỉ build Vite.
+- Laravel monolith; HR dùng `/hr`; một session auth và một bảng `users`.
+- Vai trò Phase 1: `candidate`, `staff`, `admin`; guest không phải role.
+- Controller mỏng; input qua Form Request; authorization qua Policy; nghiệp vụ nhiều bước ở Action/Service.
+- Dùng Eloquent, migration, factory, seeder, PHP enum và `DB::transaction()`.
+- Tiền VND dùng `bigint unsigned`, không dùng float.
+- Không hard-delete dữ liệu nghiệp vụ; không tạo bảng/cột dự phòng.
+- Không tự thêm React/Vue/Next/Nuxt, Node backend, Redis, Elasticsearch, Docker, Livewire hoặc microservice. Chỉ thêm khi có nhu cầu đo được và ADR được chấp nhận.
+- Không đổi schema nguồn chỉ để code thuận tiện; khác biệt phải được báo cáo.
 
-## 3. Kiến trúc
-
-- Website công khai: `tencongty.vn`.
-- Trang HR: `hr.tencongty.vn` hoặc route `/hr` khi chạy XAMPP.
-- Hai giao diện dùng chung backend và database.
-- Tách route, controller, view, middleware và layout giữa Public và HR.
-- Không để route HR truy cập được nếu chưa đăng nhập và không đủ quyền.
+Nguồn chi tiết: `docs/DECISIONS.md`, `docs/DATABASE-DICTIONARY.md`.

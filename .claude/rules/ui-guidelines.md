@@ -1,12 +1,16 @@
-## 9. Giao diện
+---
+paths:
+  - "resources/views/**/*.blade.php"
+  - "resources/css/**/*"
+  - "resources/js/**/*"
+  - "tests/Browser/**/*"
+---
 
-- Mobile-first, responsive cho điện thoại, tablet và desktop.
-- Màu chủ đạo xanh dương; màu đỏ/cam chỉ dùng cho cảnh báo hoặc tuyển gấp.
-- Font dễ đọc, nội dung chính tối thiểu 16px.
-- Nút chính cao tối thiểu 48px.
-- Card bo góc vừa phải, khoảng cách nhất quán, không lạm dụng bóng đổ.
-- Form ngắn, chia nhóm rõ, lỗi hiển thị ngay dưới trường.
-- Không sao chép logo, nội dung, hình ảnh hoặc nhận diện của Viec3mien.vn.
+# UI
 
-Tham khảo thiết kế/UX cụ thể rút ra từ Viec3mien.vn (pattern nên học và pattern không được
-copy) nằm ở file riêng `UI-REFERENCE.md` tại thư mục gốc dự án — không lặp nội dung ở đây.
+- Mobile-first; body text >=16px; action target >=48px; không tràn ngang ở 360px.
+- Form ngắn, label/error rõ, keyboard-friendly.
+- Mọi data view có loading, empty, success và error state.
+- Card dễ quét; ưu tiên thu nhập, địa điểm, ca, xe/chỗ ở và CTA.
+- Sticky action không che nội dung.
+- Không copy logo, màu, hình hoặc nội dung đối thủ; chỉ học layout/flow.
