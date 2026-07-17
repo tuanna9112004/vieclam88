@@ -92,13 +92,18 @@ không mất ngữ cảnh giữa các session:
   để lọc theo tên thay vì mở từng ảnh. Cập nhật `UI-REFERENCE.md` khớp tên file mới, thêm mục
   "Quy ước đặt tên file" giải thích quy tắc. Phát hiện thêm: `khac-tin-tuc-blog-chua-co-trong-spec.png`
   (trang tin tức) không khớp mục nào trong CLAUDE.md — chưa quyết định có bổ sung vào spec không.
+- Commit git lần đầu (`4ddddaf`) — toàn bộ CLAUDE.md, `.claude/rules/`, UI-REFERENCE.md và
+  ảnh tham khảo giờ đã có version history.
+- Lên `ROADMAP.md` (file riêng ở root) — lộ trình 8 giai đoạn hoàn thiện Phase 1, có checklist
+  từng việc. Đây là bản lưu bền của kế hoạch, không phụ thuộc plan file tạm của Plan Mode (plan
+  file ở `C:\Users\MSI\.claude\plans\` bị ghi đè mỗi lần vào Plan Mode cho việc khác).
 
-**Trạng thái hiện tại:** Đã có git repo (khởi tạo, chưa có commit nào). Chưa viết code. Đang ở
-giai đoạn hoàn thiện đặc tả (CLAUDE.md + `.claude/rules/`) và tài liệu tham khảo thiết kế
-(UI-REFERENCE.md) trước khi bắt đầu dựng schema/migration.
+**Trạng thái hiện tại:** Đã có git repo với 1 commit. Chưa viết code. Đang ở giai đoạn hoàn
+thiện đặc tả (CLAUDE.md + `.claude/rules/`), tài liệu tham khảo thiết kế (UI-REFERENCE.md) và
+lộ trình (ROADMAP.md) trước khi bắt đầu Giai đoạn 0 còn lại (setup Laravel).
 
-**Bước tiếp theo (chưa làm):** Dựng schema/migration cho các bảng cốt lõi ở mục 8, hoặc setup
-dự án Laravel ban đầu (chưa chốt việc nào làm trước).
+**Bước tiếp theo (chưa làm):** Xem `ROADMAP.md` — đang ở Giai đoạn 0, việc kế tiếp là
+`composer create-project` (cần xác nhận người dùng trước khi chạy) và chốt cơ chế routing HR.
 
 **Quyết định quan trọng cần nhớ:**
 
