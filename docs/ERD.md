@@ -1,12 +1,14 @@
 # ERD — vieclam88 (Phase 1)
 
-Sơ đồ quan hệ thực thể cho 25 bảng Phase 1. Chi tiết cột đầy đủ (kiểu dữ liệu, default,
+Sơ đồ quan hệ thực thể cho 27 bảng Phase 1. Chi tiết cột đầy đủ (kiểu dữ liệu, default,
 index...) xem `docs/DATABASE-DICTIONARY.md`. 6 luồng nghiệp vụ cốt lõi mà schema này phải hỗ
 trợ: `docs/CORE-FLOWS.md`. File này chỉ thể hiện cấu trúc quan hệ, khóa chính/khóa ngoại, và
 các bảng lịch sử (không có `updated_at`, không sửa/xóa).
 
-`lead_requests`, `favorites` và `application_assignment_histories` **không** nằm trong Phase 1
-— dời sang Phase 2 (ADR-021), không xuất hiện trong sơ đồ này.
+`lead_requests`, `favorites`, `application_assignment_histories` **không** nằm trong Phase 1
+(ADR-021). `candidates.user_id`, `users.role=candidate`, `applications.assigned_to`,
+`applications.referral_code` **không** tồn tại trong Phase 1 (ADR-021, ADR-028, ADR-029) —
+không xuất hiện trong sơ đồ này.
 
 Quy ước đọc sơ đồ:
 - `||--o{` = một-nhiều, bắt buộc ở đầu "một".
@@ -17,35 +19,41 @@ Quy ước đọc sơ đồ:
 
 ```mermaid
 erDiagram
-    users ||--o| candidates : "user_id (nullable, unique)"
     users ||--o{ application_notes : "user_id"
     users |o--o{ application_status_histories : "changed_by (nullable)"
     users ||--o{ application_contact_attempts : "contacted_by"
     users ||--o{ job_verifications : "verified_by"
+    users ||--o{ job_status_histories : "changed_by"
     users ||--o{ export_logs : "exported_by"
     users ||--o{ pages : "created_by / updated_by (nullable)"
     users ||--o{ jobs : "created_by / updated_by / deleted_by (nullable)"
     users ||--o{ companies : "created_by / updated_by (nullable)"
     users |o--o{ application_branch_histories : "transferred_by (nullable)"
+    users ||--o{ job_branch_histories : "changed_by"
     users ||--o{ application_appointments : "created_by"
     users |o--o{ application_appointments : "completed_by (nullable)"
     users |o--o{ applications : "duplicate_reviewed_by (nullable)"
+    users |o--o{ applications : "reopened_by (nullable)"
+    users |o--o{ candidates : "merged_by (nullable)"
+    users |o--o{ candidates : "anonymized_by (nullable)"
 
     branches ||--o{ users : "branch_id (nullable; bắt buộc khi role=staff, chốt ở Service)"
-    branches |o--o{ jobs : "owner_branch_id (nullable ở draft, bắt buộc trước publish)"
+    branches ||--o{ jobs : "owner_branch_id (NOT NULL từ lúc tạo — ADR-046)"
     branches ||--o{ applications : "owner_branch_id (copy từ job lúc tạo)"
     branches ||--o{ application_branch_histories : "to_branch_id"
     branches |o--o{ application_branch_histories : "from_branch_id (nullable)"
-    branches ||--o{ administrative_units : "administrative_unit_id"
+    branches ||--o{ job_branch_histories : "to_branch_id"
+    branches |o--o{ job_branch_histories : "from_branch_id (nullable)"
 
     candidates ||--o{ candidate_contacts : "candidate_id"
     candidates ||--o{ applications : "candidate_id"
-    candidates |o--o{ candidates : "target receives merged sources"
+    candidates |o--o{ candidates : "merged_into_candidate_id (self, 1 chiều mỗi lần merge)"
 
     administrative_units ||--o{ administrative_units : "parent_id (self)"
-    administrative_units ||--o{ candidates : "current_administrative_unit_id (nullable)"
+    administrative_units |o--o{ candidates : "current_administrative_unit_id (nullable)"
     administrative_units ||--o{ industrial_parks : "administrative_unit_id"
-    administrative_units ||--o{ company_locations : "administrative_unit_id"
+    administrative_units |o--o{ company_locations : "administrative_unit_id (nullable — Quick Create, ADR-045)"
+    administrative_units ||--o{ branches : "administrative_unit_id"
 
     industrial_parks |o--o{ company_locations : "industrial_park_id (nullable)"
 
@@ -60,6 +68,8 @@ erDiagram
     jobs ||--o{ job_locations : "job_id (>=1 location, 1 primary)"
     jobs ||--o{ job_work_shifts : "job_id"
     jobs ||--o{ job_verifications : "job_id"
+    jobs ||--o{ job_status_histories : "job_id"
+    jobs ||--o{ job_branch_histories : "job_id"
     jobs ||--o{ applications : "job_id"
 
     work_shifts ||--o{ job_work_shifts : "work_shift_id"
@@ -74,10 +84,9 @@ erDiagram
 
     users {
         bigint id PK
-        enum role "candidate, staff, admin"
-        bigint branch_id FK "nullable; bắt buộc khi role=staff (chốt ở Service, không DB)"
-        string phone_normalized UK "nullable"
-        string email UK "nullable"
+        enum role "staff, admin (không có candidate — ADR-028)"
+        bigint branch_id FK "nullable; bắt buộc khi role=staff"
+        string email UK "NOT NULL — định danh đăng nhập duy nhất"
         enum status "active, locked"
     }
 
@@ -94,10 +103,11 @@ erDiagram
     candidates {
         bigint id PK
         string public_id UK
-        bigint user_id FK "nullable, unique"
         bigint current_administrative_unit_id FK "nullable"
         enum status "active, merged, anonymized"
         bigint merged_into_candidate_id FK "nullable, self"
+        string merge_reason "nullable"
+        bigint anonymized_by FK "nullable"
         timestamp deleted_at "soft delete"
     }
 
@@ -135,9 +145,10 @@ erDiagram
     company_locations {
         bigint id PK
         bigint company_id FK
-        bigint administrative_unit_id FK
+        bigint administrative_unit_id FK "nullable — Quick Create, ADR-045"
         bigint industrial_park_id FK "nullable"
-        bool is_primary
+        string name "nhà máy/địa điểm làm việc của công ty khách hàng — không gọi 'chi nhánh'"
+        string address_detail "nullable — Quick Create, ADR-045"
         enum status "active, inactive"
         timestamp deleted_at "soft delete"
     }
@@ -155,9 +166,11 @@ erDiagram
         string public_id UK
         bigint company_id FK
         bigint company_contact_id FK "nullable"
-        bigint owner_branch_id FK "nullable ở draft, bắt buộc trước publish"
+        bigint owner_branch_id FK "NOT NULL từ lúc tạo — ADR-046"
         enum status "draft, published, paused, closed"
         enum salary_period "month, day, hour, piece, negotiable"
+        timestamp last_checked_at "nullable — mọi lần xác nhận, ADR-048"
+        timestamp last_verified_at "nullable — chỉ khi result=still_open, ADR-048"
         timestamp deleted_at "soft delete"
     }
 
@@ -187,6 +200,26 @@ erDiagram
         enum result "still_open, paused, closed, needs_review"
     }
 
+    job_status_histories {
+        bigint id PK
+        bigint job_id FK
+        enum from_status "nullable"
+        enum to_status
+        string reason "nullable; bắt buộc khi to_status=closed"
+        bigint changed_by FK
+        timestamp created_at "append-only"
+    }
+
+    job_branch_histories {
+        bigint id PK
+        bigint job_id FK
+        bigint from_branch_id FK "nullable, null = gán lần đầu lúc tạo"
+        bigint to_branch_id FK
+        string reason "nullable ở bản ghi đầu, bắt buộc khi đổi thủ công"
+        bigint changed_by FK "NOT NULL — luôn có người thao tác"
+        timestamp created_at "append-only"
+    }
+
     recruitment_sources {
         bigint id PK
         string code UK
@@ -203,13 +236,16 @@ erDiagram
         bigint owner_branch_id FK "copy từ job.owner_branch_id lúc tạo, không suy ra động"
         enum stage "new, contacting, consulted, interview_scheduled, interviewed, waiting_start, started, closed"
         enum close_reason "nullable; reset khi mở lại closed→new"
-        string submission_token UK "nullable khi có giá trị — idempotency chống double-submit"
+        int workflow_cycle "default 1; tăng mỗi lần mở lại"
+        timestamp workflow_cycle_started_at
+        timestamp reopened_at "nullable"
+        bigint reopened_by FK "nullable"
+        string submission_token UK "NOT NULL — idempotency"
         bool needs_duplicate_review "default false"
         bigint duplicate_reviewed_by FK "nullable -> users"
         timestamp last_reapplied_at "nullable"
         json submission_snapshot "history only, not for filtering"
         json job_snapshot "history only, not for filtering"
-        string referral_code "nullable, no FK in Phase 1"
     }
 
     application_status_histories {
@@ -217,9 +253,10 @@ erDiagram
         bigint application_id FK
         enum from_stage "nullable"
         enum to_stage
+        int workflow_cycle "chu kỳ mà to_stage thuộc về"
         bigint changed_by FK "nullable"
-        enum actor_type "user, system, import"
-        string note "bắt buộc khi from_stage=closed, to_stage=new (lý do mở lại)"
+        enum actor_type "user, system (không có import — ADR-029)"
+        string note "bắt buộc khi from_stage=closed, to_stage=new"
         timestamp created_at "no updated_at, append-only"
     }
 
@@ -229,6 +266,7 @@ erDiagram
         bigint contacted_by FK
         enum channel "phone, zalo, sms, email, other"
         enum result "reached, no_answer, busy, wrong_number, consulted, callback_requested, interview_agreed, candidate_refused, unsuitable, message_sent, other"
+        int workflow_cycle "gán tại thời điểm tạo"
         timestamp created_at "append-only"
     }
 
@@ -249,6 +287,7 @@ erDiagram
         timestamp scheduled_at "không sửa sau khi tạo — đổi lịch = tạo bản ghi mới"
         enum status "scheduled, completed, cancelled, no_show"
         string outcome "nullable"
+        int workflow_cycle "gán tại thời điểm tạo"
         bigint created_by FK
         bigint completed_by FK "nullable"
         timestamp completed_at "nullable"
@@ -293,32 +332,52 @@ erDiagram
 
 - **Pivot tables**: `job_locations` (job ↔ company_locations), `job_work_shifts` (job ↔
   work_shifts). Cả hai có unique constraint composite, có thể cascade delete khi job bị xóa
-  cứng (nhưng job có application thì không được xóa cứng — xem `.claude/rules/data-model.md`).
+  cứng (nhưng job có application thì không được xóa cứng).
 - **Bảng lịch sử (append-only)**: `application_status_histories`,
-  `application_contact_attempts`, `application_branch_histories`, `job_verifications`,
-  `export_logs`. Không có `updated_at`, không UPDATE/DELETE sau khi tạo.
-  `application_appointments` có `updated_at` (không phải append-only thuần vì appointment có
-  thể chuyển `status` sau khi tạo, vd `scheduled → completed`), nhưng `scheduled_at` không sửa
-  sau khi tạo — đổi lịch tạo bản ghi mới, không ghi đè.
+  `application_contact_attempts`, `application_branch_histories`, `job_status_histories`,
+  `job_branch_histories`, `job_verifications`, `export_logs`. Không có `updated_at`, không
+  UPDATE/DELETE sau khi tạo. `application_appointments` có `updated_at` (không phải
+  append-only thuần vì appointment có thể chuyển `status` sau khi tạo), nhưng `scheduled_at`
+  không sửa sau khi tạo — đổi lịch tạo bản ghi mới, không ghi đè.
 - **Soft delete**: `candidates`, `companies`, `company_locations`, `company_contacts`,
-  `jobs`, `branches`, `application_notes`. Xem chính sách đầy đủ ở
-  `docs/DATABASE-DICTIONARY.md` mục "Chính sách xóa".
+  `jobs`, `branches`, `application_notes`.
 - **Self-referencing**: `administrative_units.parent_id` (phân cấp tỉnh → xã/phường),
-  `candidates.merged_into_candidate_id` (gộp trùng).
-- **FK nullable quan trọng**: `applications.source_id`, `candidates.user_id` (candidate có thể
-  chưa có tài khoản), `users.branch_id` (bắt buộc khi `role=staff`, chốt ở Service, không phải
-  DB constraint), `jobs.owner_branch_id` (bắt buộc trước khi publish, xem
-  `docs/CORE-FLOWS.md`). **Không có `applications.assigned_to`** trong Phase 1 (ADR-021).
-- **Cơ sở nội bộ (`branches`) khác `company_locations`**: `branches` là văn phòng/chi nhánh
-  của chính công ty cung ứng lao động (vieclam88), phụ trách xử lý hồ sơ; `company_locations`
-  là địa điểm làm việc/nhà máy của công ty khách hàng. Không dùng lẫn hai bảng này (xem
-  ADR-015).
+  `candidates.merged_into_candidate_id` (gộp trùng — 1 chiều mỗi lần merge, không cập nhật lại
+  khi merge nhiều tầng; truy vấn "merged family" đệ quy theo chuỗi này, `docs/CORE-FLOWS.md`
+  mục 6.3).
+- **Cơ sở nội bộ (`branches`) khác `company_locations`**: `branches` là văn phòng/chi nhánh của
+  chính công ty cung ứng lao động (vieclam88), phụ trách xử lý hồ sơ; `company_locations` là
+  nhà máy/địa điểm làm việc của công ty khách hàng — không gọi bảng này là "chi nhánh" (ADR-015).
+  Quan hệ đúng: `administrative_units ||--o{ branches` (một đơn vị hành chính có nhiều cơ sở,
+  vì `branches.administrative_unit_id → administrative_units.id`) — **đã sửa lỗi vẽ ngược**
+  ở bản trước (ADR-044).
+- **`jobs.owner_branch_id`**: **NOT NULL ngay từ lúc tạo Job** (không còn nullable ở `draft` —
+  ADR-046). Chỉ set lúc tạo Job hoặc đổi qua `ChangeJobBranchAction` (chỉ khi Job `draft`/
+  `paused`, chưa `deleted_at` — **không** khi `published` hoặc `closed`, ADR-054); mỗi lần
+  gán/đổi ghi 1 dòng `job_branch_histories` (`docs/CORE-FLOWS.md` mục 1.0, 1.1). Application đã
+  tạo trước đó giữ nguyên `owner_branch_id` cũ, không tự đổi theo.
+- **`company_locations.administrative_unit_id`/`address_detail`**: nullable (ADR-045) — hỗ trợ
+  Quick Create (`docs/CORE-FLOWS.md` mục 0.3), bắt buộc có ít nhất một trong hai trước khi dùng
+  làm primary location của Job publish. Khi `industrial_park_id` khác null,
+  `administrative_unit_id` bắt buộc bằng đúng tỉnh của KCN đó (ADR-052).
+- **Enum Strategy (ADR-055)**: `jobs.status`/`applications.stage` dùng DB `enum()` (state
+  machine trung tâm). 5 cột khác từng "đề xuất" (`company_contacts.status`,
+  `jobs.employment_type`, `jobs.close_reason`, `pages.status`, `settings.type`) dùng `varchar` +
+  PHP backed enum — không hiển thị `enum status` trong sơ đồ trên vì không phải kiểu DB enum
+  (chi tiết: `docs/DATABASE-DICTIONARY.md`).
+- **`jobs.last_checked_at`/`last_verified_at`**: 2 cột tách biệt (ADR-048) — `last_checked_at`
+  cập nhật ở mọi lần xác nhận, `last_verified_at` chỉ khi `result=still_open`. Scheduler cảnh
+  báo và điều kiện publish đều dùng `last_verified_at` (`docs/CORE-FLOWS.md` mục 1.2, 1.3).
+- **`users` Phase 1 chỉ staff/admin**: không có giá trị `candidate` trong `users.role`, không
+  có `candidates.user_id`, không có `users.phone_normalized` (mục đích cũ chỉ để đăng nhập
+  candidate) — Candidate Account là Phase 2 (ADR-028). `users.email` bắt buộc (NOT NULL).
 - **`applications.owner_branch_id`** copy từ `jobs.owner_branch_id` tại thời điểm tạo
-  Application, không JOIN động qua `jobs` — Job đổi cơ sở sau này không ảnh hưởng Application
-  đã tồn tại; chuyển cơ sở cho Application phải đi qua `application_branch_histories` (xem
-  `docs/CORE-FLOWS.md` mục 6.1).
-- **`applications.submission_token`**: idempotency cho lần submit form — unique khi có giá
-  trị, khác với unique `(candidate_id, job_id)` vốn chống ứng tuyển lại (`docs/CORE-FLOWS.md`
-  mục 3).
-- **Không có trong Phase 1** (dời Phase 2, ADR-021): `lead_requests`, `favorites`,
-  `application_assignment_histories`, `applications.assigned_to`.
+  Application, không JOIN động qua `jobs`; chuyển cơ sở qua `application_branch_histories`
+  (`docs/CORE-FLOWS.md` mục 6.1).
+- **`applications.submission_token`**: NOT NULL, UNIQUE — idempotency cho lần submit form
+  (`docs/CORE-FLOWS.md` mục 3).
+- **`applications.workflow_cycle`**: chống dữ liệu Contact Log/Appointment của lần xử lý trước
+  mở khóa trạng thái mới sau khi Application được mở lại (`docs/CORE-FLOWS.md` mục 5.4).
+- **Không có trong Phase 1** (dời Phase 2): `lead_requests`, `favorites`,
+  `application_assignment_histories`, `applications.assigned_to`, `applications.referral_code`,
+  `candidates.user_id`, giá trị `candidate` trong `users.role`.

@@ -2,42 +2,42 @@
 
 ## Phase / slice hiện tại
 
-Giai đoạn 0 (chốt plan/spec) — vòng siết phạm vi lần 2. Chưa có mã nguồn Laravel.
+**Giai đoạn 0 hoàn thành về plan/spec — Phase 1 Plan Baseline v1.0 đã đóng băng (ADR-057).**
+**Không còn migration blocker nào.** Chỉ còn thiếu cài đặt môi trường code trước khi sang Giai
+đoạn 1. Chưa có mã nguồn Laravel.
 
-## Đã hoàn thành
+## Đã hoàn thành (vòng FINAL PLAN HARDENING)
 
-- Siết phạm vi Phase 1 (ADR-021): bỏ hẳn Lead (`lead_requests`, form tư vấn), bỏ
-  assignment/claim (`application_assignment_histories`, `applications.assigned_to`), bỏ
-  Favorites khỏi database. 28 → 25 bảng, renumber `docs/DATABASE-DICTIONARY.md`.
-- Idempotency contract `applications.submission_token` (ADR-022); CTA Gọi/Zalo luôn ưu tiên
-  contact cơ sở, không dùng `company_contacts` thay thế (ADR-023).
-- Chốt Application transition matrix mở rộng (`closed → new` có kiểm soát) + Contact Result
-  enum chính thức 11 giá trị, đồng nhất CORE-FLOWS/dictionary (ADR-024). Chốt Job transition
-  matrix tường minh (5 transition) + quy tắc đổi lịch appointment = tạo mới (ADR-025).
-- Duplicate contract: case A đổi thành khớp tên chính xác (bỏ ngưỡng tương đồng); merge do
-  admin chọn thủ công (ADR-026).
-- Thêm khung chính sách dữ liệu cá nhân tối thiểu vào `docs/CORE-FLOWS.md` mục 7 (ADR-027);
-  thời hạn lưu + anonymize snapshot vẫn **[CẦN CHỐT]**.
-- Thêm bảng phân lớp constraint "DB bảo vệ vs Service bảo vệ" trong `DATABASE-DICTIONARY.md`.
-- Đồng bộ toàn bộ: CORE-FLOWS, ERD, DATABASE-DICTIONARY, ROUTE-MAP, ACCEPTANCE-CRITERIA,
-  ROADMAP, DECISIONS (ADR-021..027), CLAUDE.md, rules liên quan (data-model, roles-business,
-  hr-admin, public-site, scope-standards, security-seo-testing). Rà soát chéo: không còn
-  Lead/assignment/favorites nào được yêu cầu ở tài liệu Phase 1.
+- Bootstrap Sequence + Initial Admin (`app:create-admin`, ADR-050); Seeder Classification
+  production-safe/demo-test (ADR-051) — sửa lỗi seeder Giai đoạn 1 từng gộp Branch mẫu chung
+  câu với danh mục hệ thống thật.
+- Validation tỉnh/KCN (ADR-052); quyền xóa/khôi phục Location/Contact về admin-only, thêm route
+  restore còn thiếu (ADR-053) — sửa mâu thuẫn Route Map cho phép Staff xóa.
+- Job Branch Transfer chỉ `draft`/`paused`, cấm `closed`/đã xóa (ADR-054) — sửa câu sai ở Route
+  Map bản trước.
+- **Enum Strategy (ADR-055):** 5 cột `[đề xuất]` chuyển DB `enum()` → `varchar` + PHP backed
+  enum — **xóa bỏ migration blocker cuối cùng**.
+- PII schema tối thiểu cho 6 cột `applications` đã chốt, tách khỏi quyết định retention (ADR-056).
+- Tạo `docs/PHASE-1-SCOPE.md`, `docs/PHASE-2-BACKLOG.md` — đóng băng phạm vi (ADR-057).
 
 ## Verification
 
-`python scripts/check-claude-config.py` → xem kết quả lần chạy gần nhất bên dưới trong phiên
-làm việc; cảnh báo enum **[đề xuất]** (5 mục) là cảnh báo có chủ đích, chưa chốt.
+`python scripts/check-claude-config.py` → **0 warning** (không còn `[đề xuất]` trong
+`docs/DATABASE-DICTIONARY.md` sau ADR-055).
 
 ## Blockers
 
-- 3 mục **[CẦN CHỐT]** ở `docs/CORE-FLOWS.md` mục 8: thời hạn lưu dữ liệu ứng viên, anonymize
-  `submission_snapshot`/`job_snapshot` hay không, 5 enum **[đề xuất]** còn tồn đọng.
-- Môi trường code (PHP 8.4, Composer, Node LTS, MariaDB) chưa cài/kiểm tra.
+- **Migration blocker:** không còn.
+- **Go-live blockers (không chặn migration):** thời hạn lưu dữ liệu ứng viên, mức mask
+  `submission_snapshot` khi anonymize (`docs/CORE-FLOWS.md` mục 7.4, 7.2).
+- **Phase 2 decision (không chặn gì):** có bật `job_auto_pause_enabled` hay không (mục 1.3).
+- Môi trường code (PHP 8.4, Composer, Node LTS, MariaDB 11.4) chưa cài/kiểm tra — blocker
+  **duy nhất** còn lại trước khi chạy `composer create-project`.
 
 ## Bước tiếp theo
 
-1. Công ty xác nhận 3 mục **[CẦN CHỐT]** ở `docs/CORE-FLOWS.md` mục 8.
-2. Cài PHP 8.4/Composer/Node/MariaDB.
-3. Sau khi (1) xong: `composer create-project` Laravel 13.x — Giai đoạn 1, cần xác nhận trước
-   khi chạy.
+1. Cài PHP 8.4/Composer/Node LTS/MariaDB 11.4.
+2. `composer create-project` Laravel 13.x — Giai đoạn 1 (viết migration theo
+   `docs/DATABASE-DICTIONARY.md`), cần xác nhận trước khi chạy.
+3. Song song (không chặn 1–2): công ty xác nhận go-live blockers (retention, mask) trước Giai
+   đoạn 4.

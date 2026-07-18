@@ -11,11 +11,15 @@ Chỉ đọc nhóm tài liệu cần cho task hiện tại.
 | Feature/bug thông thường | file code liên quan + test gần nhất | rule tự nạp theo path; không đọc toàn bộ dictionary |
 | Sửa tài liệu | `.claude/rules/docs-governance.md` | tài liệu nguồn duy nhất của nội dung đang sửa |
 | UI theo ảnh | đúng 1–2 ảnh trong `docs/ui-reference/phase-1/` | không mở `out-of-scope/` trừ khi audit phạm vi |
+| Xác nhận phạm vi Phase 1/Phase 2 | `docs/PHASE-1-SCOPE.md`, `docs/PHASE-2-BACKLOG.md` | `docs/CORE-FLOWS.md`, `ROADMAP.md` |
+| Bootstrap/deploy lần đầu | `ROADMAP.md` mục "Bootstrap Sequence" | `docs/DECISIONS.md` ADR-050, ADR-051 |
 
 ## Nguồn sự thật
 
 - 6 luồng nghiệp vụ cốt lõi (Job publish, tìm việc, ứng tuyển, xử lý hồ sơ, trạng thái, chuyển
   cơ sở/duplicate): `docs/CORE-FLOWS.md`. Mọi tài liệu khác phải khớp file này.
+- Phạm vi Phase 1 đã đóng băng (v1.0): `docs/PHASE-1-SCOPE.md`. Backlog Phase 2:
+  `docs/PHASE-2-BACKLOG.md`.
 - Schema/cột/FK/index: `docs/DATABASE-DICTIONARY.md`.
 - Quan hệ tổng quan: `docs/ERD.md`.
 - Nghiệp vụ và quyền: `.claude/rules/roles-business-rules.md`.
