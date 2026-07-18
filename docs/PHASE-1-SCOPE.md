@@ -1,6 +1,6 @@
 # Phase 1 Scope — Baseline v1.0 (frozen)
 
-**Trạng thái: ĐÓNG BĂNG (ADR-057).** Đây là bản khai phạm vi chính thức của Phase 1, không phải
+**Trạng thái nội dung: ĐÓNG BĂNG (ADR-057); Git baseline chỉ hoàn tất sau commit/tag.** Đây là bản khai phạm vi chính thức của Phase 1, không phải
 nguồn chi tiết — nguồn chi tiết vẫn là các file gốc được liên kết bên dưới, file này chỉ tổng
 hợp + tuyên bố đóng băng để tránh việc tiếp tục bổ sung yêu cầu không giới hạn trước khi tạo
 migration.
@@ -15,11 +15,11 @@ hiện lỗi nghiệp vụ hoặc lỗ hổng bảo mật nghiêm trọng cần 
 |---|---|
 | 6 luồng nghiệp vụ cốt lõi | `docs/CORE-FLOWS.md` |
 | Bootstrap/deployment sequence | `ROADMAP.md` mục "Bootstrap Sequence" |
-| Schema đầy đủ (27 bảng) | `docs/DATABASE-DICTIONARY.md` |
+| Schema đầy đủ (28 bảng business) | `docs/DATABASE-DICTIONARY.md` |
 | Quan hệ | `docs/ERD.md` |
 | Route | `docs/ROUTE-MAP.md` |
 | Tiêu chí nghiệm thu | `docs/ACCEPTANCE-CRITERIA.md` |
-| Quyết định kiến trúc (ADR-001..057) | `docs/DECISIONS.md` |
+| Quyết định kiến trúc (ADR-001..078) | `docs/decisions/INDEX.md` |
 | Phân loại blocker (Migration/Go-live/Phase 2) | `ROADMAP.md` mục "Phân loại blocker" |
 | Tiến độ hiện tại | `docs/PROJECT-STATUS.md` |
 
@@ -39,13 +39,13 @@ hiện lỗi nghiệp vụ hoặc lỗ hổng bảo mật nghiêm trọng cần 
 - Quản lý cơ sở nội bộ `branches` (admin), gồm cấu hình `phone`/`zalo`.
 - Company/Company Location/Company Contact — Quick Create (chỉ cần tên), Staff
   tạo/sửa, Admin thêm quyền soft delete/restore.
-- Job: Draft Contract (thiếu dữ liệu được phép), Publish Contract (11 điều kiện, gồm xác minh
-  còn tuyển), transition matrix 5 bước, Job Branch Contract (đổi cơ sở chỉ khi draft/paused),
+- Job: Draft Contract (thiếu dữ liệu được phép), Publish Contract (22 điều kiện có mã `PUB-*`, gồm `PUB-VERIFY`, Salary/Shift Predicate), transition matrix 5 bước, Job Branch Contract (đổi cơ sở chỉ khi draft/paused),
   Job Verification Scheduler (cảnh báo, không tự pause).
 - Application: pipeline 8 trạng thái + reopen có kiểm soát, Contact Log, Appointment
   (callback/interview), Workflow Cycle, chuyển cơ sở ngoại lệ (admin), filter đầy đủ.
 - Candidate: tìm kiếm, Candidate Access Policy (403 theo cơ sở qua merged family), Duplicate
-  Candidate Contract (4 trường hợp), Merge (admin).
+  Candidate Contract (4 trường hợp), Duplicate Review (`candidate_duplicate_reviews`, admin),
+  Merge (admin).
 - Dashboard Staff/Admin (KPI cố định — `docs/CORE-FLOWS.md` mục 9.1), Export CSV + log.
 - Tài khoản Staff/Admin: bootstrap Admin đầu tiên qua `php artisan app:create-admin`, tài khoản
   Staff tạo qua HR (admin), khóa bằng `status=locked`.
@@ -64,13 +64,26 @@ dữ liệu hàng loạt, AI matching, dashboard/BI nâng cao, auto-pause Job (m
 ## Điều kiện đã đóng (không còn mở ở mức migration)
 
 Quick Create Company/Location (ADR-045), Job Draft/Publish/Verification Contract mở rộng
-(ADR-046, ADR-047, ADR-048), Enum Strategy loại bỏ migration blocker (ADR-055), PII schema tối
-thiểu cho `applications` (ADR-056), quyền xóa/khôi phục Company Location/Contact (ADR-053), Job
-Branch Transfer chỉ draft/paused (ADR-054), validation tỉnh/KCN (ADR-052), bootstrap/seeder
-(ADR-050, ADR-051).
+(ADR-046, ADR-047, ADR-048, ADR-058, ADR-059, ADR-060), Enum Strategy loại bỏ migration blocker
+(ADR-055), PII schema tối thiểu cho `applications` (ADR-056), quyền xóa/khôi phục Company
+Location/Contact (ADR-053), Job Branch Transfer chỉ draft/paused (ADR-054), validation tỉnh/KCN
+(ADR-052), bootstrap/seeder (ADR-050, ADR-051), Submission Concurrency Contract (ADR-061),
+Duplicate Review data model (ADR-062), merged-root resolution + full name normalization
+(ADR-063), primary field semantics (ADR-064), administrative unit root uniqueness (ADR-065),
+timestamp/hạ tầng Laravel (ADR-066), password-first-change + Route Map đầy đủ (ADR-067), soft
+delete/restore contract rà soát toàn bộ (ADR-068), migration order + roadmap 7 nhóm (ADR-069),
+Job hết hạn (ADR-072), ERD cardinality (ADR-073), publish/contact consistency (ADR-074), matching nhiều-root + review summary (ADR-075), merged-family same-job (ADR-076), active-user middleware (ADR-077), semantic checker/final patch (ADR-078).
 
-## Điều kiện còn mở (không chặn migration — xem `ROADMAP.md` "Phân loại blocker")
+## Migration blocker
 
-5 enum đề xuất chờ công ty duyệt bằng văn bản (migration blocker duy nhất — `docs/CORE-FLOWS.md`
-mục 8.2); thời hạn lưu dữ liệu và mức mask `submission_snapshot` (go-live blocker, mục 7.2, 7.4);
-`job_auto_pause_enabled` (Phase 2 decision, mục 1.3).
+**Không còn.** 5 enum phụ (`docs/CORE-FLOWS.md` mục 8.2) dùng `varchar` + PHP backed enum
+(ADR-055) — không còn cần công ty duyệt trước khi viết migration; đổi giá trị sau này chỉ cần sửa
+code, không cần `ALTER TABLE`.
+
+## Điều kiện còn mở (không chặn migration — go-live/Phase 2, xem `ROADMAP.md` "Phân loại blocker")
+
+Thời hạn lưu dữ liệu và mức mask `submission_snapshot` (go-live blocker, `docs/CORE-FLOWS.md` mục
+7.2, 7.4); `job_verification_valid_days` (go-live blocker, mục 1.3, ADR-058); nguồn dữ liệu
+`administrative_units` chính thức (go-live blocker, ADR-070); cơ chế redact free-text nâng cao
+(go-live blocker tùy chọn, mục 7.3.1, ADR-071); `job_auto_pause_enabled` (Phase 2 decision, mục
+1.3).

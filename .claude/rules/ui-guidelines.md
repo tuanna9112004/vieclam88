@@ -8,9 +8,8 @@ paths:
 
 # UI
 
-- Mobile-first; body text >=16px; action target >=48px; không tràn ngang ở 360px.
-- Form ngắn, label/error rõ, keyboard-friendly.
-- Mọi data view có loading, empty, success và error state.
-- Card dễ quét; ưu tiên thu nhập, địa điểm, ca, xe/chỗ ở và CTA.
-- Sticky action không che nội dung.
-- Không copy logo, màu, hình hoặc nội dung đối thủ; chỉ học layout/flow.
+- Mobile-first; body text tối thiểu 16px; target thao tác tối thiểu 48px; không tràn ngang ở 360px.
+- Form ngắn, label/error rõ, keyboard-friendly; có empty/success/error state.
+- Card ưu tiên thu nhập, địa điểm, ca, xe/chỗ ở và CTA; sticky action không che nội dung.
+- HR tối ưu thao tác nhanh trên điện thoại, nhưng không ẩn thông tin cần cho quyết định nghiệp vụ.
+- Chỉ mở đúng ảnh trong `docs/ui-reference/phase-1/`; không sao chép logo, màu, hình hoặc nội dung đối thủ.

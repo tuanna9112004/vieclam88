@@ -9,3 +9,5 @@
 /storage/*.key
 /storage/app/private/
 /storage/logs/*.log
+__pycache__/
+*.py[cod]

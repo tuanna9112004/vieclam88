@@ -2,7 +2,7 @@
 
 Tiêu chí nghiệm thu tối thiểu bằng Feature Test (PHPUnit). Mỗi mục dưới đây phải có ít nhất
 1 test tương ứng trước khi tính là hoàn thành. Không tự thêm tiêu chí ngoài phạm vi Phase 1
-(`.claude/rules/scope-standards.md`), không bỏ bớt tiêu chí đã liệt kê. 6 luồng nghiệp vụ mà
+(`docs/PHASE-1-SCOPE.md`), không bỏ bớt tiêu chí đã liệt kê. 6 luồng nghiệp vụ mà
 các tiêu chí này xác nhận: `docs/CORE-FLOWS.md`. Phase 1 không có Lead, không có
 assignment/claim, không có Candidate Account, không có Favorites (ADR-021, ADR-028) — không
 viết test cho các phần này.
@@ -19,6 +19,7 @@ viết test cho các phần này.
       `address_detail` chấp nhận `NULL`).
 - [ ] Tạo được Job draft khi Company chỉ có tên và Location chưa có tỉnh/thành lẫn địa chỉ chi
       tiết (`docs/CORE-FLOWS.md` mục 1.0).
+- [ ] Tạo/lưu được Job draft khi `job_description = NULL` (cột nullable — ADR-060).
 - [ ] Tạo Job (kể cả `draft`) thiếu `owner_branch_id` bị từ chối ở tầng Service/Form Request —
       Staff luôn được tự động gán, Admin bắt buộc chọn tường minh, không có trạng thái "Job
       chưa có cơ sở phụ trách" (ADR-046).
@@ -48,11 +49,34 @@ viết test cho các phần này.
       `deleted_at`).
 - [ ] Không publish được Job nếu cơ sở phụ trách không có `phone` và không có `zalo`.
 - [ ] Không publish được Job nếu location `is_primary=true` chưa có `administrative_unit_id`
-      lẫn `address_detail` (địa điểm chưa đủ rõ — `docs/CORE-FLOWS.md` mục 1.2 điều kiện 10).
-- [ ] Không publish được Job (lần publish đầu, `draft→published`) nếu chưa có
-      `job_verifications.result = still_open` nào trong lịch sử — Staff bị từ chối; Admin
-      publish được nhưng thiếu `job_status_histories.reason` thì bị từ chối
-      (`docs/CORE-FLOWS.md` mục 1.2 điều kiện 11, mục 1.3, ADR-047).
+      lẫn `address_detail` (địa điểm chưa đủ rõ — `docs/CORE-FLOWS.md` mục 1.2 `PUB-LOCATION-CLEAR`).
+- [ ] Không publish được Job (`draft→published`/`paused→published`) nếu **bản ghi
+      `job_verifications` mới nhất** không phải `still_open` — Staff bị từ chối; Admin publish
+      được nhưng thiếu `job_status_histories.reason` thì bị từ chối (`docs/CORE-FLOWS.md` mục
+      1.2 điều kiện 21, mục 1.3, ADR-058, ADR-060).
+- [ ] Job có bản ghi `still_open` **cũ** (không phải mới nhất), sau đó có bản ghi
+      `needs_review`/`paused`/`closed` mới hơn → **không** publish được — bản ghi `still_open` cũ
+      không được dùng làm bằng chứng vượt qua điều kiện xác minh (ADR-058).
+- [ ] `still_open` là bản ghi mới nhất của Job → vượt qua điều kiện verification, publish thành
+      công.
+- [ ] Job `draft` verify với `result=paused` hoặc `result=closed` bị từ chối (Job chưa từng
+      publish — ADR-059).
+- [ ] Job `closed` không nhận `job_verifications` mới qua route Staff/Admin thông thường
+      (`403`/`422` — ADR-059) và không tự hoạt động lại dưới bất kỳ hình thức nào.
+- [ ] Job `paused` verify lại với `result=paused` chỉ ghi `job_verifications`, **không** tạo thêm
+      `job_status_histories` (status không đổi — ADR-059).
+- [ ] Không publish được Job nếu `jobs.job_description`, `jobs.requirements`, hoặc
+      `jobs.benefits` rỗng (NULL hoặc toàn khoảng trắng) — điều kiện 11–13, ADR-060.
+- [ ] `PUB-SALARY`: `salary_period=negotiable` chỉ hợp lệ khi `salary_min`/`salary_max`/
+      `salary_base` đều `NULL`; không lưu negotiable cùng lương số.
+- [ ] `PUB-SALARY`: `salary_period!=negotiable` chỉ hợp lệ khi có ít nhất một số lương dương hoặc
+      `salary_description` thực; nếu cùng có min/max thì `salary_min <= salary_max`.
+- [ ] Admin chỉ vượt qua `PUB-VERIFY` khi nhập override reason không rỗng; reason được ghi vào
+      `job_status_histories`; Staff không override được.
+- [ ] Job Company A gắn `company_contact_id` của Company B, contact inactive hoặc soft-deleted →
+      store/update/publish bị từ chối; contact chỉ xuất public khi thêm `is_public=true`.
+- [ ] Shift Predicate: publish thất bại nếu Job chưa có bản ghi `job_work_shifts` nào; thành công
+      khi có ít nhất 1 (ADR-060).
 - [ ] Không hard delete được job đã có `applications` liên kết (phải chặn ở Service).
 - [ ] Tạo `job_verifications` với `result=still_open` cập nhật đúng cả `jobs.last_checked_at`
       **và** `jobs.last_verified_at` trong cùng transaction.
@@ -143,6 +167,17 @@ viết test cho các phần này.
 - [ ] `jobs.status`, `applications.stage` vẫn là DB `enum()` — insert giá trị ngoài danh sách
       bị DB từ chối ở tầng thấp nhất (không chỉ validation).
 
+### 1.9. Job hết hạn (ADR-072)
+
+- [ ] Job `published` với `expires_at < now()` không nhận Application — submit trực tiếp (bỏ qua
+      UI) bị server từ chối.
+- [ ] Job `published` với `expires_at < now()` không xuất hiện trong danh sách/tìm kiếm/sitemap
+      công khai.
+- [ ] URL chi tiết Job hết hạn trả `200` (không `404`), hiển thị "Đã hết hạn tuyển", ẩn nút "Ứng
+      tuyển ngay", giữ CTA Gọi/Zalo.
+- [ ] `jobs.status` **không** tự động đổi khi hết hạn — vẫn `published` cho tới khi Staff/Admin
+      chủ động `pause`/`close`.
+
 ## 2. Candidate và Merge
 
 - [ ] **Trường hợp 1 (khớp chắc chắn)**: `phone_normalized` trùng + họ tên sau chuẩn hóa khớp
@@ -219,6 +254,33 @@ schema):
       danh nào theo mức mask công ty xác nhận — **chưa viết test cụ thể cho tới khi có quyết
       định**.
 
+### 2.2. Duplicate Review và merged-root resolution (ADR-062, ADR-063)
+
+- [ ] Trường hợp 2/3/4 của Duplicate Candidate Contract tạo đúng 1 bản ghi
+      `candidate_duplicate_reviews` (`candidate_id`, `suspected_candidate_id`, `reason_code`
+      đúng theo trường hợp), cùng transaction với việc tạo Candidate/Application.
+- [ ] `hr.duplicate-reviews.resolve` cập nhật `status`/`review_note` **không** tự động gọi merge
+      candidate — `confirmed_same` chỉ là kết luận, Admin phải chủ động thực hiện
+      `hr.candidates.merge` riêng.
+- [ ] Tạo 2 review trùng cặp `(candidate_id, suspected_candidate_id, reason_code)` khi bản ghi
+      trước còn `status=pending` bị chặn ở DB (`pending_pair_key` UNIQUE).
+- [ ] Candidate A `status=merged` vào B, sau đó số điện thoại cũ của A được dùng ứng tuyển Job
+      mới → hệ thống resolve về B (root) → Application mới thuộc `candidate_id=B` → không tạo
+      Candidate C.
+- [ ] Chuỗi merge có vòng lặp hoặc vượt quá độ sâu resolve (20 bước) khi matching bị từ chối an
+      toàn (log lỗi kỹ thuật, coi như không tìm thấy trùng, **không** chặn ứng viên nộp đơn).
+- [ ] `candidates.full_name_normalized` được sinh tự động, nhất quán (cùng `full_name` luôn cho
+      cùng giá trị chuẩn hóa, giữ dấu tiếng Việt) — dùng đúng trong so khớp trường hợp 1.
+- [ ] Một số điện thoại khớp nhiều Candidate/root: query toàn bộ, resolve/dedupe root, không
+      dùng `first()`; đúng một exact root thì reuse đúng root đó.
+- [ ] Nhiều exact root cùng phone/name/DOB → không chọn ngẫu nhiên; tạo Candidate/Application mới
+      và một review `multiple_exact_matches` cho từng exact root.
+- [ ] Resolve một review khi Application còn review `pending` khác → `needs_duplicate_review`
+      vẫn true và `duplicate_reviewed_at/by` vẫn null; chỉ pending cuối cùng mới hoàn tất summary.
+- [ ] Candidate A đã có Application Job X rồi merge vào B; ứng tuyển lại Job X bằng contact của A
+      → không tạo Application cho B, trả Application canonical trong merged family và cập nhật
+      `last_reapplied_at`.
+
 ## 3. Application — nộp hồ sơ, trạng thái, chống trùng
 
 - [ ] Guest ứng tuyển thành công không cần tài khoản.
@@ -241,6 +303,14 @@ schema):
 - [ ] 2 request đồng thời cùng candidate + cùng job nhưng khác `submission_token` chỉ tạo đúng 1
       `applications` (unique `(candidate_id, job_id)` là chốt chặn cuối; request thua nhận
       thông báo thân thiện, không lỗi 500).
+- [ ] 2 request đồng thời khác `submission_token`, cùng `phone_normalized` + họ tên chuẩn hóa +
+      `date_of_birth` + cùng Job → chỉ **một** Candidate hợp lệ được tạo hoặc tái sử dụng (khóa
+      `GET_LOCK` theo `phone_normalized` serialize việc đánh giá Duplicate Candidate Contract —
+      ADR-061), không tạo 2 `candidates` khác nhau cho cùng người.
+- [ ] Cùng tình huống trên → chỉ **một** `applications` được tạo; request còn lại nhận lại kết
+      quả phù hợp (không lỗi 500).
+- [ ] Khi khóa `GET_LOCK` hết thời gian chờ (timeout), request nhận lỗi thân thiện (không `500`),
+      không để lại `candidates`/`applications` rác (rollback đầy đủ).
 - [ ] Không tạo được `applications` trùng cho cùng `candidate_id + job_id` — case C duplicate
       contract; `applications.last_reapplied_at` được cập nhật trên bản ghi đã tồn tại; **không
       tự động mở lại** dù bản ghi đang `closed`.
@@ -333,6 +403,18 @@ schema):
       403).
 - [ ] Staff cơ sở mới nhìn thấy và xử lý được Application ngay sau khi chuyển.
 
+### 4.2. Primary field và Administrative Unit root (ADR-064, ADR-065, ADR-068)
+
+- [ ] 2 request đồng thời đặt `candidate_contacts.is_primary=true` cho 2 contact khác nhau cùng
+      `(candidate_id, type)` chỉ có đúng 1 request thành công (unique trên cột generated
+      `primary_flag_key`).
+- [ ] Company có tối đa 1 `company_contacts.is_primary=true` đang `status=active` — đặt primary
+      mới tự động bỏ primary cũ trong cùng transaction.
+- [ ] Không tạo được 2 `administrative_units` cấp root (`parent_id=null`) cùng `slug` — insert
+      bản ghi thứ hai bị DB từ chối (unique trên cột generated `root_slug_key`).
+- [ ] Xóa nhầm `branches` khôi phục được qua `hr.branches.restore` (admin) — dữ liệu
+      `users`/`jobs`/`applications` liên kết không bị ảnh hưởng.
+
 ## 5. Authorization
 
 - [ ] Bất kỳ route `/hr/*` nào cũng yêu cầu `role ∈ {staff, admin}` — không có route `/hr/*`
@@ -343,6 +425,17 @@ schema):
 - [ ] Guest (chưa đăng nhập) không truy cập được bất kỳ dữ liệu nội bộ nào (`application_notes`,
       danh sách `/hr/*`).
 - [ ] Xuất CSV chỉ chứa các cột được phép xuất; mỗi lần xuất tạo đúng 1 bản ghi `export_logs`.
+- [ ] `hr.candidates.anonymize` chỉ `admin` thực hiện được — Staff bị từ chối (`403`).
+- [ ] Staff không truy cập được `hr.duplicate-reviews.*` (`403`) — chỉ Admin.
+- [ ] Staff/Admin có `password_changed_at = null` chỉ truy cập được `hr.password.change/update`
+      và `hr.logout` — mọi route HR khác redirect về `hr.password.change`.
+- [ ] `hr.staff.reset-password` (Admin reset mật khẩu Staff) đặt lại `password_changed_at = null`
+      — Staff đó bắt buộc đổi mật khẩu lại ở lần đăng nhập kế tiếp.
+- [ ] Staff đang có session hợp lệ, sau đó bị Admin khóa (`status=locked`) → request HR kế
+      tiếp bị `EnsureUserIsActive` logout/invalidate session; không tiếp tục thao tác bằng session cũ.
+- [ ] `company_contacts` không `is_public=true` (hoặc `is_public=true` nhưng chưa được chọn làm
+      `jobs.company_contact_id`) không xuất hiện ở bất kỳ response/view public nào (trang chi
+      tiết Job, JSON-LD JobPosting, sitemap).
 
 ## 6. Database
 
@@ -358,6 +451,17 @@ schema):
       cột `applications.assigned_to`, `applications.referral_code`, `candidates.user_id` trong
       schema Phase 1; `users.role` chỉ nhận `staff`/`admin`.
 - [ ] `application_status_histories.actor_type` chỉ nhận `user`/`system` (không có `import`).
+- [ ] `php artisan migrate:fresh` chạy đúng thứ tự 28 bảng business theo Migration order
+      (`docs/DATABASE-DICTIONARY.md`) không vi phạm foreign key (không cần tắt kiểm tra FK tạm
+      thời để chạy migration).
+- [ ] `created_at`/`updated_at` của mọi bảng do Eloquent ghi (không có `DEFAULT CURRENT_TIMESTAMP`
+      ở tầng schema DB, trừ trường hợp có ADR riêng — ADR-066).
+- [ ] Nội dung PII trong `application_notes.content`, `application_contact_attempts.note`,
+      `application_appointments.note`/`outcome` **không** bị tự động redact/xóa khi Candidate
+      liên quan anonymize (đúng theo chính sách ADR-071 — chỉ `submission_snapshot`/
+      `candidates`/`candidate_contacts` bị mask).
+- [ ] Danh sách 28 bảng business (mục `## 9.x`) trong `docs/DATABASE-DICTIONARY.md` khớp danh
+      sách entity trong `docs/ERD.md` (không thiếu/thừa bảng nào ở tài liệu nào).
 
 ## Điều kiện chạy test
 

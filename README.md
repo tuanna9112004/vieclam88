@@ -1,36 +1,27 @@
 # vieclam88
 
-Hệ thống tuyển dụng cho công ty cung ứng lao động tại các khu công nghiệp miền Bắc:
-website công khai và khu vực HR `/hr`, dùng chung Laravel monolith và MariaDB.
+Hệ thống tuyển dụng cho công ty cung ứng lao động tại các khu công nghiệp miền Bắc: website public và HR `/hr`, dùng chung Laravel monolith và MariaDB.
 
 ## Trạng thái
 
-Đang hoàn thiện đặc tả và cấu hình Claude Code; **chưa có source Laravel**.
-Xem `docs/PROJECT-STATUS.md`.
+Phase 1 Plan/Database Baseline đã khóa về nội dung; chưa khởi tạo source Laravel. Xem `docs/PROJECT-STATUS.md`.
 
-## Bắt đầu nhanh với Claude Code
+## Làm việc với Claude Code
 
-1. Mở Claude Code tại root repository.
-2. Đọc `CLAUDE.md`; Claude sẽ tự nạp rule phù hợp theo file đang làm.
-3. Dùng một trong các workflow:
-   - `/implement <kết quả cần đạt>`
-   - `/db-task <thay đổi database>`
-   - `/review-changes`
-   - `/handoff`
-4. Kiểm tra cấu hình:
+1. Mở Claude Code tại root; global rules nằm ở `CLAUDE.md`.
+2. Bắt đầu từ `docs/INDEX.md` và `docs/CONTEXT-MAP.md`; rule trong `.claude/rules/` tự nạp theo path.
+3. Điểm vào mặc định: `/vibe-task <mục nhỏ>`; xem toàn bộ tại `docs/CLAUDE-SKILLS.md`.
+4. Kiểm tra cấu hình/tài liệu:
 
 ```bash
+python scripts/check-claude-skills.py
 python scripts/check-claude-config.py
 ```
 
-## Tài liệu
+## Nguồn chính
 
-- Điều hướng context: `docs/CONTEXT-MAP.md`.
-- Trạng thái: `docs/PROJECT-STATUS.md`.
-- Schema: `docs/DATABASE-DICTIONARY.md`, `docs/ERD.md`.
-- Route: `docs/ROUTE-MAP.md`.
-- Nghiệm thu: `docs/ACCEPTANCE-CRITERIA.md`.
-- Quyết định: `docs/DECISIONS.md`.
-- Lộ trình: `ROADMAP.md`.
-
-Hướng dẫn cài đặt thực tế sẽ được bổ sung sau khi Laravel project được khởi tạo và các lệnh đã được kiểm chứng.
+- Scope: `docs/PHASE-1-SCOPE.md`; backlog: `docs/PHASE-2-BACKLOG.md`.
+- Flow: `docs/CORE-FLOWS.md`; schema: `docs/DATABASE-DICTIONARY.md`, `docs/ERD.md`.
+- Route/test contract: `docs/ROUTE-MAP.md`, `docs/ACCEPTANCE-CRITERIA.md`.
+- ADR: `docs/decisions/INDEX.md`; roadmap: `ROADMAP.md`.
+- UI: `UI-REFERENCE.md`, `docs/ui-reference/phase-1/`.

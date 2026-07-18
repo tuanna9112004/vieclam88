@@ -1,7 +1,9 @@
 # Database Dictionary — vieclam88 (Phase 1)
 
-Mô tả đầy đủ 27 bảng Phase 1. Xem quan hệ tổng quan ở `docs/ERD.md`, nguyên tắc thiết kế ở
-`.claude/rules/data-model.md`, quyết định kiến trúc ở `docs/DECISIONS.md`, và 6 luồng nghiệp vụ
+Mô tả đầy đủ 28 bảng business Phase 1 (27 + `candidate_duplicate_reviews`, ADR-062 — xem mục
+9.28). Hạ tầng Laravel (session/cache/queue) tách riêng, xem mục "Hạ tầng Laravel Phase 1" cuối
+file (ADR-066) — không tính vào 28 bảng business. Xem quan hệ tổng quan ở `docs/ERD.md`, nguyên tắc thiết kế ở
+`.claude/rules/database-schema.md`, quyết định kiến trúc ở `docs/decisions/INDEX.md`, và 6 luồng nghiệp vụ
 mà các bảng này phải hỗ trợ ở `docs/CORE-FLOWS.md`. Database: **MariaDB 11.4 LTS** (ADR-039) —
 mọi tính năng dùng trong file này (generated column, unique index trên generated column, CHECK
 constraint, recursive CTE, JSON, row locking) đều được hỗ trợ đầy đủ từ bản này.
@@ -19,9 +21,17 @@ migration Phase 1; thêm bằng migration riêng khi Phase 2 thực sự triển
 - `created_at`/`updated_at`: `timestamp nullable` (chuẩn Laravel), trừ bảng lịch sử
   (`*_histories`, `*_attempts`, `job_verifications`, `export_logs`) chỉ có `created_at`,
   không có `updated_at` — vì không được sửa sau khi tạo.
+- **Quy ước timestamp (chính thức, ADR-066):** giá trị **"now"** ở cột "Default" trong các bảng
+  cột dưới đây là **quy ước diễn đạt** ("cột này luôn có giá trị ngay sau khi tạo bản ghi") —
+  **không** phải chỉ thị dùng `DEFAULT CURRENT_TIMESTAMP` ở tầng DB. `created_at`/`updated_at`
+  luôn do **Eloquent ghi** qua `$table->timestamps()` (migration helper chuẩn Laravel); không
+  khai `->useCurrent()`/`DEFAULT CURRENT_TIMESTAMP` thủ công ở bất kỳ migration nào trừ khi có
+  ADR riêng. Timestamp nghiệp vụ (`published_at`, `verified_at`, `contacted_at`, `started_at`,
+  `applications.created_at` đóng vai trò mốc "đã nộp"...) có ngữ nghĩa riêng biệt theo từng bảng,
+  không dùng thay cho `created_at` chung.
 - `deleted_at`: `timestamp nullable` (Laravel `SoftDeletes`), chỉ khai báo ở bảng có soft
   delete (xem "Chính sách xóa" cuối file).
-- Tiền VND luôn `bigint unsigned`, không dùng `FLOAT`/`DOUBLE` (`.claude/rules/data-model.md`).
+- Tiền VND luôn `bigint unsigned`, không dùng `FLOAT`/`DOUBLE` (`.claude/rules/database-schema.md`).
 - **Enum Strategy (ADR-055):** `jobs.status` và `applications.stage` (state machine trung tâm,
   transition matrix đã chốt chặt — `docs/CORE-FLOWS.md` mục 1.2, 5.1) dùng DB `enum()`. 5 cột
   còn "đề xuất" trước đây (`company_contacts.status`, `jobs.employment_type`,
@@ -51,7 +61,17 @@ migration Phase 1; thêm bằng migration riêng khi Phase 2 thực sự triển
 | Token thuộc đúng `job_id` khi submit form | — | Form Request đối chiếu token trong session với `job_id` đang submit | `docs/CORE-FLOWS.md` mục 3 |
 | Truy vấn "merged family" (candidate đích + toàn bộ candidate nguồn nhiều tầng) | `WITH RECURSIVE` (MariaDB 11.4) | Service dùng CTE đệ quy theo `merged_into_candidate_id` | `docs/CORE-FLOWS.md` mục 6.3 |
 | Location đủ rõ trước khi publish (`administrative_unit_id` hoặc `address_detail` khác null) | — (2 cột đều nullable ở DB — Quick Create, ADR-045) | `ChangeJobStatusAction` kiểm tra khi `to_status=published` | `docs/CORE-FLOWS.md` mục 0.3, 1.2 |
-| Đã xác minh còn tuyển (`job_verifications.result=still_open`) trước lần publish đầu, trừ Admin override có lý do | — | `ChangeJobStatusAction` kiểm tra khi `to_status=published`; Admin override ghi `job_status_histories.reason` | `docs/CORE-FLOWS.md` mục 1.2, 1.3, ADR-047 |
+| Bản ghi `job_verifications` **mới nhất** của Job phải `result=still_open` (không phải "từng có" trong lịch sử), trừ Admin override có lý do | — | `ChangeJobStatusAction` kiểm tra khi `to_status=published`; Admin override ghi `job_status_histories.reason` | `docs/CORE-FLOWS.md` mục 1.2, 1.3, ADR-058, ADR-060 |
+| Job Status × Verification Result Matrix (draft không nhận `paused`/`closed`; `closed` không nhận verification mới) | — | `JobVerificationController@store`/`ChangeJobStatusAction` | `docs/CORE-FLOWS.md` mục 1.3.1, ADR-059 |
+| Tối đa 1 `candidate_contacts.is_primary=true`/type/candidate | `UNIQUE` trên cột generated `primary_flag_key` (mục `candidate_contacts`) | Action đổi primary có `lockForUpdate` | ADR-064 |
+| Không có 2 đơn vị hành chính cấp root (`parent_id=null`) cùng `slug` | `UNIQUE` trên cột generated `root_slug_key` (mục `administrative_units`) | — | ADR-065 |
+| Không tạo 2 `candidate_duplicate_reviews` cùng cặp candidate + lý do đang `pending` | `UNIQUE` trên cột generated `pending_pair_key` (mục `candidate_duplicate_reviews`) | — | ADR-062 |
+| 2 request khác `submission_token` nhưng cùng `phone_normalized` không tạo 2 Candidate | — (named lock `GET_LOCK` ngoài phạm vi DB constraint) | `SubmitApplicationAction` khóa theo `phone_normalized` trước khi query/tạo Candidate | `docs/CORE-FLOWS.md` mục 3.1, ADR-061 |
+| `jobs.job_description`/`requirements`/`benefits` phải có nội dung thực trước publish | — (cả 3 cột nullable ở DB — Job Draft Contract, ADR-060) | `ChangeJobStatusAction` kiểm tra khi `to_status=published` | `docs/CORE-FLOWS.md` mục 1.0, 1.2, ADR-060 |
+| `PUB-SALARY`: `negotiable` loại trừ lương số; mode còn lại cần lương số dương hoặc mô tả thực | CHECK cục bộ cho min/max khi có thể; quy tắc chéo nhiều cột ở Service | Form Request chuẩn hóa cột sai mode về NULL; `ChangeJobStatusAction` kiểm tra | `docs/CORE-FLOWS.md` mục 1.2, ADR-074 |
+| `jobs.company_contact_id` phải thuộc đúng Company, active, chưa xóa | FK chỉ bảo đảm contact tồn tại | Job Request/Service kiểm tra ownership/status; public thêm `is_public=true` | ADR-074 |
+| Cùng Job trên merged family không tạo Application mới | Không biểu diễn được bằng unique đơn vì family là quan hệ đệ quy | `CreateApplicationAction` query family dưới named lock, trả Application canonical | ADR-076 |
+| Job hết hạn (`published`+`expires_at<now()`) không nhận Application | — | `SubmitApplicationAction` kiểm tra "Job còn active" | `docs/CORE-FLOWS.md` mục 2.2, 3, ADR-072 |
 | Staff mở Candidate chỉ khi merged family có Application thuộc cơ sở mình | — | Policy `hr.candidates.show` — 403 nếu không có | `docs/CORE-FLOWS.md` mục 6.4 |
 | `company_locations.administrative_unit_id` phải khớp `industrial_parks.administrative_unit_id` khi có `industrial_park_id` | — | Form Request/Service `hr.company-locations.store`/`update` | `docs/CORE-FLOWS.md` mục 0.3, ADR-052 |
 | Job Branch Transfer chỉ khi `jobs.status` ∈ {`draft`,`paused`}, chưa `deleted_at` | — | `ChangeJobBranchAction` | `docs/CORE-FLOWS.md` mục 1.1, ADR-054 |
@@ -97,6 +117,7 @@ Phase 1 luôn là guest.
 | id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
 | public_id | string(26) | — | không | — | — | ✓ | — | — | ULID public-facing, không lộ ID tuần tự |
 | full_name | string(150) | — | không | — | — | — | — | — | |
+| full_name_normalized | string(150) | — | không | — | ✓ | — | — | — | **Mới (ADR-063).** Sinh tự động ở tầng Model từ `full_name` (không nhận từ client) theo thuật toán chuẩn hóa `docs/CORE-FLOWS.md` mục 6.2 — giữ dấu tiếng Việt, không fuzzy. Dùng so khớp Duplicate Candidate Contract |
 | date_of_birth | date | — | có | null | — | — | — | — | |
 | gender | enum(male,female,other) | — | có | null | — | — | — | — | |
 | current_administrative_unit_id | bigint | ✓ | có | null | ✓ | — | administrative_units.id | RESTRICT | Tỉnh/xã hiện tại |
@@ -116,10 +137,14 @@ Phase 1 luôn là guest.
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 | deleted_at | timestamp | — | có | null | — | — | — | — | Soft delete |
 
-**Chính sách xóa:** soft delete, merge, hoặc anonymize. Candidate `status = merged` không được
-dùng để tạo application mới, không được sửa, không được làm nguồn/đích của merge khác. Candidate
-`status = anonymized` không được làm nguồn/đích của merge. Không hard delete candidate đang có
-application. Truy vấn "merged family" và quy tắc đầy đủ: `docs/CORE-FLOWS.md` mục 6.3.
+**Chính sách xóa (ADR-068):** soft delete, merge, hoặc anonymize. **Không có route HTTP nào ở
+Phase 1 tạo `deleted_at` cho candidates** — cột này chỉ dùng cho can thiệp Admin/DB thủ công
+ngoài UI (ví dụ dữ liệu rác/spam nghiêm trọng), giữ lại vì Merge/Reopen contract đã kiểm tra điều
+kiện "candidate chưa `deleted_at`" như lớp phòng vệ trước can thiệp đó. Candidate `status =
+merged` không được dùng để tạo application mới, không được sửa, không được làm nguồn/đích của
+merge khác. Candidate `status = anonymized` không được làm nguồn/đích của merge. Không hard
+delete candidate đang có application. Truy vấn "merged family" và quy tắc đầy đủ:
+`docs/CORE-FLOWS.md` mục 6.3.
 
 ---
 
@@ -132,7 +157,8 @@ application. Truy vấn "merged family" và quy tắc đầy đủ: `docs/CORE-F
 | type | enum(phone,email,zalo,other) | — | không | — | ✓ | — | — | — | |
 | value | string(191) | — | không | — | — | — | — | — | Giá trị gốc người dùng nhập |
 | normalized_value | string(191) | — | không | — | ✓ | — | — | — | Dùng để tìm kiếm/phát hiện trùng |
-| is_primary | boolean | — | không | false | ✓ | — | — | — | Chỉ 1 primary/type/candidate (enforce ở tầng ứng dụng) |
+| is_primary | boolean | — | không | false | ✓ | — | — | — | Chỉ 1 primary/type/candidate — khóa bằng `primary_flag_key` bên dưới (ADR-064) |
+| primary_flag_key | varchar(70), generated | — | có (null khi không primary) | null (generated) | ✓ | ✓ | — | — | **Mới (ADR-064).** `IF(is_primary, CONCAT(candidate_id,'-',type), NULL)` STORED. `UNIQUE` chặn 2 primary cùng `(candidate_id, type)` — cùng pattern `job_locations.primary_flag_job_id` |
 | is_verified | boolean | — | không | false | — | — | — | — | |
 | verified_at | timestamp | — | có | null | — | — | — | — | |
 | is_active | boolean | — | không | true | ✓ | — | — | — | |
@@ -140,7 +166,9 @@ application. Truy vấn "merged family" và quy tắc đầy đủ: `docs/CORE-F
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 
 Index bắt buộc theo yêu cầu gốc: `(type, normalized_value)`, `(candidate_id, is_primary)`,
-`(candidate_id, is_active)`, `UNIQUE(candidate_id, type, normalized_value)`.
+`(candidate_id, is_active)`, `UNIQUE(candidate_id, type, normalized_value)`. Đổi primary contact
+đi qua Action có `lockForUpdate` trên các bản ghi cùng `(candidate_id, type)` trong 1 transaction
+(ADR-064) — chống 2 request đồng thời đổi primary cho cùng candidate+type.
 
 **Quy tắc:** không tự động gộp candidate chỉ vì trùng contact — service phát hiện trùng phải
 kiểm tra thêm họ tên (khớp chính xác sau chuẩn hóa) và ngày sinh (`docs/CORE-FLOWS.md` mục
@@ -157,6 +185,7 @@ kiểm tra thêm họ tên (khớp chính xác sau chuẩn hóa) và ngày sinh 
 | official_code | string(20) | — | có | null | — | ✓ (khi có giá trị) | — | — | Mã đơn vị hành chính nhà nước |
 | name | string(150) | — | không | — | — | — | — | — | |
 | slug | string(170) | — | không | — | ✓ | ✓ (composite: parent_id+slug) | — | — | |
+| root_slug_key | varchar(170), generated | — | có (null khi không phải root) | null (generated) | ✓ | ✓ | — | — | **Mới (ADR-065).** `IF(parent_id IS NULL, slug, NULL)` STORED. `UNIQUE` chặn 2 đơn vị **cấp root** trùng `slug` — `UNIQUE(parent_id, slug)` không tự chặn được vì MariaDB coi mỗi `NULL` (mọi `parent_id` cấp root) là giá trị riêng biệt |
 | type | enum(province,city,commune,ward,special_zone,legacy_district) | — | không | — | ✓ | — | — | — | |
 | is_active | boolean | — | không | true | ✓ | — | — | — | |
 | valid_from | date | — | có | null | — | — | — | — | |
@@ -164,8 +193,15 @@ kiểm tra thêm họ tên (khớp chính xác sau chuẩn hóa) và ngày sinh 
 | created_at | timestamp | — | có | now | — | — | — | — | |
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 
-**Chính sách xóa:** không hard delete. Đơn vị cũ → `is_active = false`, giữ lại phục vụ dữ
-liệu lịch sử.
+**Chính sách xóa:** không hard delete. Đơn vị cũ → `is_active = false`, `valid_to` = ngày hết
+hiệu lực, giữ lại phục vụ dữ liệu lịch sử.
+
+**Provenance contract (ADR-070):** import/upsert dữ liệu thật dựa trên `official_code` khi có
+giá trị, `root_slug_key`/`(parent_id, slug)` khi chưa có mã chính thức. Đơn vị `is_active=false`
+**không** được chọn cho dữ liệu mới (`company_locations`/`branches`/
+`candidates.current_administrative_unit_id`) — kiểm tra ở Form Request. **Nguồn dữ liệu hành
+chính chính thức (văn bản/API nào) chưa xác nhận — [CẦN CHỐT VỚI CÔNG TY]** — go-live blocker,
+không migration blocker (schema đã đủ: `official_code`/`valid_from`/`valid_to`/`is_active`).
 
 ---
 
@@ -227,7 +263,7 @@ ADR-015).
 **Quick Create (ADR-045, `docs/CORE-FLOWS.md` mục 0.3):** chỉ `name` bắt buộc lúc tạo —
 `administrative_unit_id` và `address_detail` **nullable**, bổ sung sau. Bắt buộc có ít nhất một
 trong hai (khác null) trước khi location đó được dùng làm primary location của một Job publish
-(`docs/CORE-FLOWS.md` mục 1.2, điều kiện 10) — không phải điều kiện tạo location.
+(`docs/CORE-FLOWS.md` mục 1.2, `PUB-LOCATION-CLEAR`) — không phải điều kiện tạo location.
 
 **Validation tỉnh/KCN (ADR-052, `docs/CORE-FLOWS.md` mục 0.3):** khi `industrial_park_id` khác
 `null`, `administrative_unit_id` bắt buộc bằng đúng `industrial_parks.administrative_unit_id`
@@ -243,11 +279,15 @@ của KCN đó — kiểm tra ở Service/Form Request, không phải DB constra
 | address_detail | string(255) | — | **có** | null | — | — | — | — | Nullable (ADR-045) — xem điều kiện publish |
 | latitude | decimal(10,7) | — | có | null | — | — | — | — | |
 | longitude | decimal(10,7) | — | có | null | — | — | — | — | |
-| is_primary | boolean | — | không | false | — | — | — | — | |
 | status | enum(active,inactive) | — | không | active | ✓ | — | — | — | |
 | created_at | timestamp | — | có | now | — | — | — | — | |
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 | deleted_at | timestamp | — | có | null | — | — | — | — | Soft delete |
+
+**`is_primary` đã bị loại khỏi cột này (ADR-064):** rà soát xác nhận không có use case Phase 1
+nào đọc/ghi "primary location của Company" — điều kiện publish/tìm kiếm/hiển thị đều dùng
+`job_locations.is_primary` (primary **cấp Job**, khác khái niệm). Giữ lại chỉ gây nhầm lẫn giữa 2
+khái niệm "primary" ở 2 tầng khác nhau — không tạo cột dự phòng.
 
 **Chính sách xóa:** soft delete.
 
@@ -265,7 +305,7 @@ của KCN đó — kiểm tra ở Service/Form Request, không phải DB constra
 | phone_normalized | string(20) | — | có | null | ✓ | — | — | — | |
 | zalo | string(20) | — | có | null | — | — | — | — | |
 | email | string(191) | — | có | null | — | — | — | — | |
-| is_primary | boolean | — | không | false | — | — | — | — | |
+| is_primary | boolean | — | không | false | — | — | — | — | Tối đa 1 primary `active`/company (ADR-064) — enforce ở tầng Service (`store`/`update`), không thêm DB generated-unique (CRUD nội bộ, ít đồng thời hơn form public) |
 | is_public | boolean | — | không | false | — | — | — | — | Chỉ hiển thị công khai khi `true` **và** được chọn làm `jobs.company_contact_id` — không phải nguồn CTA mặc định (`docs/CORE-FLOWS.md` mục 1) |
 | status | varchar(20) **[varchar+enum]** | — | không | active | — | — | — | — | PHP backed enum: `active`, `inactive` (ADR-055) |
 | created_at | timestamp | — | có | now | — | — | — | — | |
@@ -283,8 +323,8 @@ của KCN đó — kiểm tra ở Service/Form Request, không phải DB constra
 | id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
 | public_id | string(26) | — | không | — | — | ✓ | — | — | |
 | company_id | bigint | ✓ | không | — | ✓ | — | companies.id | RESTRICT | |
-| company_contact_id | bigint | ✓ | có | null | — | — | company_contacts.id | SET NULL | |
-| owner_branch_id | bigint | ✓ | **không** | — | ✓ | — | branches.id | RESTRICT | **NOT NULL ngay từ lúc tạo Job (kể cả `draft`)** — sửa lại từ "nullable ở draft" (ADR-046). Staff: tự gán = `users.branch_id`. Admin: bắt buộc chọn tường minh khi tạo. Chỉ set lúc tạo Job hoặc đổi qua `ChangeJobBranchAction` (Job không được `published`) — không sửa từ `hr.jobs.update`. Mỗi lần gán/đổi ghi 1 dòng `job_branch_histories` (mục 9.27, `docs/CORE-FLOWS.md` mục 1.0, 1.1) |
+| company_contact_id | bigint | ✓ | có | null | — | — | company_contacts.id | SET NULL | Nếu có: contact phải thuộc đúng `jobs.company_id`, `status=active`, chưa soft-delete; chỉ public khi `is_public=true` (ADR-074) |
+| owner_branch_id | bigint | ✓ | **không** | — | ✓ | — | branches.id | RESTRICT | **NOT NULL ngay từ lúc tạo Job (kể cả `draft`)** — sửa lại từ "nullable ở draft" (ADR-046). Staff: tự gán = `users.branch_id`. Admin: bắt buộc chọn tường minh khi tạo. Chỉ set lúc tạo Job hoặc đổi qua `ChangeJobBranchAction` khi `status ∈ {draft, paused}` và chưa soft-delete — không được đổi khi `published` hoặc `closed`; không sửa từ `hr.jobs.update`. Mỗi lần gán/đổi ghi 1 dòng `job_branch_histories` (mục 9.27, `docs/CORE-FLOWS.md` mục 1.0, 1.1) |
 | code | string(30) | — | không | — | — | ✓ | — | — | Mã nội bộ, HR nhập tay hoặc tự sinh |
 | title | string(200) | — | không | — | — | — | — | — | |
 | slug | string(220) | — | không | — | ✓ | ✓ | — | — | |
@@ -301,9 +341,9 @@ của KCN đó — kiểm tra ở Service/Form Request, không phải DB constra
 | salary_period | enum(month,day,hour,piece,negotiable) | — | không | month | — | — | — | — | |
 | currency | string(3) | — | không | VND | — | — | — | — | |
 | salary_description | text | — | có | null | — | — | — | — | |
-| job_description | text | — | không | — | — | — | — | — | |
-| requirements | text | — | có | null | — | — | — | — | |
-| benefits | text | — | có | null | — | — | — | — | |
+| job_description | text | — | **có** | null | — | — | — | — | Nullable (ADR-060 — sửa từ NOT NULL, mâu thuẫn với Job Draft Contract mục 1.0/ADR-046). Bắt buộc có nội dung thực trước publish (mục 1.2, điều kiện nội dung Job) |
+| requirements | text | — | có | null | — | — | — | — | Bắt buộc có nội dung thực trước publish (điều kiện 12) |
+| benefits | text | — | có | null | — | — | — | — | Bắt buộc có nội dung thực trước publish (điều kiện 13, ADR-060) |
 | application_documents | text | — | có | null | — | — | — | — | |
 | has_shuttle_bus | boolean | — | không | false | — | — | — | — | |
 | shuttle_bus_details | text | — | có | null | — | — | — | — | |
@@ -318,7 +358,7 @@ của KCN đó — kiểm tra ở Service/Form Request, không phải DB constra
 | closed_at | timestamp | — | có | null | — | — | — | — | |
 | close_reason | varchar(30) **[varchar+enum]** | — | có | null | — | — | — | — | PHP backed enum: `recruitment_filled`, `recruitment_stopped`, `expired`, `company_request`, `duplicate`, `other` (ADR-055) |
 | last_checked_at | timestamp | — | có | null | — | — | — | — | **Mới (ADR-048).** Cập nhật ở **mọi** lần tạo `job_verifications`, bất kể `result`. Khác `last_verified_at` — xem `docs/CORE-FLOWS.md` mục 1.3 |
-| last_verified_at | timestamp | — | có | null | — | — | — | — | Chỉ cập nhật khi `job_verifications.result = still_open` (ADR-048) — là mốc scheduler cảnh báo dùng để tính, và là điều kiện publish (mục 1.2, điều kiện 11) |
+| last_verified_at | timestamp | — | có | null | — | — | — | — | Chỉ cập nhật khi `job_verifications.result = still_open` (ADR-048) — là mốc scheduler cảnh báo dùng để tính, và là mốc freshness hỗ trợ `PUB-VERIFY` (mục 1.2) |
 | created_by | bigint | ✓ | không | — | — | — | users.id | RESTRICT | |
 | updated_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | |
 | deleted_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | |
@@ -395,9 +435,14 @@ thế cho nhau).
 | verified_at | timestamp | — | không | now | — | — | — | — | |
 | created_at | timestamp | — | có | now | — | — | — | — | Append-only, không có updated_at |
 
-**Quy tắc transaction:** tạo verification → cập nhật `jobs.last_verified_at` → cập nhật
-`jobs.status` nếu cần (qua `ChangeJobStatusAction`, ghi thêm `job_status_histories`), trong 1
-transaction.
+**Quy tắc transaction (ADR-048, ADR-058, ADR-059 — không phải "mọi lần đều cập nhật `last_verified_at`"):**
+tạo verification → **luôn** cập nhật `jobs.last_checked_at = now()`, bất kể `result` → **chỉ khi
+`result = still_open`** cập nhật thêm `jobs.last_verified_at = now()` → áp dụng Ma trận Job
+Status × Verification Result (`docs/CORE-FLOWS.md` mục 1.3.1) để quyết định có đổi `jobs.status`
+hay không (qua `ChangeJobStatusAction`, ghi thêm `job_status_histories` nếu status đổi) — tất cả
+trong 1 transaction. Publish/mở lại chỉ dựa vào **bản ghi mới nhất**, không phải "từng có
+`still_open` trong lịch sử" (ADR-058). Job `draft` từ chối `result ∈ {paused, closed}`; Job
+`closed` từ chối mọi verification mới qua route Staff/Admin thông thường (ADR-059).
 
 ---
 
@@ -440,9 +485,9 @@ nguồn — không kéo theo module cộng tác viên (vẫn ngoài Phase 1).
 | reopened_at | timestamp | — | có | null | — | — | — | — | Lần mở lại gần nhất |
 | reopened_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | Lần mở lại gần nhất |
 | submission_token | string(64) | — | **không** | — | ✓ | ✓ | — | — | **NOT NULL, UNIQUE** — idempotency chống double-submit (`docs/CORE-FLOWS.md` mục 3). Không dùng bảng riêng — xem ADR-035 |
-| needs_duplicate_review | boolean | — | không | false | ✓ | — | — | — | Đặt `true` ở trường hợp 2/3/4 của Duplicate Candidate Contract (`docs/CORE-FLOWS.md` mục 6.2, ADR-040) |
-| duplicate_reviewed_at | timestamp | — | có | null | — | — | — | — | |
-| duplicate_reviewed_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | |
+| needs_duplicate_review | boolean | — | không | false | ✓ | — | — | — | Summary: `true` khi còn ít nhất 1 `candidate_duplicate_reviews.status=pending`; bảng review là nguồn sự thật (ADR-075) |
+| duplicate_reviewed_at | timestamp | — | có | null | — | — | — | — | Chỉ ghi khi review pending cuối cùng của Application được resolve; reset null nếu phát sinh review pending mới |
+| duplicate_reviewed_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | Admin resolve review pending cuối cùng; không phải nguồn sự thật chi tiết |
 | last_reapplied_at | timestamp | — | có | null | — | — | — | — | Cập nhật khi candidate nộp lại form cho cùng job (case C, không tạo record mới, không tự mở lại) |
 | submitted_full_name | string(150) | — | không | — | — | — | — | — | PII. NOT NULL giữ nguyên khi anonymize — **mask** bằng placeholder cố định, không set NULL (mục 7.2.1, ADR-056) |
 | submitted_phone | string(20) | — | không | — | — | — | — | — | PII. NOT NULL giữ nguyên khi anonymize — **mask** bằng placeholder cố định (mục 7.2.1, ADR-056) |
@@ -596,7 +641,8 @@ sở).
 
 **Seed bắt buộc cho Job Verification Scheduler** (`docs/CORE-FLOWS.md` mục 1.3):
 `job_verification_warning_days` = `7`, `job_auto_pause_days` = `14`,
-`job_auto_pause_enabled` = `false`.
+`job_auto_pause_enabled` = `false`, `job_verification_valid_days` = `null` (tắt kiểm tra độ mới —
+ADR-058, giá trị cụ thể **[CẦN CHỐT VỚI CÔNG TY]**, không migration blocker).
 
 ---
 
@@ -727,21 +773,51 @@ bản ghi ở đây.
 
 ---
 
+## 9.28. `candidate_duplicate_reviews`
+
+**Mới (ADR-062).** Bảng thứ 28 — dữ liệu đủ để Admin thực sự xử lý nghi ngờ trùng thay vì chỉ có
+cờ `applications.needs_duplicate_review`. Xem `docs/CORE-FLOWS.md` mục 6.2.2.
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| application_id | bigint | ✓ | không | — | ✓ | — | applications.id | RESTRICT | Application tạo ra review này; có thể có nhiều review/suspected root (ADR-075) |
+| candidate_id | bigint | ✓ | không | — | ✓ | — | candidates.id | RESTRICT | Candidate mới của Application cần review |
+| suspected_candidate_id | bigint | ✓ | không | — | ✓ | — | candidates.id | RESTRICT | Suspected root đã tồn tại cùng `phone_normalized` |
+| reason_code | varchar(30) **[varchar+enum]** | — | không | — | — | — | — | — | PHP backed enum: `same_phone_missing_dob`, `same_phone_different_name`, `same_identity_conflicting_dob`, `multiple_exact_matches`, `other` |
+| status | varchar(20) **[varchar+enum]** | — | không | pending | ✓ | — | — | — | PHP backed enum: `pending`, `confirmed_same`, `confirmed_distinct`, `dismissed` |
+| pending_pair_key | varchar(80), generated | — | có (null khi không `pending`) | null (generated) | ✓ | ✓ | — | — | `IF(status='pending', CONCAT(candidate_id,'-',suspected_candidate_id,'-',reason_code), NULL)` STORED — chặn 2 review `pending` trùng cặp + lý do |
+| reviewed_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | |
+| reviewed_at | timestamp | — | có | null | — | — | — | — | |
+| review_note | string(255) | — | có | null | — | — | — | — | |
+| created_at | timestamp | — | có | now | — | — | — | — | |
+| updated_at | timestamp | — | có | now | — | — | — | — | Không append-only thuần — `status`/`reviewed_by`/`reviewed_at`/`review_note` cập nhật sau khi Admin xử lý |
+
+**Quy tắc:** tạo một bản ghi cho **mỗi suspected root** khi không có đúng một exact root; một Application có thể có nhiều review. Trường hợp nhiều exact root dùng `multiple_exact_matches` cho từng root. Tạo cùng transaction với Candidate/Application. **Không tự động merge** —
+`confirmed_same` chỉ đánh dấu kết luận của Admin, merge vẫn là hành động riêng
+(`hr.candidates.merge`). Chỉ **admin** truy cập.
+
+**Chính sách xóa:** không xóa — cập nhật `status` khi Admin xử lý xong (không phải append-only
+thuần, xem ghi chú `updated_at` ở trên).
+
+---
+
 ## Chính sách xóa — tổng hợp
 
 | Bảng | Chính sách |
 |---|---|
 | users | khóa bằng `status` |
-| candidates | soft delete, merge, hoặc anonymize (`docs/CORE-FLOWS.md` mục 7, 6.3) |
-| companies | soft delete |
-| company_locations | soft delete |
-| company_contacts | soft delete |
-| branches | `status=inactive` trước, soft delete khi cần; không hard delete nếu đã có `users`/`jobs`/`applications` |
-| jobs | đóng trước (`status=closed`), soft delete khi cần; không hard delete nếu đã có application |
+| candidates | soft delete, merge, hoặc anonymize (`docs/CORE-FLOWS.md` mục 7, 6.3); **không có route HTTP soft-delete/restore ở Phase 1** — `deleted_at` chỉ dùng cho can thiệp Admin/DB thủ công (ADR-068) |
+| companies | soft delete, có route restore (`hr.companies.restore`) |
+| company_locations | soft delete, có route restore (ADR-053) |
+| company_contacts | soft delete, có route restore (ADR-053) |
+| branches | `status=inactive` trước, soft delete khi cần; có route restore (`hr.branches.restore`, mới — ADR-068); không hard delete nếu đã có `users`/`jobs`/`applications` |
+| jobs | đóng trước (`status=closed`), soft delete khi cần, có route restore (`hr.jobs.restore`); không hard delete nếu đã có application |
 | applications | không hard delete |
 | application_status_histories / application_contact_attempts / application_branch_histories / job_status_histories / job_branch_histories / job_verifications / export_logs | không xóa, không sửa (append-only) |
 | application_appointments | không xóa; `status`/`outcome` cập nhật được sau khi tạo, `scheduled_at` không sửa (đổi lịch = tạo bản ghi mới) |
-| application_notes | soft delete |
+| application_notes | soft delete qua `hr.applications.notes.destroy`; **không có route restore ở Phase 1** — xóa nhầm cần Admin can thiệp DB thủ công (ghi chú nội bộ, rủi ro thấp — ADR-068) |
+| candidate_duplicate_reviews | không xóa — cập nhật `status` khi Admin xử lý (mục 9.28, ADR-062) |
 | administrative_units / industrial_parks / work_shifts / recruitment_sources | `is_active = false`, không hard delete khi đã tham chiếu |
 | job_locations / job_work_shifts | có thể cascade delete (pivot) |
 
@@ -754,10 +830,53 @@ có thể xóa.
 **Dùng `SET NULL`** cho quan hệ "người thực hiện" khi cột đã nullable (`changed_by`,
 `updated_by`, `users.branch_id`, `application_branch_histories.from_branch_id`/
 `transferred_by`, `job_branch_histories.from_branch_id`, `application_appointments.completed_by`,
-`applications.duplicate_reviewed_by`/`reopened_by`, `candidates.merged_by`/`anonymized_by`...)
-— tài khoản hoặc cơ sở có thể bị khóa/ngừng hoạt động nhưng lịch sử vẫn phải còn nguyên. Cột
-"người thực hiện" bắt buộc (không nullable, vd `verified_by`, `exported_by`, `contacted_by`,
-`application_appointments.created_by`, `job_status_histories.changed_by`,
-`job_branch_histories.changed_by`) dùng `RESTRICT` vì `users` không bao giờ bị hard delete
-trong hệ thống này. `applications.owner_branch_id`, `application_branch_histories.to_branch_id`
-và `job_branch_histories.to_branch_id` không nullable nên dùng `RESTRICT`.
+`applications.duplicate_reviewed_by`/`reopened_by`, `candidates.merged_by`/`anonymized_by`,
+`candidate_duplicate_reviews.reviewed_by`...) — tài khoản hoặc cơ sở có thể bị khóa/ngừng hoạt
+động nhưng lịch sử vẫn phải còn nguyên. Cột "người thực hiện" bắt buộc (không nullable, vd
+`verified_by`, `exported_by`, `contacted_by`, `application_appointments.created_by`,
+`job_status_histories.changed_by`, `job_branch_histories.changed_by`) dùng `RESTRICT` vì `users`
+không bao giờ bị hard delete trong hệ thống này. `applications.owner_branch_id`,
+`application_branch_histories.to_branch_id` và `job_branch_histories.to_branch_id` không
+nullable nên dùng `RESTRICT`.
+
+---
+
+## Migration order chính thức (ADR-069)
+
+Business tables (28), theo thứ tự dependency:
+
+1. `administrative_units` 2. `branches` 3. `users` 4. `industrial_parks` 5. `work_shifts`
+6. `recruitment_sources` 7. `settings` 8. `companies` 9. `company_locations`
+10. `company_contacts` 11. `jobs` 12. `job_locations` 13. `job_work_shifts`
+14. `job_verifications` 15. `job_status_histories` 16. `job_branch_histories` 17. `candidates`
+18. `candidate_contacts` 19. `applications` 20. `candidate_duplicate_reviews`
+21. `application_status_histories` 22. `application_contact_attempts`
+23. `application_appointments` 24. `application_branch_histories` 25. `application_notes`
+26. `export_logs` 27. `pages` 28. `faqs`
+
+Ghi chú dependency không hiển nhiên: `branches` trước `users` (`users.branch_id` FK);
+`administrative_units` trước `branches`/`industrial_parks`/`candidates`/`company_locations`;
+`candidates` trước `candidate_contacts`/`applications`; `applications` trước
+`candidate_duplicate_reviews` (FK `application_id`) — bảng này cũng cần `candidates` đã tồn tại
+(2 FK `candidate_id`/`suspected_candidate_id`), nên đặt sau `applications` (thứ tự tạo bảng, không
+phải thứ tự ghi dữ liệu — dữ liệu review luôn ghi sau khi cả candidate lẫn application đã tồn
+tại). `job_verifications`/`job_status_histories`/`job_branch_histories` chỉ cần `jobs`+`users`,
+đặt trước `candidates` cũng hợp lệ nhưng giữ theo nhóm Job cho dễ đọc. `pages`/`faqs` không phụ
+thuộc bảng nghiệp vụ nào khác ngoài `users` — đặt cuối chỉ vì thuộc nhóm "Admin tools", không phải
+vì có dependency bắt buộc.
+
+Chia theo 7 nhóm triển khai (mỗi nhóm có migration + model + policy + request + action + test
+riêng trước khi sang nhóm kế): xem `ROADMAP.md` mục "Giai đoạn 1".
+
+## Hạ tầng Laravel Phase 1 (ADR-066)
+
+Tách biệt khỏi 28 business tables ở trên — **không tính chung** khi báo cáo số lượng bảng:
+
+- `SESSION_DRIVER=file`, `CACHE_STORE=file`, `QUEUE_CONNECTION=sync`.
+- **Không cần** `password_reset_tokens` (không có luồng "quên mật khẩu qua email" — Phase 1 dùng
+  Admin reset, `docs/ROUTE-MAP.md` mục "HR admin", ADR-067).
+- **Không cần** `jobs`/`job_batches`/`failed_jobs` (không có Job class bất đồng bộ nào ở Phase 1
+  — không gửi email, `docs/CORE-FLOWS.md` mục 1.3).
+- **Không cần** Laravel Task Scheduler/cron entry hay cache lock cho `withoutOverlapping()` —
+  cảnh báo Job Verification Scheduler là giá trị tính toán khi render, không phải cron job.
+- Với cấu hình trên, migration hạ tầng Phase 1 chỉ còn bảng `migrations` mặc định của Laravel.

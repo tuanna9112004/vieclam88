@@ -29,7 +29,7 @@ Giai đoạn 0.
 - [x] Quy tắc hiển thị Job `closed`/`paused` (ADR-043) — mục 2.1.
 - [x] Transfer Branch validation đầy đủ (Application) — mục 6.1.
 - [x] Candidate Merge visibility ("merged family", chống vòng lặp, merge nhiều tầng) — mục 6.3.
-- [x] Quyền theo cơ sở (Staff thuộc đúng cơ sở hoặc Admin) — mục 4, `.claude/rules/roles-business-rules.md`.
+- [x] Quyền theo cơ sở (Staff thuộc đúng cơ sở hoặc Admin) — mục 4, `docs/CORE-FLOWS.md`.
 - [x] Khóa phiên bản MariaDB 11.4 LTS (ADR-039).
 - [x] Sửa lỗi hướng quan hệ ERD (ADR-044).
 - [x] Company & Company Location Quick Create Contract; `company_locations.administrative_unit_id`/
@@ -52,15 +52,27 @@ Giai đoạn 0.
       retention (ADR-056).
 - [x] Phase 1 Plan Baseline v1.0 — freeze chính thức (ADR-057, `docs/PHASE-1-SCOPE.md`,
       `docs/PHASE-2-BACKLOG.md`).
+- [x] **DATABASE FINAL AUDIT & PLAN HARDENING** — sửa mâu thuẫn "còn/không còn migration
+      blocker"; Job Verification publish theo bản ghi mới nhất + Ma trận Status×Result (ADR-058,
+      ADR-059); Job Publish Predicate 22 điều kiện + Salary/Shift Predicate, `job_description`
+      NULLABLE (ADR-060); Submission Concurrency Contract (ADR-061); bảng
+      `candidate_duplicate_reviews` + merged-root resolution + `full_name_normalized` (ADR-062,
+      ADR-063); Primary field semantics, administrative root uniqueness, timestamp/hạ tầng
+      Laravel (ADR-064..066); Password-first-change + Route Map đầy đủ, soft delete/restore rà
+      soát toàn bộ (ADR-067, ADR-068); Migration order + nhóm triển khai, provenance hành chính,
+      PII free-text, Job hết hạn, ERD cardinality (ADR-069..073), Final Consistency Patch
+      (ADR-074..078). **Database Baseline v1.0: CONTENT FROZEN; chờ commit/tag.**
 - [ ] Cài PHP 8.4, kiểm tra Composer, Node LTS, MariaDB 11.4.
 
-**Điều kiện chuyển sang Giai đoạn 1:** sau ADR-055, **không còn migration blocker nào** trong
-`docs/CORE-FLOWS.md` mục 8 — chỉ còn môi trường code chưa cài đặt (dòng trên). Toàn bộ phần kỹ
-thuật (workflow cycle, reopen, transfer-branch, job branch, job draft/publish/verification
-contract, quick create, merge, duplicate contract, submission token, scheduler, MariaDB version,
-enum strategy, PII schema, bootstrap/seeder) đã chốt xong. Mục 8.1 (data retention, mask
-`submission_snapshot`, `job_auto_pause_enabled`) vẫn **không** là điều kiện ở đây — xem "Phân
-loại blocker" bên dưới (ADR-049).
+**Điều kiện chuyển sang Giai đoạn 1:** sau ADR-055 và vòng DATABASE FINAL AUDIT + Final Consistency Patch (ADR-058..078),
+**không còn migration blocker nào** — chỉ còn môi trường code chưa cài đặt (dòng trên). Toàn bộ
+phần kỹ thuật (workflow cycle, reopen, transfer-branch, job branch, job draft/publish/verification
+contract, quick create, merge, duplicate contract + duplicate review, submission token +
+concurrency, scheduler, MariaDB version, enum strategy, PII schema, bootstrap/seeder, primary
+field semantics, timestamp/hạ tầng, route map, soft delete/restore, migration order) đã chốt
+xong. Mục 8.1 (data retention, mask `submission_snapshot`, `job_verification_valid_days`,
+provenance hành chính, redact free-text, `job_auto_pause_enabled`) vẫn **không** là điều kiện ở
+đây — xem "Phân loại blocker" bên dưới (ADR-049, ADR-069).
 
 Chưa tạo mã nguồn trong giai đoạn này.
 
@@ -84,6 +96,11 @@ ADR-054).
 - Mức mask cụ thể cho `submission_snapshot` khi anonymize (mục 7.2) — ảnh hưởng nội dung Action
   anonymize ở Giai đoạn 3/4, không ảnh hưởng schema (`candidates.anonymized_at`/`anonymized_by`,
   `applications.submission_snapshot` JSON đã đủ cho mọi phương án).
+- Giá trị `job_verification_valid_days` (mục 1.3, ADR-058) — mặc định tắt, không ảnh hưởng schema.
+- Nguồn dữ liệu `administrative_units` chính thức (provenance, ADR-070) — không ảnh hưởng schema
+  (`official_code`/`valid_from`/`valid_to`/`is_active` đã đủ).
+- Có cần cơ chế redact/kiểm duyệt free-text mạnh hơn hay không (mục 7.3.1, ADR-071) — tùy chọn,
+  không ảnh hưởng schema.
 - Nội dung chính sách bảo mật/consent hiển thị qua `pages` (nội dung văn bản, không phải schema).
 - Backup production, monitoring cơ bản (hạ tầng vận hành — Giai đoạn 4).
 
@@ -123,42 +140,64 @@ Không có thời hạn, không chặn migration hay go-live Phase 1.
 Bước 1–4 thuộc Giai đoạn 1; bước 5–10 thực hiện được ngay sau khi Giai đoạn 2–3 (HR CRUD) hoàn
 thành, không cần chờ hết Giai đoạn 4.
 
-## Giai đoạn 1 — Database lõi
+## Giai đoạn 1 — Database lõi (chia 7 nhóm triển khai, ADR-069)
 
-- [ ] Khởi tạo Laravel 13.x project, PHP 8.4.x (`.claude/rules/tech-stack.md`).
-- [ ] Migration cho toàn bộ 27 bảng theo đúng `docs/DATABASE-DICTIONARY.md`: Branch, User
-      (staff/admin, bắt buộc email, staff bắt buộc branch), Company (quick create — chỉ
-      `name` bắt buộc)/location (`administrative_unit_id`/`address_detail` nullable,
-      ADR-045)/contact, Job (`owner_branch_id` NOT NULL từ lúc tạo — ADR-046;
-      `last_checked_at`/`last_verified_at` tách riêng — ADR-048) + `job_status_histories` +
-      `job_branch_histories`, Candidate (không `user_id`, có `merge_reason`, `anonymized_by`),
-      Application (snapshot, consent, `submission_token` NOT NULL, `workflow_cycle`,
-      `reopened_at/by`), Status history (kèm `workflow_cycle`), Branch history, Contact log
-      (kèm `workflow_cycle`), Appointment (kèm `workflow_cycle`), Note, Export log. **Không
-      tạo** `lead_requests`, `favorites`, `application_assignment_histories`,
-      `applications.assigned_to`, `applications.referral_code`, `candidates.user_id`, giá trị
-      `candidate` trong `users.role` (ADR-021, ADR-028, ADR-029).
-- [ ] PHP backed enum cho mọi cột trạng thái: `jobs.status`/`applications.stage` dùng DB
-      `enum()` + backed enum khớp transition matrix; 5 cột trước đây `[đề xuất]`
-      (`company_contacts.status`, `jobs.employment_type`, `jobs.close_reason`, `pages.status`,
-      `settings.type`) dùng `varchar` + backed enum + validation, không dùng DB `enum()`
-      (Enum Strategy, ADR-055).
-- [ ] Model + relationship khớp `docs/ERD.md`.
-- [ ] Factory cho toàn bộ 27 bảng.
-- [ ] **Production-safe seeder** (chạy trên mọi môi trường — ADR-051): `settings`, `work_shifts`,
-      `recruitment_sources`, `administrative_units` (dữ liệu hành chính thật, không phải mẫu).
-- [ ] **Demo/test seeder** (chỉ `local`/`testing`, không đăng ký trong seeder chạy mặc định
-      production — ADR-051): Branch mẫu (≥ 2 cơ sở để test phân quyền), Staff mẫu, Company mẫu,
-      Job mẫu, Candidate/Application mẫu.
-- [ ] Console command `php artisan app:create-admin` (bootstrap Admin đầu tiên, ADR-050) — tách
-      biệt hoàn toàn khỏi seeder.
-- [ ] Database test: foreign key, unique constraint (`submission_token`, `candidate_id+job_id`,
-      `job_locations` primary), soft delete, Job/Application transition matrix, workflow cycle
-      scoping, duplicate contract, merged family, branch scoping, validation tỉnh/KCN khớp nhau
+Khởi tạo Laravel 13.x project, PHP 8.4.x (`.claude/rules/architecture.md`) trước Nhóm 1. Migration
+order đầy đủ (28 bảng business): `docs/DATABASE-DICTIONARY.md` mục "Migration order". PHP backed
+enum: `jobs.status`/`applications.stage` dùng DB `enum()`; 5 cột (`company_contacts.status`,
+`jobs.employment_type`, `jobs.close_reason`, `pages.status`, `settings.type`) dùng `varchar` +
+backed enum (Enum Strategy, ADR-055). Mỗi nhóm dưới đây làm xong migration + model + relationship
+(`docs/ERD.md`) + policy + Form Request + Action/Service + test + chạy thử thủ công (manual
+acceptance test theo `docs/ACCEPTANCE-CRITERIA.md`) trước khi sang nhóm kế tiếp. Factory: có cho
+mọi bảng dữ liệu "sống" (không phải bảng lịch sử); **không bắt buộc Factory** cho
+`*_histories`/`*_attempts`/`job_verifications`/`export_logs` — dữ liệu lịch sử trong test được
+tạo qua domain action thật (`ChangeJobStatusAction`, `ChangeApplicationStageAction`...) để tránh
+sinh state vi phạm transition matrix.
+
+- [ ] **Nhóm 1 — nền tảng:** `administrative_units` (kèm `root_slug_key`, ADR-065), `branches`
+      (kèm route restore, ADR-068), `users` (staff/admin, email bắt buộc, staff bắt buộc
+      branch), console command `php artisan app:create-admin` (ADR-050) — tách biệt hoàn toàn
+      khỏi seeder.
+- [ ] **Nhóm 2 — danh mục nền:** `industrial_parks`, `work_shifts`, `recruitment_sources`,
+      `settings` (kèm seed `job_verification_valid_days`, ADR-058). **Production-safe seeder**
+      (chạy trên mọi môi trường — ADR-051): `settings`/`work_shifts`/`recruitment_sources`/
+      `administrative_units` (dữ liệu hành chính thật, không phải mẫu).
+- [ ] **Nhóm 3 — company:** `companies`, `company_locations` (nullable `administrative_unit_id`/
+      `address_detail`, không còn `is_primary` — ADR-045, ADR-064), `company_contacts` (primary
+      tối đa 1 active/company — ADR-064). Quick Create Contract, validation tỉnh/KCN
       (`company_locations.administrative_unit_id` = `industrial_parks.administrative_unit_id`
-      khi có `industrial_park_id` — ADR-052).
+      khi có `industrial_park_id` — ADR-052), quyền xóa/khôi phục admin-only (ADR-053).
+- [ ] **Nhóm 4 — job:** `jobs` (`owner_branch_id` NOT NULL, `job_description` NULLABLE,
+      `last_checked_at`/`last_verified_at` tách riêng — ADR-046, ADR-048, ADR-060),
+      `job_locations`, `job_work_shifts`, `job_verifications`, `job_status_histories`,
+      `job_branch_histories`. Job Draft/Publish Predicate (22 điều kiện, ADR-060), Ma trận
+      Status×Verification (ADR-059), Job Branch Contract (ADR-054).
+- [ ] **Nhóm 5 — candidate/application:** `candidates` (không `user_id`, có `merge_reason`,
+      `anonymized_by`, `full_name_normalized` — ADR-063), `candidate_contacts` (kèm
+      `primary_flag_key`, ADR-064), `applications` (snapshot, consent, `submission_token` NOT
+      NULL, `workflow_cycle`, `reopened_at/by`), `candidate_duplicate_reviews` (ADR-062).
+      Duplicate Candidate Contract + merged-root resolution (ADR-063), Submission Concurrency
+      Contract `GET_LOCK` theo `phone_normalized` (ADR-061).
+- [ ] **Nhóm 6 — xử lý hồ sơ:** `application_status_histories` (kèm `workflow_cycle`),
+      `application_contact_attempts` (kèm `workflow_cycle`), `application_appointments` (kèm
+      `workflow_cycle`), `application_branch_histories`, `application_notes`. Transition matrix +
+      workflow cycle scoping.
+- [ ] **Nhóm 7 — admin tools:** `export_logs`, `pages`, `faqs`. Password-first-change contract
+      (ADR-067). **Demo/test seeder** (chỉ `local`/`testing`, không đăng ký trong seeder chạy mặc
+      định production — ADR-051): Branch mẫu (≥ 2 cơ sở để test phân quyền), Staff mẫu, Company
+      mẫu, Job mẫu, Candidate/Application mẫu.
 
-**Điều kiện hoàn thành:**
+**Không tạo** `lead_requests`, `favorites`, `application_assignment_histories`,
+`applications.assigned_to`, `applications.referral_code`, `candidates.user_id`, giá trị
+`candidate` trong `users.role` (ADR-021, ADR-028, ADR-029).
+
+Database test bao trùm mọi nhóm: foreign key theo Migration order, unique constraint
+(`submission_token`, `candidate_id+job_id`, `job_locations` primary, `candidate_contacts`
+primary, `administrative_units` root, `candidate_duplicate_reviews` pending pair), soft delete,
+Job/Application transition matrix, Job Status×Verification Matrix, workflow cycle scoping,
+duplicate contract + merged-root resolution, merged family, branch scoping.
+
+**Điều kiện hoàn thành (sau Nhóm 7):**
 
 ```bash
 php artisan migrate:fresh --seed
@@ -170,12 +209,14 @@ php artisan test
 - [ ] Authentication staff/admin (`/hr/dang-nhap`), `users.branch_id` bắt buộc khi tạo staff.
 - [ ] Company CRUD (Quick Create — chỉ `name` bắt buộc, mục 0.2), Location CRUD (Quick Create —
       chỉ `name` bắt buộc, mục 0.3), Contact CRUD, Branch CRUD.
-- [ ] Job CRUD, Job Draft Contract (mục 1.0 — cho phép thiếu company/location/lương chưa hoàn
-      thiện), `owner_branch_id` bắt buộc ngay lúc tạo (mục 1.1), điều kiện publish đầy đủ 11
-      mục gồm địa điểm đủ rõ + đã xác minh còn tuyển (mục 1.2).
+- [ ] Job CRUD, Job Draft Contract (mục 1.0 — `job_description`/`requirements`/`benefits` nullable
+      ở draft, ADR-060), `owner_branch_id` bắt buộc ngay lúc tạo (mục 1.1), Job Publish Predicate
+      đầy đủ 22 điều kiện gồm Salary/Shift Predicate, địa điểm đủ rõ, verification **mới nhất**
+      là `still_open` (mục 1.2, ADR-058, ADR-060), Ma trận Job Status×Verification (mục 1.3.1,
+      ADR-059).
 - [ ] Publish/pause/reopen (`paused → published`, re-check điều kiện publish)/close job qua
       `ChangeJobStatusAction`, ghi `job_status_histories`; nhân bản job.
-- [ ] Đổi cơ sở Job (`ChangeJobBranchAction`, chỉ admin, chỉ khi không `published`), ghi
+- [ ] Đổi cơ sở Job (`ChangeJobBranchAction`, chỉ admin, chỉ khi `status ∈ {draft, paused}`; không `published`/`closed`/deleted), ghi
       `job_branch_histories` (mục 1.1).
 - [ ] Danh sách và chi tiết Job public (`/viec-lam`), tìm kiếm/lọc (Luồng 2), quy tắc hiển thị
       `closed`/`paused` (mục 2.1).
@@ -183,10 +224,14 @@ php artisan test
       `closed`/`paused`.
 - [ ] Job verification (`job_verifications`) + Job Verification Scheduler (`last_checked_at` vs
       `last_verified_at`, cảnh báo 7/14 ngày, không tự pause — mục 1.3); gắn với điều kiện
-      publish (mục 1.2 điều kiện 11).
+      publish (`PUB-VERIFY`, mục 1.2).
 - [ ] Form ứng tuyển guest (`ApplicationController@store`), toàn bộ transaction Luồng 3 gồm
       Submission Token Lifecycle (session đa-token, mục 3), Duplicate Candidate Contract 4
       trường hợp (mục 6.2).
+- [ ] Candidate matching nhiều-root (ADR-075): query toàn bộ theo phone, resolve/dedupe roots,
+      Duplicate Review summary theo pending; merged-family same-job reapply invariant (ADR-076).
+- [ ] Middleware `EnsureUserIsActive` trước `EnsurePasswordChanged`; account locked mất quyền ở
+      request kế tiếp (ADR-077).
 
 ## Giai đoạn 3 — HR xử lý hồ sơ
 
@@ -203,7 +248,11 @@ php artisan test
 - [ ] Chuyển cơ sở ngoại lệ theo đúng contract mục 6.1 (validation đầy đủ), chỉ admin.
 - [ ] Trang chi tiết Candidate + merged family (mục 6.3) + Candidate Access Policy — 403 nếu
       family không có Application thuộc cơ sở Staff (mục 6.4); merge candidate qua
-      `hr.candidates.merge`, chỉ admin.
+      `hr.candidates.merge`, chỉ admin; anonymize qua `hr.candidates.anonymize`, chỉ admin.
+- [ ] Duplicate Review (`hr.duplicate-reviews.*`, chỉ admin) — bảng `candidate_duplicate_reviews`
+      (mục 6.2.2, ADR-062).
+- [ ] Password-first-change (`hr.password.change/update`) + Admin reset/lock/unlock Staff
+      (`hr.staff.*`) đúng contract (ADR-067).
 - [ ] Bộ lọc `hr.applications.index` đầy đủ (mục 9.2).
 
 ## Giai đoạn 4 — Hoàn thiện
@@ -215,9 +264,10 @@ php artisan test
 - [ ] SEO, Responsive.
 - [ ] Feature test đầy đủ theo `docs/ACCEPTANCE-CRITERIA.md`.
 - [ ] Backup.
-- [ ] Cron/Scheduler xác nhận còn tuyển (`.claude/rules/roles-business-rules.md`).
-- [ ] SSL, Log rotation.
-- [ ] Deploy VPS, cấu hình path `/hr` theo `.claude/rules/tech-stack.md`.
+- [ ] SSL, Log rotation. **Không cần** Laravel Task Scheduler/cron cho Job Verification — cảnh
+      báo còn tuyển là giá trị tính toán khi render, không phải cron job (`docs/CORE-FLOWS.md`
+      mục 1.3, ADR-066).
+- [ ] Deploy VPS, cấu hình path `/hr` theo `.claude/rules/architecture.md`.
 
 ## Phase 2 — ngoài phạm vi Phase 1 (không code, không thiết kế trước ở Phase 1)
 
@@ -241,5 +291,5 @@ php artisan test
   xong trước Giai đoạn 3 (application cần job tồn tại).
 - Mỗi giai đoạn nên là 1 hoặc vài session riêng.
 - Cập nhật `docs/PROJECT-STATUS.md` sau khi hoàn thành mỗi giai đoạn.
-- Không mở rộng sang các hạng mục "Ngoài phạm vi" (`.claude/rules/scope-standards.md`) hoặc
+- Không mở rộng sang các hạng mục "Ngoài phạm vi" (`docs/PHASE-1-SCOPE.md`) hoặc
   Phase 2 trong lộ trình này.

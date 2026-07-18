@@ -1,17 +1,25 @@
 ---
-name: db-task
-description: Thực hiện thay đổi schema/model/database của vieclam88 theo dictionary, ERD và transaction rules.
-argument-hint: "<thay đổi database>"
+name: Database Slice
+description: Thực hiện một thay đổi schema/model/database theo Database Baseline, đúng dependency và có integrity test. Dùng cho migration, constraint, index, relationship hoặc seed/import.
+argument-hint: "<bảng hoặc thay đổi database>"
 disable-model-invocation: true
 effort: high
 ---
 
 Thực hiện database task: **$ARGUMENTS**
 
-1. Đọc `.claude/rules/data-model.md`, phần liên quan trong `docs/DATABASE-DICTIONARY.md`, `docs/ERD.md` và ADR liên quan.
-2. Kiểm tra blocker trong `docs/PROJECT-STATUS.md`; không tự quyết enum/FK còn chưa chốt.
-3. Nêu migration order, FK/on-delete, unique/check/index và rollback trước khi sửa.
-4. Giữ migration nhỏ, thuận nghịch; không sửa migration đã chạy production nếu có.
-5. Đồng bộ Model, Enum, Factory, Seeder và database test liên quan.
-6. Chạy focused test; khi schema đủ ổn định mới chạy `migrate:fresh --seed`.
-7. Báo cáo mọi khác biệt giữa code và dictionary; không âm thầm thay tài liệu nguồn.
+1. Đọc `docs/PROJECT-STATUS.md`, `.claude/rules/database-schema.md`, đúng bảng trong Dictionary và quan hệ trong ERD.
+2. Đọc rule domain/ADR được tham chiếu; không tải toàn bộ docs khi task chỉ liên quan một nhóm bảng.
+3. Trước edit, nêu:
+   - migration order/dependency;
+   - type/nullability/default;
+   - FK và on-delete;
+   - unique/check/index;
+   - soft delete/history/PII;
+   - rollback và test integrity.
+4. Nếu Dictionary, ERD và flow mâu thuẫn, trả `BLOCKED`; không tự chọn schema.
+5. Migration phải nhỏ và thuận nghịch. Không sửa migration đã chạy staging/production; tạo migration mới khi repository đã có dữ liệu dùng thử.
+6. Đồng bộ Model/Enum/Factory/Seeder tối thiểu; history data phải được tạo qua domain action khi factory có thể phá invariant.
+7. Viết test cho constraint, relationship, rollback/error path và query/index quan trọng khi có contract.
+8. Không tự chạy `migrate:fresh`, migrate staging/production, xóa data hoặc commit/push.
+9. Kết thúc bằng `DONE`, `BLOCKED` hoặc `CHANGES REQUIRED` cùng command/kết quả.

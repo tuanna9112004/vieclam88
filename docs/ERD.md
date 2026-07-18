@@ -1,6 +1,7 @@
 # ERD — vieclam88 (Phase 1)
 
-Sơ đồ quan hệ thực thể cho 27 bảng Phase 1. Chi tiết cột đầy đủ (kiểu dữ liệu, default,
+Sơ đồ quan hệ thực thể cho 28 bảng business Phase 1 (27 + `candidate_duplicate_reviews`,
+ADR-062). Chi tiết cột đầy đủ (kiểu dữ liệu, default,
 index...) xem `docs/DATABASE-DICTIONARY.md`. 6 luồng nghiệp vụ cốt lõi mà schema này phải hỗ
 trợ: `docs/CORE-FLOWS.md`. File này chỉ thể hiện cấu trúc quan hệ, khóa chính/khóa ngoại, và
 các bảng lịch sử (không có `updated_at`, không sửa/xóa).
@@ -25,9 +26,13 @@ erDiagram
     users ||--o{ job_verifications : "verified_by"
     users ||--o{ job_status_histories : "changed_by"
     users ||--o{ export_logs : "exported_by"
-    users ||--o{ pages : "created_by / updated_by (nullable)"
-    users ||--o{ jobs : "created_by / updated_by / deleted_by (nullable)"
-    users ||--o{ companies : "created_by / updated_by (nullable)"
+    users ||--o{ pages : "created_by"
+    users |o--o{ pages : "updated_by (nullable)"
+    users ||--o{ jobs : "created_by"
+    users |o--o{ jobs : "updated_by (nullable)"
+    users |o--o{ jobs : "deleted_by (nullable)"
+    users ||--o{ companies : "created_by"
+    users |o--o{ companies : "updated_by (nullable)"
     users |o--o{ application_branch_histories : "transferred_by (nullable)"
     users ||--o{ job_branch_histories : "changed_by"
     users ||--o{ application_appointments : "created_by"
@@ -36,8 +41,9 @@ erDiagram
     users |o--o{ applications : "reopened_by (nullable)"
     users |o--o{ candidates : "merged_by (nullable)"
     users |o--o{ candidates : "anonymized_by (nullable)"
+    users |o--o{ candidate_duplicate_reviews : "reviewed_by (nullable)"
 
-    branches ||--o{ users : "branch_id (nullable; bắt buộc khi role=staff, chốt ở Service)"
+    branches |o--o{ users : "branch_id (nullable ở DB; bắt buộc khi role=staff, chốt ở Service — ADR-073)"
     branches ||--o{ jobs : "owner_branch_id (NOT NULL từ lúc tạo — ADR-046)"
     branches ||--o{ applications : "owner_branch_id (copy từ job lúc tạo)"
     branches ||--o{ application_branch_histories : "to_branch_id"
@@ -49,7 +55,7 @@ erDiagram
     candidates ||--o{ applications : "candidate_id"
     candidates |o--o{ candidates : "merged_into_candidate_id (self, 1 chiều mỗi lần merge)"
 
-    administrative_units ||--o{ administrative_units : "parent_id (self)"
+    administrative_units |o--o{ administrative_units : "parent_id (self, nullable ở root)"
     administrative_units |o--o{ candidates : "current_administrative_unit_id (nullable)"
     administrative_units ||--o{ industrial_parks : "administrative_unit_id"
     administrative_units |o--o{ company_locations : "administrative_unit_id (nullable — Quick Create, ADR-045)"
@@ -81,6 +87,9 @@ erDiagram
     applications ||--o{ application_notes : "application_id"
     applications ||--o{ application_branch_histories : "application_id"
     applications ||--o{ application_appointments : "application_id"
+    applications ||--o{ candidate_duplicate_reviews : "application_id"
+    candidates ||--o{ candidate_duplicate_reviews : "candidate_id (Candidate mới)"
+    candidates ||--o{ candidate_duplicate_reviews : "suspected_candidate_id (Candidate nghi trùng)"
 
     users {
         bigint id PK
@@ -105,6 +114,7 @@ erDiagram
         string public_id UK
         bigint current_administrative_unit_id FK "nullable"
         enum status "active, merged, anonymized"
+        string full_name_normalized "sinh tự động từ full_name, giữ dấu — ADR-063"
         bigint merged_into_candidate_id FK "nullable, self"
         string merge_reason "nullable"
         bigint anonymized_by FK "nullable"
@@ -242,7 +252,8 @@ erDiagram
         bigint reopened_by FK "nullable"
         string submission_token UK "NOT NULL — idempotency"
         bool needs_duplicate_review "default false"
-        bigint duplicate_reviewed_by FK "nullable -> users"
+        bigint duplicate_reviewed_by FK "nullable -> users; summary khi hết pending"
+        timestamp duplicate_reviewed_at "nullable; summary khi hết pending"
         timestamp last_reapplied_at "nullable"
         json submission_snapshot "history only, not for filtering"
         json job_snapshot "history only, not for filtering"
@@ -300,6 +311,16 @@ erDiagram
         timestamp deleted_at "soft delete"
     }
 
+    candidate_duplicate_reviews {
+        bigint id PK
+        bigint application_id FK
+        bigint candidate_id FK "Candidate mới"
+        bigint suspected_candidate_id FK "Candidate nghi trùng"
+        enum reason_code "same_phone_missing_dob, same_phone_different_name, same_identity_conflicting_dob, multiple_exact_matches, other"
+        enum status "pending, confirmed_same, confirmed_distinct, dismissed"
+        bigint reviewed_by FK "nullable"
+    }
+
     export_logs {
         bigint id PK
         bigint exported_by FK
@@ -339,8 +360,12 @@ erDiagram
   UPDATE/DELETE sau khi tạo. `application_appointments` có `updated_at` (không phải
   append-only thuần vì appointment có thể chuyển `status` sau khi tạo), nhưng `scheduled_at`
   không sửa sau khi tạo — đổi lịch tạo bản ghi mới, không ghi đè.
-- **Soft delete**: `candidates`, `companies`, `company_locations`, `company_contacts`,
-  `jobs`, `branches`, `application_notes`.
+- **Soft delete**: `candidates` (không có route HTTP ở Phase 1 — chỉ can thiệp Admin/DB, ADR-068),
+  `companies`, `company_locations`, `company_contacts`, `jobs`, `branches`, `application_notes`.
+- **`candidate_duplicate_reviews`** (mới, ADR-062): không phải bảng lịch sử append-only thuần —
+  `status`/`reviewed_by`/`reviewed_at`/`review_note` cập nhật sau khi Admin xử lý, giống
+  `application_appointments`. Chặn review trùng bằng cột generated `pending_pair_key` (UNIQUE) —
+  cùng pattern `job_locations.primary_flag_job_id`.
 - **Self-referencing**: `administrative_units.parent_id` (phân cấp tỉnh → xã/phường),
   `candidates.merged_into_candidate_id` (gộp trùng — 1 chiều mỗi lần merge, không cập nhật lại
   khi merge nhiều tầng; truy vấn "merged family" đệ quy theo chuỗi này, `docs/CORE-FLOWS.md`
@@ -381,3 +406,17 @@ erDiagram
 - **Không có trong Phase 1** (dời Phase 2): `lead_requests`, `favorites`,
   `application_assignment_histories`, `applications.assigned_to`, `applications.referral_code`,
   `candidates.user_id`, giá trị `candidate` trong `users.role`.
+- **`company_locations.is_primary` đã bị loại bỏ khỏi schema Phase 1** (ADR-064) — không có use
+  case nào đọc/ghi cột này; primary cấp Job dùng `job_locations.is_primary` (không đổi).
+- **Cardinality nhiều-FK-khác-nullability** (ADR-073): các quan hệ `users↔pages/jobs/companies`
+  tách riêng từng edge theo đúng nullability thật của từng cột (`created_by` bắt buộc,
+  `updated_by`/`deleted_by` nullable) — không gộp chung 1 edge `||--o{` cho nhiều FK có
+  nullability khác nhau như bản trước.
+
+- **Candidate matching nhiều root (ADR-075):** query toàn bộ Candidate theo phone, resolve/dedupe
+  root rồi so khớp; cấm chọn `first()`. Một Application có thể có nhiều
+  `candidate_duplicate_reviews`; cờ/timestamp trên `applications` chỉ là summary khi hết pending.
+- **Merged-family same-job invariant (ADR-076):** trước khi insert Application phải query cùng
+  `job_id` trên toàn family; unique `(candidate_id, job_id)` chỉ là chốt chặn cấp một Candidate.
+- **Company contact ownership (ADR-074):** FK `jobs.company_contact_id` không thể bảo vệ điều kiện
+  cùng Company; Service bắt buộc kiểm tra contact thuộc `jobs.company_id`, active/chưa xóa.

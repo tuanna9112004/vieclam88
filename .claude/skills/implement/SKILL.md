@@ -1,17 +1,18 @@
 ---
-name: implement
-description: Triển khai một vertical slice nhỏ của vieclam88, đọc đúng context, viết test và tự xác minh.
-argument-hint: "<kết quả cần đạt>"
+name: Implement Slice
+description: Triển khai một feature vertical slice nhỏ đã rõ contract, từ authorization/validation đến domain action, UI cần thiết và test. Dùng khi task không thay đổi schema đáng kể.
+argument-hint: "<kết quả nghiệp vụ cần đạt>"
 disable-model-invocation: true
-effort: medium
+effort: high
 ---
 
-Triển khai: **$ARGUMENTS**
+Triển khai feature: **$ARGUMENTS**
 
-1. Đọc `docs/PROJECT-STATUS.md` và `docs/CONTEXT-MAP.md`.
-2. Xác định tối đa 5 acceptance criteria; nêu blocker thật sự nếu có.
-3. Tìm file liên quan, không quét toàn repo và không đọc tài liệu ngoài context map.
-4. Thực hiện một vertical slice hoàn chỉnh; không refactor ngoài phạm vi.
-5. Viết/cập nhật test trước hoặc cùng lúc với code.
-6. Chạy test nhỏ nhất liên quan; sau đó chạy build hoặc suite rộng hơn nếu cần.
-7. Báo cáo: file đổi, lệnh đã chạy, kết quả, phần chưa xong. Không commit/push.
+1. Đọc `docs/PROJECT-STATUS.md`, chọn đúng context trong `docs/CONTEXT-MAP.md` và khóa tối đa 5 acceptance criteria.
+2. Nếu task quá rộng, có mâu thuẫn nguồn hoặc cần schema chưa có, dừng và trả lệnh phù hợp `/vibe-task` hoặc `/db-task`; không tự mở rộng.
+3. Nêu Task Contract: kết quả, out-of-scope, dependency, file dự kiến, test command.
+4. Hoàn thành một slice: Request/Policy → Action/Service → Controller/Route → Blade khi cần → test.
+5. Không đặt nghiệp vụ trong Controller/Blade; không tin field actor/branch/stage từ client.
+6. Dùng transaction/history/lock đúng contract; không tạo abstraction hoặc Phase 2 dự phòng.
+7. Chạy focused test, regression liên quan và build khi cần.
+8. Báo `DONE`, `BLOCKED` hoặc `CHANGES REQUIRED`; không commit/push.

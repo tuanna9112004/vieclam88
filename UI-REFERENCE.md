@@ -15,20 +15,20 @@ nghiệp vụ trong `.claude/rules/*.md`, quy tắc nghiệp vụ luôn được
 - `docs/ui-reference/phase-1/` — ảnh thuộc phạm vi Phase 1: 5.2 trang chủ, 5.3 danh sách/lọc
   việc làm, 5.4 chi tiết việc làm, 5.5 công ty, 5.6 ứng tuyển. Tên file tiền tố `05.x-` (số cũ,
   giữ nguyên để không phải đổi tên hàng loạt). Đối chiếu nghiệp vụ hiện hành:
-  `.claude/rules/scope-standards.md`, `.claude/rules/public-site.md`.
+  `docs/PHASE-1-SCOPE.md`, `.claude/rules/public-site.md`.
 - `docs/ui-reference/phase-2/` — ảnh thuộc tính năng Candidate Account (Phase 2, ADR-028):
   5.1 menu tài khoản trượt, 5.7 trang cá nhân ứng viên. **Không dùng cho Phase 1** dưới bất kỳ
   hình thức nào — chuyển ra khỏi `phase-1/` để tránh nhầm là tài liệu tham khảo đang áp dụng.
 - `docs/ui-reference/out-of-scope/` — ảnh thuộc luồng cộng tác viên/hoa hồng (`13-ctv-*`,
   `13-modal-*`) và tin tức/blog chưa có trong spec (`khac-tin-tuc-*`). Đối chiếu:
-  `.claude/rules/scope-standards.md` (mục "Ngoài phạm vi").
+  `docs/PHASE-1-SCOPE.md` (mục "Ngoài phạm vi").
 
 ## 1. Đáng học theo
 
 ### Card việc làm (trang chủ, danh sách việc làm)
 *(xem `docs/ui-reference/phase-1/05.2-trang-chu.png`, `05.3-bo-loc-viec-lam.png`)*
 Logo công ty, tên vị trí, mức lương nổi bật (số to, tách dòng riêng), tỉnh/ca làm, nhãn
-"Tuyển gấp" màu đỏ. Khớp yêu cầu lọc/hiển thị ở `.claude/rules/scope-standards.md` (mục
+"Tuyển gấp" màu đỏ. Khớp yêu cầu lọc/hiển thị ở `docs/PHASE-1-SCOPE.md` (mục
 "Public"). **Không copy** icon trái tim lưu việc (Favorites) — không thuộc Phase 1, kể cả
 database (ADR-021).
 
@@ -38,7 +38,7 @@ Thay vì dropdown truyền thống, dùng nút tròn (pill) để chọn nhanh t
 1 ô nhập tự do bên dưới cho trường hợp không có trong preset. Nút "Bỏ lọc" / "Áp dụng" cố
 định ở đáy modal. Phù hợp mobile-first (`.claude/rules/ui-guidelines.md`), nên áp dụng cho cả
 bộ lọc việc làm và bộ lọc công ty. Lưu ý: filter theo tỉnh/xã phải dùng
-`administrative_units` phân cấp (`.claude/rules/data-model.md`), không lưu chuỗi tự do như
+`administrative_units` phân cấp (`.claude/rules/database-schema.md`), không lưu chuỗi tự do như
 tham khảo.
 
 ### Form ứng tuyển chia 2 tầng
@@ -48,7 +48,7 @@ Trường bắt buộc hiện ngay, phần còn lại gói trong accordion "THÔ
 Giảm friction, tăng tỷ lệ nộp hồ sơ. **Phase 1 không có đăng nhập ứng viên; người dùng tự nhập
 số điện thoại trong form** (khác với ảnh tham khảo, vốn tự điền SĐT cho tài khoản đã đăng
 nhập — không áp dụng vì Candidate Account là Phase 2, ADR-028). Danh sách trường cụ thể được
-phép thu thập: `.claude/rules/roles-business-rules.md` — xem cảnh báo ở mục 3 bên dưới,
+phép thu thập: `docs/CORE-FLOWS.md` — xem cảnh báo ở mục 3 bên dưới,
 **không copy nguyên khối trường** của ảnh tham khảo.
 
 ### Bố cục trang chi tiết việc làm
@@ -60,7 +60,7 @@ quan → công ty liên quan. Khớp `.claude/rules/public-site.md` (phần "Job
 ### Trang công ty
 *(xem `docs/ui-reference/phase-1/05.5-danh-sach-cong-ty.png`, `05.5-chi-tiet-cong-ty.png`)*
 Banner ảnh bìa + logo + tên + lĩnh vực + tỉnh, danh sách "Vị trí đang tuyển" của công ty,
-"Công ty liên quan" gợi ý chéo ở cuối trang. Khớp `.claude/rules/scope-standards.md` (mục
+"Công ty liên quan" gợi ý chéo ở cuối trang. Khớp `docs/PHASE-1-SCOPE.md` (mục
 "Public").
 
 ## 2. Phase 2 — không dùng cho Phase 1
@@ -88,7 +88,7 @@ khi có ADR riêng duyệt.
 ### Form thu thập vượt quá danh sách trường cho phép
 *(xem `docs/ui-reference/phase-1/05.6-form-ung-tuyen-bo-sung.png`)*
 Phần "Thông tin bổ sung" của tham khảo có: Số CMND/CCCD + ngày cấp + nơi cấp, Tình trạng hôn
-nhân, Trình độ học vấn, Ngoại ngữ, Dân tộc. `.claude/rules/roles-business-rules.md` cấm rõ:
+nhân, Trình độ học vấn, Ngoại ngữ, Dân tộc. `docs/CORE-FLOWS.md` cấm rõ:
 CCCD, ảnh CCCD, tài khoản ngân hàng, **Dân tộc**, Tôn giáo, hồ sơ sức khỏe chi tiết,
 **Tình trạng hôn nhân**.
 
@@ -99,13 +99,13 @@ CCCD, ảnh CCCD, tài khoản ngân hàng, **Dân tộc**, Tôn giáo, hồ sơ
   `education_level` dạng free text) — không tự thêm trường cấu trúc mới khi chưa có yêu cầu.
 
 Chỉ học cơ chế accordion ẩn/hiện; danh sách trường bên trong phải giới hạn đúng theo
-`.claude/rules/roles-business-rules.md` và schema thật ở `docs/DATABASE-DICTIONARY.md`.
+`.claude/rules/application-domain.md` và schema thật ở `docs/DATABASE-DICTIONARY.md`.
 
 ### Điểm thưởng, modal chọn ứng tuyển hay giới thiệu, luồng cộng tác viên
 *(xem `docs/ui-reference/out-of-scope/13-modal-chon-ung-tuyen-hay-gioi-thieu.png`,
 `13-ctv-hoa-hong-tong-quan.png`, `13-ctv-trang-gioi-thieu-chuong-trinh.png`,
 `13-ctv-danh-sach-ho-so-da-gioi-thieu.png`, `13-ctv-danh-sach-ho-so-chua-gioi-thieu.png`)*
-Toàn bộ nhóm này thuộc phạm vi **Ngoài Phase 1** (`.claude/rules/scope-standards.md`, mục
+Toàn bộ nhóm này thuộc phạm vi **Ngoài Phase 1** (`docs/PHASE-1-SCOPE.md`, mục
 "Ngoài phạm vi" — cộng tác viên, hoa hồng, điểm thưởng, referral). Không xây các luồng UI
 này. `applications.referral_code` đã bị loại khỏi schema Phase 1 (ADR-029) — không giữ trước
 "phòng khi cần"; khi module cộng tác viên được duyệt xây dựng ở Phase 2, thêm lại cột này
@@ -119,11 +119,11 @@ hiển thị số sao cho đến khi có cơ chế review thật và bảng dữ
 ## 4. Không khớp phạm vi Phase 1 hiện tại
 
 `docs/ui-reference/out-of-scope/khac-tin-tuc-blog-chua-co-trong-spec.png` — trang tin
-tức/blog. `.claude/rules/scope-standards.md` không liệt kê "Tin tức" trong danh sách chức
+tức/blog. `docs/PHASE-1-SCOPE.md` không liệt kê "Tin tức" trong danh sách chức
 năng website công khai, và `docs/ROUTE-MAP.md` không có route tương ứng. Không tự thêm
-route/bảng cho tin tức khi chưa có yêu cầu chính thức (`.claude/rules/scope-standards.md`).
+route/bảng cho tin tức khi chưa có yêu cầu chính thức (`docs/PHASE-1-SCOPE.md`).
 
 Phần "Chương trình Cộng tác viên" ở footer và các trang liên quan đến app riêng (QR code tải
 app) xuất hiện lặp lại ở hầu hết ảnh tham khảo — thuộc phạm vi ngoài Phase 1 hoặc không áp
-dụng (dự án này chưa có app mobile — `.claude/rules/scope-standards.md`, mục "Ngoài phạm
+dụng (dự án này chưa có app mobile — `docs/PHASE-1-SCOPE.md`, mục "Ngoài phạm
 vi"), không cần phân tích thêm mỗi lần gặp lại.
