@@ -14,17 +14,21 @@ Quy ước:
 | GET | `/` | `home` | `HomeController@index` | web | Trang chủ |
 | GET | `/viec-lam` | `jobs.index` | `JobController@index` | web | Danh sách, tìm kiếm, lọc |
 | GET | `/viec-lam/{job:slug}` | `jobs.show` | `JobController@show` | web | Chi tiết việc làm |
-| POST | `/viec-lam/{job:slug}/ung-tuyen` | `applications.store` | `ApplicationController@store` | web, throttle, honeypot | Ứng tuyển guest/candidate |
+| POST | `/viec-lam/{job:slug}/ung-tuyen` | `applications.store` | `ApplicationController@store` | web, throttle, honeypot | Ứng tuyển guest/candidate; form render kèm `submission_token` ẩn (idempotency, `docs/CORE-FLOWS.md` mục 3) |
 | GET | `/cong-ty` | `companies.index` | `CompanyController@index` | web | Danh sách công ty |
 | GET | `/cong-ty/{company:slug}` | `companies.show` | `CompanyController@show` | web | Chi tiết công ty |
 | GET | `/khu-cong-nghiep/{industrialPark:slug}` | `industrial-parks.show` | `IndustrialParkController@show` | web | Việc theo KCN |
 | GET | `/gioi-thieu` | `pages.about` | `PageController@about` | web | Trang giới thiệu |
-| GET | `/lien-he` | `contact.show` | `ContactController@show` | web | Trang liên hệ |
-| POST | `/lien-he/tu-van` | `leads.store` | `LeadRequestController@store` | web, throttle, honeypot | Yêu cầu tư vấn |
+| GET | `/lien-he` | `contact.show` | `ContactController@show` | web | Trang liên hệ (thông tin tĩnh, không có form gửi Lead — Phase 1 không có Lead, xem `docs/CORE-FLOWS.md` mục 0) |
 | GET | `/cau-hoi-thuong-gap` | `faqs.index` | `FaqController@index` | web | FAQ |
 | GET | `/sitemap.xml` | `sitemap` | `SitemapController@index` | throttle | Sitemap |
 
+**Đã bỏ khỏi Phase 1** (chuyển Phase 2 — ADR-021): `POST /lien-he/tu-van` (`leads.store`) —
+không có form tạo Lead trong Phase 1, kể cả form "yêu cầu tư vấn".
+
 ## Candidate account — làm sau guest + HR
+
+Favorites **không** thuộc Phase 1 (ADR-021) — không có route `favorites.*`/`account.favorites`.
 
 | Method | Path | Name | Controller@method | Middleware |
 |---|---|---|---|---|
@@ -35,9 +39,6 @@ Quy ước:
 | GET/POST | `/dat-lai-mat-khau/{token}` | `password.reset/update` | Password controllers | guest |
 | GET | `/tai-khoan` | `account.show` | `AccountController@show` | auth, role:candidate |
 | PUT | `/tai-khoan` | `account.update` | `AccountController@update` | auth, role:candidate |
-| POST | `/viec-lam/{job:slug}/luu` | `favorites.store` | `FavoriteController@store` | auth, role:candidate |
-| DELETE | `/viec-lam/{job:slug}/luu` | `favorites.destroy` | `FavoriteController@destroy` | auth, role:candidate |
-| GET | `/tai-khoan/viec-da-luu` | `account.favorites` | `AccountController@favorites` | auth, role:candidate |
 | GET | `/tai-khoan/da-ung-tuyen` | `account.applications` | `AccountController@applications` | auth, role:candidate |
 
 ## HR auth/dashboard
@@ -105,32 +106,31 @@ riêng.
 | DELETE | `/hr/viec-lam/{job}` | `hr.jobs.destroy` | `JobController@destroy` | admin |
 | POST | `/hr/viec-lam/{job}/khoi-phuc` | `hr.jobs.restore` | `JobController@restore` | admin |
 
-## HR hồ sơ và lead
+## HR hồ sơ
 
 `hr.applications.index`/`show` và mọi thao tác bên dưới **scope theo cơ sở**: `staff` chỉ
 truy cập Application có `owner_branch_id = users.branch_id` của mình (403 nếu cố truy cập
-URL của cơ sở khác); `admin` không bị giới hạn. Xem `docs/CORE-FLOWS.md` mục 4.
+URL của cơ sở khác); `admin` không bị giới hạn. Xem `docs/CORE-FLOWS.md` mục 4. Phase 1 không
+có route "nhận xử lý"/"gán nhân viên" — bất kỳ staff nào cùng cơ sở đều xử lý được mọi hồ sơ
+của cơ sở đó (ADR-021).
 
 | Method | Path | Name | Controller@method | Quyền |
 |---|---|---|---|---|
 | GET | `/hr/ho-so/xuat-csv` | `hr.applications.export` | `ApplicationExportController@index` | admin |
 | GET | `/hr/ho-so` | `hr.applications.index` | `ApplicationController@index` | staff/admin (scope cơ sở) |
 | GET | `/hr/ho-so/{application}` | `hr.applications.show` | `ApplicationController@show` | staff/admin (scope cơ sở) |
-| POST | `/hr/ho-so/{application}/nhan-xu-ly` | `hr.applications.claim` | `AssignmentController@claim` | staff/admin (scope cơ sở) |
-| POST | `/hr/ho-so/{application}/gan-nhan-vien` | `hr.applications.assign` | `AssignmentController@assign` | admin |
-| POST | `/hr/ho-so/{application}/doi-giai-doan` | `hr.applications.stage` | `ApplicationStageController@store` | staff/admin (scope cơ sở) |
+| POST | `/hr/ho-so/{application}/doi-giai-doan` | `hr.applications.stage` | `ApplicationStageController@store` | staff/admin (scope cơ sở) — dùng chung cho mọi transition trong `docs/CORE-FLOWS.md` mục 5.1, kể cả mở lại `closed → new` |
 | POST | `/hr/ho-so/{application}/lien-he` | `hr.applications.contacts.store` | `ContactAttemptController@store` | staff/admin (scope cơ sở) |
-| POST | `/hr/ho-so/{application}/lich-hen` | `hr.applications.appointments.store` | `AppointmentController@store` | staff/admin (scope cơ sở) |
-| PUT | `/hr/ho-so/{application}/lich-hen/{appointment}` | `hr.applications.appointments.update` | `AppointmentController@update` | staff/admin (scope cơ sở) — cập nhật `status`/`outcome` |
+| POST | `/hr/ho-so/{application}/lich-hen` | `hr.applications.appointments.store` | `AppointmentController@store` | staff/admin (scope cơ sở) — dùng cả khi tạo lịch mới lẫn khi đổi lịch (kèm hủy lịch cũ, `docs/CORE-FLOWS.md` mục 5.3) |
+| PUT | `/hr/ho-so/{application}/lich-hen/{appointment}` | `hr.applications.appointments.update` | `AppointmentController@update` | staff/admin (scope cơ sở) — chỉ cập nhật `status`/`outcome`, không sửa `scheduled_at` |
 | POST | `/hr/ho-so/{application}/chuyen-co-so` | `hr.applications.transfer-branch` | `ApplicationBranchTransferController@store` | admin |
 | POST | `/hr/ho-so/{application}/ghi-chu` | `hr.applications.notes.store` | `ApplicationNoteController@store` | staff/admin (scope cơ sở) |
 | PUT/DELETE | `/hr/ho-so/{application}/ghi-chu/{note}` | `hr.applications.notes.update/destroy` | `ApplicationNoteController@update/destroy` | owner/admin |
-| GET | `/hr/yeu-cau-tu-van` | `hr.leads.index` | `LeadRequestController@index` | staff/admin |
-| GET | `/hr/yeu-cau-tu-van/{leadRequest}` | `hr.leads.show` | `LeadRequestController@show` | staff/admin |
 
-**Đã bỏ khỏi Phase 1** (chuyển Phase 2 — xem ADR-018, `ROADMAP.md`):
-`hr.leads.convert`/`LeadConversionController` — Phase 1 không chuyển đổi `lead_requests`
-thành `applications`. Nhân viên xử lý lead thủ công, không có route/action chuyển đổi.
+**Đã bỏ khỏi Phase 1** (chuyển Phase 2 — ADR-021): `hr.applications.claim`,
+`hr.applications.assign` (không còn khái niệm phân công nhân viên cụ thể);
+`hr.leads.index`/`hr.leads.show`/`hr.leads.convert` và toàn bộ route `/hr/yeu-cau-tu-van`
+(không còn `lead_requests` trong Phase 1).
 
 ## HR admin
 

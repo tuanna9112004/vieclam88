@@ -3,7 +3,7 @@
 ## Mục tiêu
 
 Laravel monolith cho công ty cung ứng lao động miền Bắc:
-- Public: tìm việc, xem công ty, ứng tuyển guest, gửi yêu cầu tư vấn.
+- Public: tìm việc, xem công ty, ứng tuyển guest.
 - HR tại `/hr`: quản lý công ty, việc làm, ứng viên và quy trình xử lý.
 
 ## Stack cố định
@@ -20,9 +20,9 @@ Không tự thêm framework/service mới. Mọi thay đổi kiến trúc phải
 - Một `job` là một đợt tuyển; không tạo trùng `(candidate_id, job_id)`.
 - `applications` phải lưu snapshot và consent tại thời điểm gửi.
 - `applications.owner_branch_id` copy từ `jobs.owner_branch_id` lúc tạo, không suy ra động; staff chỉ xem/xử lý Application thuộc cơ sở của mình, admin xem toàn bộ. Chuyển cơ sở là ngoại lệ có kiểm soát (lý do + lịch sử), không tạo Application mới.
-- Pipeline, lần liên hệ, lịch hẹn, ghi chú và phân công là dữ liệu riêng; lịch sử chỉ thêm, không ghi đè.
+- Pipeline, lần liên hệ, lịch hẹn và ghi chú là dữ liệu riêng; lịch sử chỉ thêm, không ghi đè.
 - Không hard-delete dữ liệu tuyển dụng cốt lõi.
-- Không làm chức năng ngoài Phase 1 nếu chưa có ADR được chấp nhận. Chuyển đổi Lead thành Application, tự động phân công/round-robin thuộc Phase 2.
+- Phase 1 không có Lead (mọi hình thức), không có phân công/claim hồ sơ cho nhân viên, không có Favorites — thuộc Phase 2. Không làm chức năng ngoài Phase 1 nếu chưa có ADR được chấp nhận.
 
 ## Cách làm việc
 

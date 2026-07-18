@@ -25,8 +25,9 @@ nghiệp vụ trong `.claude/rules/*.md`, quy tắc nghiệp vụ luôn được
 ### Card việc làm (trang chủ, danh sách việc làm)
 *(xem `docs/ui-reference/phase-1/05.2-trang-chu.png`, `05.3-bo-loc-viec-lam.png`)*
 Logo công ty, tên vị trí, mức lương nổi bật (số to, tách dòng riêng), tỉnh/ca làm, nhãn
-"Tuyển gấp" màu đỏ, icon trái tim lưu việc ở góc phải. Khớp yêu cầu lọc/hiển thị ở
-`.claude/rules/scope-standards.md` (mục "Public").
+"Tuyển gấp" màu đỏ. Khớp yêu cầu lọc/hiển thị ở `.claude/rules/scope-standards.md` (mục
+"Public"). **Không copy** icon trái tim lưu việc (Favorites) — không thuộc Phase 1, kể cả
+database (ADR-021).
 
 ### Bộ lọc việc làm dạng modal + chip button
 *(xem `docs/ui-reference/phase-1/05.3-bo-loc-viec-lam.png`, `05.5-bo-loc-cong-ty.png`)*
@@ -59,16 +60,17 @@ Banner ảnh bìa + logo + tên + lĩnh vực + tỉnh, danh sách "Vị trí đ
 
 ### Trang cá nhân
 *(xem `docs/ui-reference/phase-1/05.7-trang-ca-nhan-ung-vien.png`)*
-2 counter to, rõ ("Mục yêu thích" / "Việc làm ứng tuyển") thay vì liệt kê danh sách dài ngay
-đầu trang. Áp dụng cho `.claude/rules/scope-standards.md` (mục "Candidate account" — làm sau
-khi luồng guest + HR ổn định).
+Chỉ học cách trình bày 1 counter to, rõ ("Việc làm ứng tuyển") thay vì liệt kê danh sách dài
+ngay đầu trang. Áp dụng cho `.claude/rules/scope-standards.md` (mục "Candidate account" — làm
+sau khi luồng guest + HR ổn định). **Không copy** counter "Mục yêu thích" — Favorites không
+thuộc Phase 1, kể cả database (ADR-021).
 
 ### Menu tài khoản dạng trượt
 *(xem `docs/ui-reference/phase-1/05.1-menu-tai-khoan-truot.png`)*
 Slide-in từ phải, avatar + tên ở đầu, danh sách mục dạng icon + label rõ ràng (dễ chạm, khớp
 tinh thần nút tối thiểu 48px ở `.claude/rules/ui-guidelines.md`). Khi áp dụng: bỏ mục "0 xu"
-(điểm thưởng) và "Cộng tác viên" khỏi menu — cả hai đều ngoài phạm vi Phase 1
-(`.claude/rules/scope-standards.md`, mục "Ngoài phạm vi").
+(điểm thưởng), "Cộng tác viên" và "Việc đã lưu" (Favorites) khỏi menu — cả ba đều ngoài phạm vi
+Phase 1 (`.claude/rules/scope-standards.md`, mục "Ngoài phạm vi"; ADR-021).
 
 ## 2. Thấy nhưng KHÔNG được copy
 

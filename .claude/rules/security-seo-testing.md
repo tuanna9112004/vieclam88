@@ -13,7 +13,7 @@ paths:
 # Security, SEO, test
 
 - CSRF, Form Request, escaped Blade output, mass-assignment allowlist.
-- Rate limit login/application/lead; honeypot mặc định, CAPTCHA chỉ khi cần.
+- Rate limit login/application; honeypot mặc định, CAPTCHA chỉ khi cần.
 - Không log secret, token hoặc dữ liệu nhạy cảm; không đọc/ghi `.env` tùy tiện.
 - Upload phải kiểm MIME/size, tên ngẫu nhiên, chặn executable.
 - Authorization ở route và Policy; không chỉ ẩn nút trong view.

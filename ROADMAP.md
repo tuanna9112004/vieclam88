@@ -8,51 +8,52 @@ hoàn thành, không viết thêm ghi chú tiến độ dài ở đây (tránh t
 **Không migration nào được viết trước khi Giai đoạn 0 hoàn thành** — xem điều kiện ở cuối mục
 Giai đoạn 0.
 
-## Giai đoạn 0 — Chốt nghiệp vụ, database và môi trường
+## Giai đoạn 0 — Chốt plan/spec
 
-- [x] Audit repository.
-- [x] Chuẩn hóa tài liệu (`CLAUDE.md`, `.claude/rules/*.md`, `docs/*.md`).
-- [x] Đặc tả 6 luồng nghiệp vụ cốt lõi (`docs/CORE-FLOWS.md`).
-- [x] Thiết kế `branches` (cơ sở nội bộ) và phân biệt với `company_locations`/`company_contacts`.
-- [x] Duplicate handling contract (case A/B/C + merge conflict) — `docs/CORE-FLOWS.md` mục 6.
-- [x] Transition matrix chính thức cho `applications.stage` — `docs/CORE-FLOWS.md` mục 5.1.
-- [x] Thiết kế `application_appointments` (callback/interview).
-- [x] Điều kiện publish Job (bao gồm `owner_branch_id`, contact công khai).
-- [x] Quyền theo cơ sở (staff scope, admin không giới hạn) — `docs/CORE-FLOWS.md` mục 4,
-      `.claude/rules/roles-business-rules.md`.
-- [ ] Chính sách dữ liệu cá nhân (nội dung consent, thời hạn lưu trữ, quyền yêu cầu xóa/ẩn
-      danh của ứng viên) — chưa có tài liệu riêng, cần xác nhận trước Giai đoạn 1.
-- [ ] Review và chốt ERD (`docs/ERD.md`) sau khi thêm bảng mới.
-- [ ] Review và chốt database dictionary (`docs/DATABASE-DICTIONARY.md`) sau khi thêm bảng mới.
-- [ ] Review và chốt foreign key, check constraint và delete policy cho bảng mới.
-- [ ] Review và chốt index, unique và quy tắc primary duy nhất cho bảng mới.
-- [ ] Xác nhận toàn bộ mục **[CẦN CHỐT]** liệt kê ở `docs/CORE-FLOWS.md` mục 7 (ngưỡng khớp
-      tên, nhóm contact result mở khóa `consulted`, có cho mở lại `closed`, tiêu chí merge,
-      phạm vi xem Job của staff, scope cơ sở cho `lead_requests`) và 5 enum **[đề xuất]** còn
-      tồn đọng trong `docs/DATABASE-DICTIONARY.md`.
+- [x] Sáu Critical Business Flows (`docs/CORE-FLOWS.md`).
+- [x] Phạm vi Phase 1 chính thức — không Lead, không assignment/claim, không Favorites
+      (ADR-021).
+- [x] Branch (cơ sở nội bộ), phân biệt với `company_locations`/`company_contacts` (ADR-015).
+- [x] Duplicate contract (case A/B/C + merge — admin chọn thủ công) — `docs/CORE-FLOWS.md`
+      mục 6.
+- [x] Idempotency contract (`applications.submission_token`) — `docs/CORE-FLOWS.md` mục 3.
+- [x] Transition matrix Application (bao gồm `closed → new` mở lại có kiểm soát) —
+      `docs/CORE-FLOWS.md` mục 5.1.
+- [x] Contact Result enum chính thức (11 giá trị) — `docs/CORE-FLOWS.md` mục 5.2.
+- [x] Appointment — quy tắc đổi lịch (tạo mới, không sửa đè) — `docs/CORE-FLOWS.md` mục 5.3.
+- [x] Job transition matrix chính thức — `docs/CORE-FLOWS.md` mục 1.
+- [ ] Data retention — thời hạn lưu dữ liệu ứng viên và chính sách anonymize snapshot vẫn
+      **[CẦN CHỐT]** (`docs/CORE-FLOWS.md` mục 7–8), chưa có quyết định từ công ty.
+- [x] Constraint và index — đã chốt tầng DB vs Service (`docs/DATABASE-DICTIONARY.md` mục
+      "Ràng buộc: DB bảo vệ vs Service + test bảo vệ").
+- [ ] Xác nhận 5 enum **[đề xuất]** còn tồn đọng (`docs/DATABASE-DICTIONARY.md`).
 - [ ] Cài PHP 8.4, kiểm tra Composer, Node LTS, MariaDB.
 
-**Điều kiện chuyển sang Giai đoạn 1:** tất cả mục **[CẦN CHỐT]** ở `docs/CORE-FLOWS.md` mục 7
-đã được xác nhận hoặc chấp nhận mặc định đề xuất bằng văn bản (cập nhật lại
-`docs/CORE-FLOWS.md`, xóa khỏi danh sách); ERD + dictionary không còn mâu thuẫn với
-`docs/CORE-FLOWS.md`; môi trường code đã cài đặt xong.
+**Điều kiện chuyển sang Giai đoạn 1:** thời hạn lưu dữ liệu + chính sách anonymize snapshot +
+5 enum **[đề xuất]** đã được xác nhận hoặc chấp nhận mặc định đề xuất bằng văn bản (cập nhật lại
+`docs/CORE-FLOWS.md`/`docs/DATABASE-DICTIONARY.md`, xóa khỏi danh sách [CẦN CHỐT]); môi trường
+code đã cài đặt xong.
 
 Chưa tạo mã nguồn trong giai đoạn này.
 
 ## Giai đoạn 1 — Database lõi
 
 - [ ] Khởi tạo Laravel 13.x project, PHP 8.4.x (`.claude/rules/tech-stack.md`).
-- [ ] Migration cho toàn bộ 28 bảng theo đúng `docs/DATABASE-DICTIONARY.md`, gồm `branches`,
-      `application_branch_histories`, `application_appointments` và các cột mới
-      (`users.branch_id`, `jobs.owner_branch_id`, `applications.owner_branch_id` và các cột
-      duplicate-review).
-- [ ] Enum (PHP backed enum) cho mọi cột trạng thái, khớp transition matrix.
+- [ ] Migration cho toàn bộ 25 bảng theo đúng `docs/DATABASE-DICTIONARY.md`: Branch, User
+      (staff bắt buộc có branch), Company/location/contact, Job, Candidate, Application
+      (snapshot, consent, `submission_token`), Status history, Branch history, Contact log,
+      Appointment, Note, Export log. **Không tạo** `lead_requests`, `favorites`,
+      `application_assignment_histories`, cột `applications.assigned_to` (ADR-021).
+- [ ] Enum (PHP backed enum) cho mọi cột trạng thái, khớp transition matrix (Job và
+      Application) và Contact Result enum.
 - [ ] Model + relationship khớp `docs/ERD.md`.
-- [ ] Factory cho toàn bộ bảng, bao gồm bảng mới.
+- [ ] Factory cho toàn bộ 25 bảng.
 - [ ] Seeder (`branches`, `work_shifts`, `recruitment_sources`, `administrative_units` dữ liệu
       mẫu — cần ít nhất 2 cơ sở mẫu để test phân quyền theo cơ sở).
-- [ ] Database test (foreign key, unique constraint, soft delete, transition matrix, duplicate
-      contract, branch scoping).
+- [ ] Database test (foreign key, unique constraint gồm `submission_token`, soft delete,
+      transition matrix Job/Application, duplicate contract, branch scoping). "Audit log" của
+      Phase 1 = audit trail theo từng bảng lịch sử (ADR-019), không phải bảng `audit_logs`
+      tổng quát riêng — không tạo bảng này.
 
 **Điều kiện hoàn thành:**
 
@@ -61,41 +62,41 @@ php artisan migrate:fresh --seed
 php artisan test
 ```
 
-## Giai đoạn 2 — Job và website public
+## Giai đoạn 2 — Website public và Job
 
 - [ ] Authentication admin/staff (`/hr/dang-nhap`), `users.branch_id` bắt buộc khi tạo staff.
-- [ ] Company CRUD (`docs/ROUTE-MAP.md` phần "HR công ty").
-- [ ] Location CRUD (`company_locations`), Contact CRUD (`company_contacts`).
-- [ ] Branch CRUD (`docs/ROUTE-MAP.md` phần "HR danh mục" — `hr.branches.*`).
+- [ ] Company CRUD, Location CRUD, Contact CRUD, Branch CRUD (`docs/ROUTE-MAP.md`).
 - [ ] Job CRUD, chọn `owner_branch_id`, điều kiện publish đầy đủ (Luồng 1).
-- [ ] Publish/pause/close job, nhân bản job.
-- [ ] Public listing (`/viec-lam`), tìm kiếm/lọc (Luồng 2).
-- [ ] Job detail (`/viec-lam/{slug}`), CTA Gọi/Zalo ưu tiên contact cơ sở (Luồng 1, mục
-      "Quy tắc contact CTA").
-- [ ] Job verification (`job_verifications`, transaction "Verify job" trong
-      `.claude/rules/data-model.md`).
+- [ ] Publish/pause/reopen (`paused → published`)/close job theo transition matrix, nhân bản
+      job.
+- [ ] Danh sách và chi tiết Job public (`/viec-lam`), tìm kiếm/lọc (Luồng 2).
+- [ ] CTA Gọi/Zalo trên Job — luôn dùng contact của `owner_branch_id`, không dùng
+      `company_contacts` làm CTA thay thế (ADR-023).
+- [ ] Job verification (`job_verifications`, transaction "Verify job").
 - [ ] Form ứng tuyển guest (`ApplicationController@store`), toàn bộ transaction Luồng 3
-      (`docs/CORE-FLOWS.md` mục 3), duplicate contract case A/B/C.
+      (`docs/CORE-FLOWS.md` mục 3) gồm `submission_token`, duplicate contract case A/B/C.
 
-## Giai đoạn 3 — HR xử lý Application
+## Giai đoạn 3 — HR xử lý hồ sơ
 
 - [ ] Danh sách hồ sơ theo cơ sở (Luồng 4), cột tối thiểu theo `docs/CORE-FLOWS.md` mục 4.
-- [ ] Chi tiết hồ sơ, claim/assign trong phạm vi cơ sở.
-- [ ] Contact Log (`application_contact_attempts`).
-- [ ] Appointment — tạo lịch gọi lại/phỏng vấn, cập nhật kết quả (Luồng 5 mục 5.3).
-- [ ] Đổi stage qua `ChangeApplicationStageAction`, validate transition matrix (Luồng 5).
+- [ ] Chi tiết hồ sơ — bất kỳ staff nào cùng cơ sở đều xử lý được, không có "nhận xử lý"/"gán
+      nhân viên" (ADR-021).
+- [ ] Contact Log (`application_contact_attempts`), enum kết quả chính thức.
+- [ ] Appointment — callback và interview, tạo/cập nhật kết quả, đổi lịch = hủy cũ + tạo mới
+      (Luồng 5 mục 5.3).
+- [ ] Đổi stage qua `ChangeApplicationStageAction`, validate transition matrix, gồm `closed →
+      new` mở lại có kiểm soát (Luồng 5).
 - [ ] Close reason bắt buộc khi đóng hồ sơ.
 - [ ] Chuyển cơ sở ngoại lệ (Luồng 6 mục 6.1), chỉ admin.
-- [ ] Merge candidate + xử lý xung đột Application cùng job (Luồng 6 mục 6.3), chỉ admin.
-- [ ] Lead request: form công khai + danh sách/chi tiết cho staff (chỉ xem/ghi nhận, không
-      chuyển đổi — xem ADR-018).
+- [ ] Merge candidate (admin chọn Application giữ lại) + xử lý xung đột Application cùng job
+      (Luồng 6 mục 6.3), chỉ admin.
 
 ## Giai đoạn 4 — Hoàn thiện
 
 - [ ] Dashboard cơ bản (KPI đã chốt).
 - [ ] Export CSV + `export_logs`.
 - [ ] Security review (`.claude/rules/security-seo-testing.md`), bao gồm test 403 xem chéo
-      cơ sở và test mass-assignment `owner_branch_id`/`stage`/`assigned_to`.
+      cơ sở và test mass-assignment `owner_branch_id`/`stage`.
 - [ ] SEO, Responsive.
 - [ ] Feature test đầy đủ theo `docs/ACCEPTANCE-CRITERIA.md`.
 - [ ] Backup.
@@ -105,17 +106,22 @@ php artisan test
 
 ## Candidate account — sau khi guest + HR ổn định
 
+Chỉ tài khoản cơ bản; **không có Favorites** (Phase 2, ADR-021).
+
 - [ ] Register/Login (`docs/ROUTE-MAP.md` phần "Candidate account").
-- [ ] Profile, Favorites.
+- [ ] Profile.
 - [ ] Applied jobs (hiển thị rút gọn, không lộ pipeline nội bộ — `.claude/rules/scope-standards.md`).
 - [ ] Link guest candidate vào tài khoản mới đăng ký (`candidates.user_id`).
 
 ## Phase 2 — ngoài phạm vi Phase 1 (không code, không thiết kế trước ở Phase 1)
 
-- Lead từ điện thoại/tin nhắn Zalo trực tiếp; chuyển đổi Lead thành Application (ADR-018).
+- Lead (mọi kênh: điện thoại, Zalo, form "yêu cầu tư vấn" trên website); chuyển đổi Lead thành
+  Application.
+- Assignment: "Nhận xử lý" (claim), gán nhân viên (assign), tự động phân công, round-robin,
+  vai trò "trưởng cơ sở" phân công, `application_assignment_histories`.
+- Favorites.
+- Candidate Account nâng cao (dashboard nâng cao, theo dõi trạng thái pipeline qua tài khoản).
 - Tích hợp Zalo API; tự động gọi/gửi tin nhắn.
-- Phân công nhân viên tự động, round-robin.
-- Candidate Account nâng cao.
 - Cộng tác viên, hoa hồng, referral.
 - AI matching, CRM đa kênh.
 

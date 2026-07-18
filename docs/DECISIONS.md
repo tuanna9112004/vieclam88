@@ -230,3 +230,128 @@ application") trong `.claude/rules/roles-business-rules.md`.
 cơ sở sẽ vô hiệu hóa mục đích phân vùng dữ liệu theo cơ sở và có nguy cơ lộ dữ liệu ứng viên
 giữa các cơ sở không liên quan. Việc "tự nhận hồ sơ" (claim) trong phạm vi cơ sở của mình vẫn
 giữ nguyên, không cần phân công cứng.
+
+> Cập nhật (ADR-021): phần "tự nhận hồ sơ (claim)" ở ADR này bị thay thế — Phase 1 bỏ hẳn khái
+> niệm claim/assign, không chỉ bỏ phân công cứng.
+
+## ADR-021 — Bỏ Lead, Assignment và Favorites khỏi phạm vi database Phase 1 (siết phạm vi lần 2)
+
+**Quyết định:** Ba nhóm sau bị loại hoàn toàn khỏi database và route Phase 1, dời sang Phase 2:
+
+- **Lead**: không có `lead_requests`, không có form "yêu cầu tư vấn" trên website
+  (`/lien-he/tu-van`), không có trang quản lý lead ở HR (`/hr/yeu-cau-tu-van`). Thay thế phần
+  quyết định trước đó ở ADR-018 (vốn chỉ bỏ *chuyển đổi* Lead → Application nhưng vẫn giữ
+  `lead_requests` làm nơi ghi nhận số điện thoại) — nay bỏ hẳn cả bảng và tính năng ghi nhận.
+- **Assignment**: không có route "Nhận xử lý" (claim) hay "Gán nhân viên" (assign), không có
+  bảng `application_assignment_histories`, không có cột `applications.assigned_to`. Thay thế
+  phần "tự nhận hồ sơ (claim)" đã mô tả ở ADR-020 — Phase 1 chỉ phân quyền theo cơ sở, không có
+  khái niệm phân công ở mức nhân viên dưới bất kỳ hình thức nào (kể cả tự nguyện).
+- **Favorites**: không có bảng `favorites`, không có route lưu việc làm.
+
+Bảng Phase 1 giảm từ 28 xuống còn 25 (bỏ `lead_requests`, `application_assignment_histories`,
+`favorites`).
+
+**Lý do:** Yêu cầu nghiệp vụ cập nhật xác nhận Phase 1 chỉ cần xử lý hồ sơ đến từ form ứng
+tuyển, xử lý theo cơ sở (không theo từng nhân viên), và ưu tiên guest application (không cần
+tính năng tài khoản nâng cao như lưu việc làm). Giữ các bảng/route này ở Phase 1 dù không dùng
+sẽ tạo cột/bảng dự phòng không ai ghi dữ liệu vào — vi phạm nguyên tắc "không tạo bảng/cột dự
+phòng" (`.claude/rules/tech-stack.md`). Trách nhiệm xử lý hồ sơ vẫn được theo dõi đầy đủ qua
+audit trail theo từng action đã có (ADR-019): người tạo Contact Log, người đổi trạng thái,
+người tạo/hoàn thành Appointment, người thêm Note — không cần cột "người phụ trách" để biết ai
+đã làm gì.
+
+## ADR-022 — Idempotency contract: `applications.submission_token`
+
+**Quyết định:** Thêm `applications.submission_token` (string, unique khi có giá trị), sinh 1
+lần khi server render form ứng tuyển, gửi kèm khi submit. Đây là cơ chế chống **cùng một lần
+gửi form bị lặp** (double-click, F5 sau khi đã submit thành công), tách biệt với unique
+`(candidate_id, job_id)` vốn chống **ứng tuyển lại** (lần submit mới, hợp lệ về nghiệp vụ,
+nhưng trùng candidate + job).
+
+**Lý do:** Unique `(candidate_id, job_id)` một mình không đủ phân biệt "double-click cùng 1 lần
+submit" (nên coi là thành công, trả lại bản ghi đã tạo) với "submit lần 2 độc lập cho cùng job"
+(case C, thông báo đã ứng tuyển). Không có token, server không biết 2 request unique-conflict
+có phải cùng 1 hành động người dùng hay không — không ảnh hưởng tới tính đúng của constraint,
+nhưng ảnh hưởng tới thông báo/trải nghiệm trả về. `submission_token` giải quyết rõ ràng ở tầng
+dữ liệu, không đoán qua timing.
+
+## ADR-023 — CTA Gọi/Zalo luôn ưu tiên contact cơ sở, không dùng `company_contacts` làm CTA thay thế
+
+**Quyết định:** CTA "Gọi"/"Nhắn Zalo" trên trang Job công khai luôn dùng `branches.phone`/
+`branches.zalo` của `jobs.owner_branch_id`. `company_contacts.is_public = true` không còn là
+nguồn CTA ưu tiên số 1 thay thế branch — chỉ hiển thị **thêm** như kênh liên hệ phụ khi được
+chọn làm `jobs.company_contact_id`. Thay thế logic ưu tiên mô tả trước đây trong
+`docs/CORE-FLOWS.md` (bản trước: `company_contacts.is_public` ưu tiên 1, branch là fallback).
+
+**Lý do:** Nhân viên cơ sở (branch) là người trực tiếp xử lý ứng viên trong Phase 1; để CTA mặc
+định trỏ tới đầu mối của công ty khách hàng (nhà máy) sẽ khiến ứng viên liên hệ sai người, bỏ
+qua vai trò tư vấn của công ty cung ứng lao động. Vì `branches.phone`/`zalo` hợp lệ đã là điều
+kiện bắt buộc trước khi publish (ADR liên quan `docs/CORE-FLOWS.md` mục 1), CTA luôn có dữ liệu
+để hiển thị mà không cần fallback.
+
+## ADR-024 — Chốt Application transition matrix mở rộng và Contact Result enum chính thức
+
+**Quyết định:** Application transition matrix liệt kê tường minh mọi transition hợp lệ, gồm
+đường `closed` từ từng stage (không chỉ 1 dòng gộp chung như bản trước) và bổ sung `closed →
+new` (mở lại có kiểm soát: bắt buộc lý do, không được vi phạm unique `(candidate_id, job_id)`).
+Contact Result chốt đúng 11 giá trị: `reached`, `no_answer`, `busy`, `wrong_number`,
+`consulted`, `callback_requested`, `interview_agreed`, `candidate_refused`, `unsuitable`,
+`message_sent`, `other` — đồng nhất giữa `docs/CORE-FLOWS.md` và
+`docs/DATABASE-DICTIONARY.md` (bản trước 2 tài liệu này liệt kê enum khác nhau). Nhóm mở khóa
+`contacting → consulted` chốt là {`consulted`, `interview_agreed`}.
+
+**Lý do:** Bản đặc tả trước để "closed → (bất kỳ): không cho phép mở lại — [CẦN CHỐT]" và để
+enum Contact Result mô tả không nhất quán giữa 2 tài liệu (tiếng Việt có dấu ở
+`docs/CORE-FLOWS.md` cũ, tiếng Anh khác ở dictionary) — đây chính là loại mâu thuẫn tài liệu mà
+`.claude/rules/docs-governance.md` yêu cầu tránh. Cho phép mở lại có kiểm soát phản ánh thực tế
+vận hành (ứng viên từng bị đóng hồ sơ có thể quay lại sau); ràng buộc chống vi phạm unique khi
+mở lại ngăn một lỗi dữ liệu thật (mở lại bản ghi từng bị đóng do trùng sẽ tạo 2 Application
+active cho cùng candidate + job).
+
+## ADR-025 — Chốt Job transition matrix tường minh và quy tắc đổi lịch hẹn (appointment)
+
+**Quyết định:** Job transition matrix chỉ cho phép đúng 5 transition: `draft→published`,
+`published→paused`, `paused→published`, `published→closed`, `paused→closed`. `draft→closed`
+không phải transition — Job nháp bỏ dùng được xử lý bằng soft delete (hành động khác, không
+qua state machine). `application_appointments`: đổi lịch (đổi giờ/hủy) không sửa đè
+`scheduled_at` của bản ghi cũ — chuyển bản ghi cũ sang `cancelled`/`no_show` rồi tạo bản ghi
+Appointment mới, giữ nguyên lịch sử các lần hẹn.
+
+**Lý do:** Bản đặc tả trước chỉ mô tả trạng thái Job dạng chuỗi (`draft → published → paused →
+closed`) không liệt kê tường minh `paused → published` (mở lại) hay giới hạn transition nào bị
+cấm — dẫn tới rủi ro code cho phép chuyển trạng thái tùy ý. Việc appointment không được sửa đè
+`scheduled_at` giữ đúng nguyên tắc "lịch sử chỉ thêm, không ghi đè" (`CLAUDE.md`) — sửa đè giờ
+hẹn cũ sẽ làm mất bằng chứng đã từng hẹn giờ nào, ai đổi, đổi khi nào.
+
+## ADR-026 — Tinh chỉnh duplicate handling contract: khớp tên chính xác, merge do admin chọn thủ công
+
+**Quyết định:** Thay thế 2 điểm mở trong ADR-017:
+
+- Case A (khớp mạnh): tiêu chí "tên tương đồng mạnh" (ngưỡng chưa xác định) đổi thành "tên sau
+  chuẩn hóa (bỏ dấu, lowercase, gộp khoảng trắng) khớp **chính xác**" — không dùng thuật toán
+  khoảng cách chuỗi hay ngưỡng tương đồng.
+- Merge conflict (mục 6.3): Application được giữ lại do **admin chọn thủ công**; hệ thống chỉ
+  đề xuất gợi ý theo stage tiến xa hơn, không tự động quyết định.
+
+**Lý do:** Đây là 2 trong số các mục **[CẦN CHỐT]** còn tồn đọng ở vòng đặc tả trước — nay có
+quyết định rõ từ yêu cầu nghiệp vụ cập nhật, xóa khỏi danh sách CẦN CHỐT. Khớp tên chính xác dễ
+kiểm thử và dự đoán hơn ngưỡng tương đồng mờ; để admin chọn thủ công khi merge tránh rủi ro hệ
+thống tự đóng nhầm Application đang có tiến triển thực sự tốt hơn tiêu chí "stage xa hơn" đo
+được (vd Application A đang `interview_scheduled` nhưng ứng viên thực chất đã từ chối ngầm,
+trong khi Application B ở `contacting` nhưng đang được xử lý tích cực — chỉ người thực sự đọc
+lịch sử mới biết chọn đúng).
+
+## ADR-027 — Khung chính sách dữ liệu cá nhân tối thiểu (thời hạn lưu vẫn [CẦN CHỐT])
+
+**Quyết định:** Thêm khung chính sách dữ liệu cá nhân tối thiểu vào `docs/CORE-FLOWS.md` mục 7:
+ai được anonymize (đề xuất chỉ admin), anonymize xử lý thế nào với `candidates` (mask định danh,
+giữ `id`/quan hệ), Contact Log/Note không tự động bị ảnh hưởng, nội dung chính sách hiển thị qua
+`pages` (không cần bảng version riêng). **Không** tự đặt thời hạn lưu dữ liệu cụ thể, và **không**
+tự quyết định có anonymize nội dung `submission_snapshot`/`job_snapshot` lịch sử hay không — cả
+hai đánh dấu **[CẦN CHỐT]**, chặn Giai đoạn 1 cho tới khi công ty xác nhận.
+
+**Lý do:** Yêu cầu nghiệp vụ cập nhật đòi hỏi có tài liệu chính sách tối thiểu nhưng cấm tự đặt
+thời hạn lưu khi công ty chưa xác nhận (`docs/CORE-FLOWS.md` không được tự suy đoán nghiệp vụ,
+`CLAUDE.md`). Tách rõ phần có thể quyết định ở mức kiến trúc (ai anonymize, xử lý dữ liệu quan
+hệ) khỏi phần bắt buộc phải do công ty quyết định (thời hạn cụ thể, đánh đổi giữa xóa triệt để
+và giữ bằng chứng lịch sử) để không chặn toàn bộ tài liệu chỉ vì 1 con số chưa có.
