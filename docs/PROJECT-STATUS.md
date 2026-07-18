@@ -2,7 +2,7 @@
 
 ## Phase / slice hiện tại
 
-**Giai đoạn 0 hoàn thành về nội dung.** Phase 1 Plan Baseline v1.0 và Database Baseline v1.0 đã được harden; Claude Context Architecture đã được tối ưu. Chưa có source Laravel hoặc migration. Git baseline chỉ hoàn tất sau review + commit/tag.
+**Giai đoạn 0 hoàn thành — Phase 1 Plan, Database và Claude Context Baseline v1.0 đã đóng băng.** Commit `10039ef` (push `origin/main`); `/release-gate baseline` xác nhận READY, 0 warning. Chưa có source Laravel hoặc migration.
 
 ## Đã hoàn thành
 
@@ -10,6 +10,7 @@
 - Chốt Job draft/publish/verification, branch ownership, submission concurrency, duplicate review, merged family, PII schema và authorization.
 - Tách ADR theo chủ đề tại `docs/decisions/`; thêm `docs/INDEX.md` và Context Map tối giản.
 - Rút gọn `CLAUDE.md`; chia rule theo architecture/schema/job/application/auth/public/security/test/SEO; bổ sung bộ skill vibe coding thông minh và semantic checker.
+- Commit + push baseline (`10039ef`), release gate baseline READY — Plan/Database/Claude Context Baseline v1.0 chính thức đóng băng.
 
 ## Verification bắt buộc trước baseline
 
@@ -27,6 +28,6 @@ git diff --check
 
 ## Bước tiếp theo
 
-1. Review diff, commit/tag Plan + Database + Claude Context Baseline khi người dùng xác nhận.
+1. Gắn git tag chính thức cho baseline (`git tag`/`git push` cần xác nhận riêng theo `.claude/settings.json`).
 2. Kiểm tra/cài môi trường và khởi tạo Laravel 13.x sau khi được phép.
 3. Triển khai Nhóm 1 trong `ROADMAP.md`: administrative units, branches, users và auth nền tảng, kèm test.
