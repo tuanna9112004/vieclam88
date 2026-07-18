@@ -13,17 +13,20 @@ Không tự thêm framework/service mới. Mọi thay đổi kiến trúc phải
 
 ## Bất biến nghiệp vụ
 
+6 luồng nghiệp vụ cốt lõi (nguồn sự thật, mọi thứ khác phải khớp): `docs/CORE-FLOWS.md`.
+
 - `users` là tài khoản; `candidates` là hồ sơ; guest vẫn có thể ứng tuyển.
 - Không nhận diện người chỉ bằng một số điện thoại; liên hệ nằm ở `candidate_contacts`.
 - Một `job` là một đợt tuyển; không tạo trùng `(candidate_id, job_id)`.
 - `applications` phải lưu snapshot và consent tại thời điểm gửi.
-- Pipeline, lần liên hệ, ghi chú và phân công là dữ liệu riêng; lịch sử chỉ thêm, không ghi đè.
+- `applications.owner_branch_id` copy từ `jobs.owner_branch_id` lúc tạo, không suy ra động; staff chỉ xem/xử lý Application thuộc cơ sở của mình, admin xem toàn bộ. Chuyển cơ sở là ngoại lệ có kiểm soát (lý do + lịch sử), không tạo Application mới.
+- Pipeline, lần liên hệ, lịch hẹn, ghi chú và phân công là dữ liệu riêng; lịch sử chỉ thêm, không ghi đè.
 - Không hard-delete dữ liệu tuyển dụng cốt lõi.
-- Không làm chức năng ngoài Phase 1 nếu chưa có ADR được chấp nhận.
+- Không làm chức năng ngoài Phase 1 nếu chưa có ADR được chấp nhận. Chuyển đổi Lead thành Application, tự động phân công/round-robin thuộc Phase 2.
 
 ## Cách làm việc
 
-1. Đọc `docs/PROJECT-STATUS.md` và `docs/CONTEXT-MAP.md`.
+1. Đọc `docs/PROJECT-STATUS.md` và `docs/CONTEXT-MAP.md`; nếu task đụng tới Job/Application/cơ sở, đọc thêm `docs/CORE-FLOWS.md`.
 2. Chỉ đọc tài liệu đúng loại task; không quét toàn bộ `docs/` hoặc toàn bộ ảnh.
 3. Mỗi session xử lý một vertical slice nhỏ, có tiêu chí nghiệm thu rõ.
 4. Sửa ít file nhất; không refactor ngoài phạm vi.

@@ -2,37 +2,36 @@
 
 ## Phase / slice hiện tại
 
-Giai đoạn 0 (chuẩn hóa tài liệu) — chưa có mã nguồn Laravel.
+Giai đoạn 0 (chốt nghiệp vụ + database) — chưa có mã nguồn Laravel.
 
 ## Đã hoàn thành
 
-- Bộ tài liệu đầy đủ: `CLAUDE.md` (điều phối, 57 dòng), `.claude/rules/*.md` (9 file,
-  path-scoped), `docs/` (CONTEXT-MAP, ERD, DATABASE-DICTIONARY, ROUTE-MAP,
-  ACCEPTANCE-CRITERIA, DECISIONS, PROJECT-STATUS), `.claude/skills/{implement,db-task,
-  review-changes,handoff}`, `.claude/agents/reviewer.md`.
-- Audit toàn dự án: xóa `.claude/rules/workflow-session-handoff.md` (trùng nội dung với
-  `/handoff` skill, thiếu frontmatter `paths:`); sửa toàn bộ tham chiếu "mục X.Y" lỗi thời
-  còn sót lại sau khi rules được rút gọn bỏ số thứ tự (`ROADMAP.md`, `UI-REFERENCE.md`,
-  `docs/ERD.md`, `docs/DECISIONS.md`, `docs/DATABASE-DICTIONARY.md`,
-  `docs/ACCEPTANCE-CRITERIA.md`).
-- 25 bảng Phase 1 đã chốt cấu trúc (ERD + dictionary), routing `/hr`, PHP 8.4/Laravel 13.
+- `docs/CORE-FLOWS.md` (mới): nguồn sự thật 6 luồng cốt lõi, transition matrix, duplicate
+  contract (case A/B/C + merge conflict), chuyển cơ sở, danh sách **[CẦN CHỐT]**.
+- Thêm `branches` (cơ sở nội bộ) + `owner_branch_id` (jobs/applications) + `users.branch_id`;
+  scope quyền staff theo cơ sở (ADR-015, 016, 020). Dictionary nay 28 bảng (+
+  `application_branch_histories`, `application_appointments`, cột duplicate-review — ADR-017).
+- Dời cơ chế chuyển `lead_requests → applications` sang Phase 2 (ADR-018).
+- Đồng bộ toàn bộ: ERD, DATABASE-DICTIONARY, ROUTE-MAP, ACCEPTANCE-CRITERIA, DECISIONS
+  (ADR-015..020), CLAUDE.md, CONTEXT-MAP, ROADMAP (viết lại theo Giai đoạn 0–4 + Phase 2), rules
+  liên quan. Rà soát chéo: không còn mâu thuẫn "staff xem toàn bộ", "25 bảng", lead-convert.
 
 ## Verification
 
-Không chạy được `scripts/check-claude-config.py` (máy dev chưa cài Python). Đã tự đối chiếu
-thủ công theo đúng logic script: required files ✓, `CLAUDE.md` 57 dòng ✓, không `@` import ✓,
-9/9 rule file path-scoped ✓, `settings.json` không chặn nhầm `.env.example`/`storage` ✓,
-`viec3mien_giaodienweb/` đã xóa ✓, `PROJECT-STATUS.md` ≤45 dòng ✓.
+`python scripts/check-claude-config.py` → `OK: Claude configuration passed with 1 warning(s)`
+(cảnh báo enum **[đề xuất]** chưa chốt, không đổi so với trước).
 
 ## Blockers
 
-- 6 chỗ đánh dấu **[đề xuất]** trong `docs/DATABASE-DICTIONARY.md` (`jobs.employment_type`,
-  `jobs.close_reason`, `pages.status`, `settings.type`, `company_contacts.status`) — cần xác
-  nhận nghiệp vụ trước khi tạo migration thật.
-- Chưa cài Python trên máy dev — không tự động chạy được `check-claude-config.py`.
+- 7 mục **[CẦN CHỐT]** ở `docs/CORE-FLOWS.md` mục 7 (ngưỡng khớp tên, nhóm contact result mở
+  khóa `consulted`, mở lại `closed`, tiêu chí merge, phạm vi xem Job của staff, scope cơ sở
+  cho lead, + 5 enum đề xuất cũ) — chưa migration được tới khi xác nhận.
+- Chính sách dữ liệu cá nhân (thời hạn lưu, quyền xóa/ẩn danh) chưa có tài liệu riêng.
+- Môi trường code (PHP 8.4, Composer, Node LTS, MariaDB) chưa cài/kiểm tra.
 
 ## Bước tiếp theo
 
-1. Cài Python, chạy `python scripts/check-claude-config.py` để xác nhận lại bằng máy.
-2. Chốt các enum **[đề xuất]**.
-3. `composer create-project` Laravel 13.x (cần xác nhận trước khi chạy).
+1. Công ty xác nhận danh sách **[CẦN CHỐT]** ở `docs/CORE-FLOWS.md` mục 7.
+2. Cài PHP 8.4/Composer/Node/MariaDB.
+3. Sau khi (1) xong: `composer create-project` Laravel 13.x — Giai đoạn 1, cần xác nhận trước
+   khi chạy.

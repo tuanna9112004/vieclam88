@@ -140,3 +140,93 @@ bảng `roles`, `permissions`, `role_user`, `permission_role`. `guest` không ph
 **Lý do:** RBAC đầy đủ (nhiều role, nhiều permission tùy biến) chỉ cần thiết khi có nhiều
 loại nhân viên với quyền khác nhau đáng kể. Với 2 role nội bộ (staff, admin), 1 cột enum +
 Policy đủ để kiểm soát quyền, tránh xây hệ thống thừa không ai cấu hình.
+
+## ADR-015 — Thêm `branches` (cơ sở nội bộ), tách khỏi `company_locations`
+
+**Quyết định:** Tạo bảng `branches` đại diện cho cơ sở/văn phòng nội bộ của chính công ty cung
+ứng lao động (vieclam88) — nơi nhân viên làm việc và xử lý hồ sơ. Tách hoàn toàn khỏi
+`company_locations` (địa điểm làm việc/nhà máy của công ty khách hàng) và `company_contacts`
+(đầu mối liên hệ tại công ty khách hàng, chủ yếu nội bộ).
+
+**Lý do:** Yêu cầu nghiệp vụ xác nhận công ty có nhiều cơ sở nội bộ, mỗi cơ sở phụ trách xử lý
+một tập hồ sơ riêng, nhân viên thuộc một cơ sở. Dùng `company_locations` cho việc này sẽ trộn
+lẫn 2 khái niệm không liên quan (nơi khách hàng cần tuyển người và nơi công ty cung ứng lao
+động vận hành), gây sai lệch khi công ty khách hàng có nhiều nhà máy nhưng chỉ 1 cơ sở nội bộ
+phụ trách, hoặc ngược lại.
+
+## ADR-016 — Application copy `owner_branch_id` từ Job lúc tạo, không suy ra động
+
+**Quyết định:** `applications.owner_branch_id` được copy từ `jobs.owner_branch_id` tại thời
+điểm Application được tạo và lưu cố định. Không JOIN động qua `jobs` để suy ra cơ sở phụ
+trách. Thay đổi cơ sở cho một Application đã tồn tại phải đi qua bảng lịch sử riêng
+`application_branch_histories` bằng một hành động tường minh ("chuyển cơ sở"), không tự động
+theo khi Job đổi `owner_branch_id`.
+
+**Lý do:** Nếu suy ra động qua Job, một thay đổi ở Job (vd sửa nhầm cơ sở phụ trách sau khi đã
+có hàng trăm hồ sơ) sẽ âm thầm chuyển toàn bộ hồ sơ đang xử lý sang cơ sở khác, làm nhân viên
+đang xử lý đột ngột mất quyền truy cập mà không có dấu vết. Snapshot tại thời điểm tạo +
+lịch sử chuyển tường minh giữ được nguyên tắc "lịch sử chỉ thêm, không ghi đè" đã có trong
+`CLAUDE.md`.
+
+## ADR-017 — Duplicate handling contract: 3 trường hợp tách biệt, không gộp chung logic
+
+**Quyết định:** Phát hiện trùng khi nộp hồ sơ tách thành 3 trường hợp xử lý khác nhau (chi
+tiết: `docs/CORE-FLOWS.md` mục 6.2–6.3):
+
+- **Case A** (khớp mạnh: số điện thoại chuẩn hóa + tên tương đồng mạnh + ngày sinh khớp nếu có
+  cả 2 bên) → tái sử dụng Candidate, không tạo mới.
+- **Case B** (chỉ trùng số điện thoại) → tạo Candidate mới bình thường, đánh dấu
+  `needs_duplicate_review` để HR xem lại thủ công, không tự động gộp.
+- **Case C** (đã có Application cùng Job) → không tạo Application mới, cập nhật
+  `last_reapplied_at`, thông báo thân thiện.
+- **Merge conflict** (2 Candidate cùng có Application cho cùng Job) → quy tắc chọn Application
+  giữ lại (stage tiến xa hơn, hoặc tạo trước nếu bằng stage), Application còn lại chuyển
+  `closed`/`duplicate`; toàn bộ Contact Log/Note/Appointment/Status History giữ nguyên gắn với
+  `application_id` gốc, không di chuyển.
+
+**Lý do:** ADR-005 đã quyết định không dùng số điện thoại làm định danh duy nhất nhưng chưa mô
+tả chính xác phải làm gì ở từng tình huống — để lập trình viên/AI tự đoán sẽ dẫn tới hành vi
+không nhất quán (có nơi tự gộp, có nơi chặn cứng). Tách 3 trường hợp + quy tắc merge tường minh
+loại bỏ khoảng trống này. Ngưỡng "tên tương đồng mạnh" cụ thể vẫn để **[CẦN CHỐT]** — ADR này
+chỉ chốt kiến trúc xử lý, không chốt thuật toán so khớp.
+
+## ADR-018 — Chuyển đổi Lead (`lead_requests`) thành Application dời sang Phase 2
+
+**Quyết định:** Phase 1 không triển khai bất kỳ cơ chế nào chuyển `lead_requests` thành
+`candidates`/`applications` — bỏ `converted_application_id`, `converted_at`, và giá trị
+`converted` khỏi `lead_requests.status` so với đặc tả trước. `lead_requests` Phase 1 chỉ ghi
+nhận yêu cầu tư vấn (số điện thoại) để nhân viên gọi lại thủ công, tách biệt hoàn toàn khỏi
+pipeline `applications`.
+
+**Lý do:** Yêu cầu nghiệp vụ hiện tại giới hạn Phase 1 chỉ xử lý hồ sơ đến từ form ứng tuyển
+trên website; lead từ điện thoại/Zalo và cơ chế chuyển đổi lead → application được xác nhận
+thuộc Phase 2. Đây là thay đổi phạm vi so với `docs/ACCEPTANCE-CRITERIA.md`/`docs/ROUTE-MAP.md`
+bản trước (đã cập nhật đồng bộ). Tránh xây cơ chế chuyển đổi (và các quy tắc chống chuyển đổi 2
+lần, xử lý trùng giữa lead-converted-application và application-thường) khi chưa chắc nghiệp vụ
+cần ngay ở Phase 1.
+
+## ADR-019 — "Audit trail theo từng action", không xây "audit log" tổng quát
+
+**Quyết định:** Yêu cầu "mọi thao tác phải ghi rõ người thực hiện/thời gian/nội dung" được đáp
+ứng bằng các bảng lịch sử append-only chuyên biệt đã có
+(`application_status_histories`, `application_assignment_histories`,
+`application_contact_attempts`, `application_branch_histories`, `job_verifications`,
+`export_logs`) — mỗi hành động nghiệp vụ tự ghi lại lịch sử của chính nó. Phase 1 **không**
+tạo bảng `audit_logs`/`activities` tổng quát ghi mọi thay đổi trên mọi model.
+
+**Lý do:** `.claude/rules/scope-standards.md` đã liệt kê "full audit log" là ngoài phạm vi
+Phase 1. Yêu cầu "Action phải ghi Audit log" trong đặc tả luồng nghiệp vụ mới không mâu thuẫn
+với giới hạn này — nó được thỏa mãn bởi audit trail per-action đã tồn tại, không cần thêm hạ
+tầng audit tổng quát (dual-write, listener toàn cục) mà Phase 1 chưa cần.
+
+## ADR-020 — Staff chỉ xem Application thuộc cơ sở phụ trách (thay vì toàn bộ)
+
+**Quyết định:** Staff chỉ truy cập được `applications` có `owner_branch_id` trùng
+`users.branch_id` của mình; truy cập URL của Application thuộc cơ sở khác trả về 403. Admin
+không bị giới hạn cơ sở. Đây là thay đổi so với giả định trước đó ("Staff Phase 1 xem toàn bộ
+application") trong `.claude/rules/roles-business-rules.md`.
+
+**Lý do:** Khi hệ thống có khái niệm cơ sở nội bộ (ADR-015), để staff xem toàn bộ hồ sơ của mọi
+cơ sở sẽ vô hiệu hóa mục đích phân vùng dữ liệu theo cơ sở và có nguy cơ lộ dữ liệu ứng viên
+giữa các cơ sở không liên quan. Việc "tự nhận hồ sơ" (claim) trong phạm vi cơ sở của mình vẫn
+giữ nguyên, không cần phân công cứng.

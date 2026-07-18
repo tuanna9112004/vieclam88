@@ -1,6 +1,8 @@
 # Database Dictionary — vieclam88 (Phase 1)
 
-Mô tả đầy đủ 25 bảng Phase 1. Xem quan hệ tổng quan ở `docs/ERD.md`, nguyên tắc thiết kế ở
+Mô tả đầy đủ 28 bảng Phase 1 (25 bảng gốc + `branches`, `application_branch_histories`,
+`application_appointments` — xem `docs/CORE-FLOWS.md` cho 6 luồng nghiệp vụ mà các bảng mới
+này hỗ trợ). Xem quan hệ tổng quan ở `docs/ERD.md`, nguyên tắc thiết kế ở
 `.claude/rules/data-model.md`, quyết định kiến trúc ở `docs/DECISIONS.md`.
 
 ## Quy ước chung
@@ -25,6 +27,7 @@ Mô tả đầy đủ 25 bảng Phase 1. Xem quan hệ tổng quan ở `docs/ERD
 |---|---|---|---|---|---|---|---|---|---|
 | id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | Khóa chính |
 | role | enum(candidate,staff,admin) | — | không | — | ✓ | — | — | — | Vai trò tài khoản; `guest` không phải giá trị hợp lệ |
+| branch_id | bigint | ✓ | có | null | ✓ | — | branches.id | SET NULL | Cơ sở nội bộ phụ trách; **bắt buộc khi `role=staff`** (chốt ở Form Request/Service, không ép NOT NULL ở DB vì `admin` không cần); xem `docs/CORE-FLOWS.md` |
 | name | string(150) | — | không | — | — | — | — | — | Tên hiển thị |
 | email | string(191) | — | có | null | — | ✓ (khi có giá trị) | — | — | Dùng đăng nhập cho staff/admin, tùy chọn cho candidate |
 | phone_normalized | string(20) | — | có | null | — | ✓ (khi có giá trị) | — | — | Số điện thoại chuẩn hóa, có thể dùng đăng nhập cho candidate |
@@ -213,6 +216,7 @@ liệu lịch sử.
 | public_id | string(26) | — | không | — | — | ✓ | — | — | |
 | company_id | bigint | ✓ | không | — | ✓ | — | companies.id | RESTRICT | |
 | company_contact_id | bigint | ✓ | có | null | — | — | company_contacts.id | SET NULL | |
+| owner_branch_id | bigint | ✓ | có | null | ✓ | — | branches.id | RESTRICT | Cơ sở nội bộ phụ trách; nullable ở `draft`, **bắt buộc trước khi `publish`** (Service kiểm tra, xem `docs/CORE-FLOWS.md` mục 1) |
 | code | string(30) | — | không | — | — | ✓ | — | — | Mã nội bộ, HR nhập tay hoặc tự sinh |
 | title | string(200) | — | không | — | — | — | — | — | |
 | slug | string(220) | — | không | — | ✓ | ✓ | — | — | |
@@ -253,7 +257,7 @@ liệu lịch sử.
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 | deleted_at | timestamp | — | có | null | — | — | — | — | Soft delete |
 
-Index bổ sung: `(company_id, status)`.
+Index bổ sung: `(company_id, status)`, `(owner_branch_id, status)`.
 
 **Chính sách xóa:** đóng job trước (`status = closed`), soft delete khi cần. **Không hard
 delete job đã có application.** Một job là một đợt tuyển dụng — không tái sử dụng job đã
@@ -352,10 +356,15 @@ Khóa chính composite `(job_id, work_shift_id)`, không có cột `id` riêng.
 | candidate_id | bigint | ✓ | không | — | ✓ | ✓ (composite: candidate_id+job_id) | candidates.id | RESTRICT | |
 | job_id | bigint | ✓ | không | — | ✓ | (composite) | jobs.id | RESTRICT | |
 | source_id | bigint | ✓ | có | null | ✓ | — | recruitment_sources.id | SET NULL | |
-| assigned_to | bigint | ✓ | có | null | ✓ | — | users.id | SET NULL | |
-| stage | enum(new,contacting,consulted,interview_scheduled,interviewed,waiting_start,started,closed) | — | không | new | ✓ | — | — | — | |
+| assigned_to | bigint | ✓ | có | null | ✓ | — | users.id | SET NULL | Phải là `staff` cùng `owner_branch_id` (enforce ở Service, không DB) |
+| owner_branch_id | bigint | ✓ | không | — | ✓ | — | branches.id | RESTRICT | Copy từ `jobs.owner_branch_id` lúc tạo, không suy ra động qua job; đổi qua `application_branch_histories` (xem `docs/CORE-FLOWS.md` mục 6.1) |
+| stage | enum(new,contacting,consulted,interview_scheduled,interviewed,waiting_start,started,closed) | — | không | new | ✓ | — | — | — | Transition matrix: `docs/CORE-FLOWS.md` mục 5.1 |
 | stage_changed_at | timestamp | — | không | now | — | — | — | — | |
 | close_reason | enum(unreachable,candidate_cancelled,employer_cancelled,unsuitable,duplicate,job_closed,other) | — | có | null | — | — | — | — | Bắt buộc khi `stage = closed` (validate ở Form Request) |
+| needs_duplicate_review | boolean | — | không | false | ✓ | — | — | — | Case B duplicate contract (`docs/CORE-FLOWS.md` mục 6.2) — trùng số điện thoại nhưng tên/ngày sinh không đủ khớp |
+| duplicate_reviewed_at | timestamp | — | có | null | — | — | — | — | |
+| duplicate_reviewed_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | |
+| last_reapplied_at | timestamp | — | có | null | — | — | — | — | Cập nhật khi candidate nộp lại form cho cùng job (case C, không tạo record mới) |
 | submitted_full_name | string(150) | — | không | — | — | — | — | — | |
 | submitted_phone | string(20) | — | không | — | — | — | — | — | |
 | submitted_phone_normalized | string(20) | — | không | — | ✓ | — | — | — | |
@@ -379,7 +388,8 @@ Khóa chính composite `(job_id, work_shift_id)`, không có cột `id` riêng.
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 
 Index bắt buộc theo yêu cầu gốc: `(stage, created_at)`, `(assigned_to, stage, updated_at)`,
-`(job_id, stage, created_at)`, `(source_id, created_at)`, `(candidate_id, created_at)`.
+`(job_id, stage, created_at)`, `(source_id, created_at)`, `(candidate_id, created_at)`,
+`(owner_branch_id, stage, updated_at)` (danh sách hồ sơ theo cơ sở).
 
 **Chính sách xóa:** không hard delete.
 
@@ -468,7 +478,7 @@ Hiển thị dấu hiệu "đã chỉnh sửa" khi `edited_at` khác null.
 | preferred_industrial_park_id | bigint | ✓ | có | null | — | — | industrial_parks.id | SET NULL | |
 | source_id | bigint | ✓ | có | null | — | — | recruitment_sources.id | SET NULL | |
 | assigned_to | bigint | ✓ | có | null | ✓ | — | users.id | SET NULL | |
-| status | enum(new,contacting,converted,closed) | — | không | new | ✓ | — | — | — | |
+| status | enum(new,contacting,closed) | — | không | new | ✓ | — | — | — | Không còn `converted` — xem ADR-018 |
 | full_name | string(150) | — | không | — | — | — | — | — | |
 | phone | string(20) | — | không | — | — | — | — | — | |
 | phone_normalized | string(20) | — | không | — | ✓ | — | — | — | |
@@ -478,13 +488,14 @@ Hiển thị dấu hiệu "đã chỉnh sửa" khi `edited_at` khác null.
 | consented_at | timestamp | — | không | — | — | — | — | — | |
 | consent_ip | string(45) | — | có | null | — | — | — | — | |
 | consent_user_agent | string(255) | — | có | null | — | — | — | — | |
-| converted_application_id | bigint | ✓ | có | null | — | ✓ (khi có giá trị) | applications.id | SET NULL | |
-| converted_at | timestamp | — | có | null | — | — | — | — | |
 | created_at | timestamp | — | có | now | — | — | — | — | |
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 
-**Quy tắc:** không chuyển đổi 1 lead thành application 2 lần (kiểm tra `converted_application_id`
-đã có giá trị trước khi chuyển).
+**Quy tắc Phase 1:** `lead_requests` chỉ ghi nhận số điện thoại cần tư vấn để nhân viên gọi lại
+thủ công; **không có cơ chế chuyển đổi thành `candidates`/`applications`** trong Phase 1 (bỏ
+`converted_application_id`/`converted_at`/status `converted` so với bản trước — xem ADR-018).
+Nhân viên xử lý lead ngoài hệ thống; nếu muốn ứng viên có hồ sơ chính thức, hướng dẫn họ nộp
+form ứng tuyển (Luồng 3, `docs/CORE-FLOWS.md`). Cơ chế chuyển đổi tự động để lại cho Phase 2.
 
 ---
 
@@ -563,6 +574,81 @@ Hiển thị dấu hiệu "đã chỉnh sửa" khi `edited_at` khác null.
 
 ---
 
+## 9.26. `branches`
+
+Cơ sở nội bộ của công ty cung ứng lao động (vieclam88) — **khác** `company_locations` (địa
+điểm/nhà máy của công ty khách hàng). Xem ADR-015 và `docs/CORE-FLOWS.md`.
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| code | string(20) | — | không | — | — | ✓ | — | — | Mã cơ sở, HR nhập tay |
+| name | string(150) | — | không | — | — | — | — | — | |
+| phone | string(20) | — | có | null | — | — | — | — | Số điện thoại công khai cho ứng viên (CTA "Gọi") |
+| phone_normalized | string(20) | — | có | null | ✓ | — | — | — | |
+| zalo | string(20) | — | có | null | — | — | — | — | |
+| email | string(191) | — | có | null | — | — | — | — | |
+| administrative_unit_id | bigint | ✓ | không | — | ✓ | — | administrative_units.id | RESTRICT | |
+| address_detail | string(255) | — | có | null | — | — | — | — | |
+| status | enum(active,inactive) | — | không | active | ✓ | — | — | — | |
+| created_at | timestamp | — | có | now | — | — | — | — | |
+| updated_at | timestamp | — | có | now | — | — | — | — | |
+| deleted_at | timestamp | — | có | null | — | — | — | — | Soft delete |
+
+**Chính sách xóa:** soft delete; không hard delete cơ sở đã có `users`/`jobs`/`applications`
+tham chiếu. Ngừng hoạt động → `status = inactive` trước, soft delete sau nếu cần.
+
+---
+
+## 9.27. `application_branch_histories`
+
+Lịch sử gán/chuyển cơ sở phụ trách của một Application — append-only. Xem
+`docs/CORE-FLOWS.md` mục 6.1.
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| application_id | bigint | ✓ | không | — | ✓ | — | applications.id | RESTRICT | |
+| from_branch_id | bigint | ✓ | có | null | — | — | branches.id | SET NULL | Null ở bản ghi đầu tiên (gán lúc Apply) |
+| to_branch_id | bigint | ✓ | không | — | ✓ | — | branches.id | RESTRICT | |
+| transferred_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | Null = hệ thống tự gán lúc Apply, không phải thao tác thủ công |
+| reason | string(255) | — | có | null | — | — | — | — | Bắt buộc ở tầng Service khi là chuyển cơ sở thủ công (không bắt buộc ở bản ghi đầu) |
+| created_at | timestamp | — | có | now | — | — | — | — | Append-only, không có `updated_at` |
+
+**Quy tắc:** mỗi lần tạo Application (gán lần đầu) và mỗi lần chuyển cơ sở thủ công đều tạo 1
+bản ghi. Không sửa/xóa sau khi tạo. Chỉ `admin` được tạo bản ghi chuyển cơ sở thủ công.
+
+---
+
+## 9.28. `application_appointments`
+
+Lịch gọi lại (`callback`) và lịch phỏng vấn (`interview`). Xem `docs/CORE-FLOWS.md` mục 5.3.
+Không phải bảng append-only thuần vì `status`/`outcome` được cập nhật sau khi tạo.
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| application_id | bigint | ✓ | không | — | ✓ | — | applications.id | RESTRICT | |
+| type | enum(callback,interview) | — | không | — | ✓ | — | — | — | |
+| scheduled_at | timestamp | — | không | — | ✓ | — | — | — | |
+| location_detail | string(255) | — | có | null | — | — | — | — | Địa điểm phỏng vấn nếu khác trụ sở cơ sở |
+| status | enum(scheduled,completed,cancelled,no_show) | — | không | scheduled | ✓ | — | — | — | |
+| outcome | string(255) | — | có | null | — | — | — | — | Tóm tắt kết quả khi `completed` |
+| note | text | — | có | null | — | — | — | — | |
+| created_by | bigint | ✓ | không | — | — | — | users.id | RESTRICT | |
+| completed_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | |
+| completed_at | timestamp | — | có | null | — | — | — | — | |
+| created_at | timestamp | — | có | now | — | — | — | — | |
+| updated_at | timestamp | — | có | now | — | — | — | — | |
+
+Index bổ sung: `(application_id, type, status)`.
+
+**Quy tắc:** `interview_scheduled → interviewed` (transition matrix) yêu cầu tồn tại 1
+appointment `type=interview` với `status=completed`. `no_show`/`cancelled` không tự động đổi
+`applications.stage` — staff phải chủ động tạo appointment mới hoặc đóng hồ sơ.
+
+---
+
 ## Chính sách xóa — tổng hợp
 
 | Bảng | Chính sách |
@@ -572,19 +658,26 @@ Hiển thị dấu hiệu "đã chỉnh sửa" khi `edited_at` khác null.
 | companies | soft delete |
 | company_locations | soft delete |
 | company_contacts | soft delete |
+| branches | `status=inactive` trước, soft delete khi cần; không hard delete nếu đã có `users`/`jobs`/`applications` |
 | jobs | đóng trước (`status=closed`), soft delete khi cần; không hard delete nếu đã có application |
 | applications | không hard delete |
-| application_status_histories / application_assignment_histories / application_contact_attempts / job_verifications / export_logs | không xóa, không sửa (append-only) |
+| application_status_histories / application_assignment_histories / application_contact_attempts / application_branch_histories / job_verifications / export_logs | không xóa, không sửa (append-only) |
+| application_appointments | không xóa; `status`/`outcome` cập nhật được sau khi tạo, các cột còn lại không sửa |
 | application_notes | soft delete |
 | administrative_units / industrial_parks / work_shifts / recruitment_sources | `is_active = false`, không hard delete khi đã tham chiếu |
 | favorites / job_locations / job_work_shifts | có thể cascade delete (pivot/quan hệ phụ) |
 
 **Không dùng cascade delete cho:** `companies → jobs`, `jobs → applications`,
-`candidates → applications`, `applications → *_histories`. Dùng `RESTRICT` — xử lý nghiệp vụ
-(đóng/soft-delete) trước khi có thể xóa, không để DB tự động xóa dây chuyền dữ liệu nghiệp vụ.
+`candidates → applications`, `applications → *_histories`, `applications → application_appointments`,
+`branches → jobs`, `branches → applications`. Dùng `RESTRICT` — xử lý nghiệp vụ (đóng/soft-delete)
+trước khi có thể xóa, không để DB tự động xóa dây chuyền dữ liệu nghiệp vụ.
 
 **Dùng `SET NULL`** cho quan hệ "người thực hiện" khi cột đã nullable (`assigned_to`,
-`changed_by`, `from_user_id`/`to_user_id`, `updated_by`...) — tài khoản có thể bị khóa nhưng
-lịch sử vẫn phải còn nguyên. Cột "người thực hiện" bắt buộc (không nullable, vd
-`assigned_by`, `verified_by`, `exported_by`, `contacted_by`) dùng `RESTRICT` vì `users` không
-bao giờ bị hard delete trong hệ thống này.
+`changed_by`, `from_user_id`/`to_user_id`, `updated_by`, `users.branch_id`,
+`application_branch_histories.from_branch_id`/`transferred_by`,
+`application_appointments.completed_by`, `applications.duplicate_reviewed_by`...) — tài khoản
+hoặc cơ sở có thể bị khóa/ngừng hoạt động nhưng lịch sử vẫn phải còn nguyên. Cột "người thực
+hiện" bắt buộc (không nullable, vd `assigned_by`, `verified_by`, `exported_by`, `contacted_by`,
+`application_appointments.created_by`) dùng `RESTRICT` vì `users` không bao giờ bị hard delete
+trong hệ thống này. `applications.owner_branch_id` và `application_branch_histories.to_branch_id`
+không nullable nên dùng `RESTRICT`.

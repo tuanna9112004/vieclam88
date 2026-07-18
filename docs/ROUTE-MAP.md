@@ -1,5 +1,7 @@
 # Route Map — Phase 1
 
+6 luồng nghiệp vụ mà các route dưới đây phải hỗ trợ đúng: `docs/CORE-FLOWS.md`.
+
 Quy ước:
 - Public ở `routes/web.php`; HR ở `routes/hr.php` với prefix/name `hr.`.
 - Route động dùng implicit binding (`{job:slug}`, `{company:slug}`) hoặc `whereNumber()`.
@@ -59,6 +61,16 @@ Các route bên dưới đều có middleware `auth`, `role:staff,admin`; route 
 | GET | `/hr/khu-cong-nghiep` | `hr.industrial-parks.index` | `IndustrialParkController@index` | admin |
 | POST | `/hr/khu-cong-nghiep` | `hr.industrial-parks.store` | `IndustrialParkController@store` | admin |
 | PUT | `/hr/khu-cong-nghiep/{industrialPark}` | `hr.industrial-parks.update` | `IndustrialParkController@update` | admin |
+| GET | `/hr/co-so` | `hr.branches.index` | `BranchController@index` | admin |
+| GET | `/hr/co-so/tao-moi` | `hr.branches.create` | `BranchController@create` | admin |
+| POST | `/hr/co-so` | `hr.branches.store` | `BranchController@store` | admin |
+| GET | `/hr/co-so/{branch}/sua` | `hr.branches.edit` | `BranchController@edit` | admin |
+| PUT | `/hr/co-so/{branch}` | `hr.branches.update` | `BranchController@update` | admin |
+| DELETE | `/hr/co-so/{branch}` | `hr.branches.destroy` | `BranchController@destroy` | admin |
+
+`branches` = cơ sở nội bộ vieclam88 (xem `docs/CORE-FLOWS.md`), quản lý bởi admin. Gán
+nhân viên vào cơ sở làm ở form tài khoản staff (`hr.staff.*`, mục "HR admin"), không có route
+riêng.
 
 ## HR công ty
 
@@ -95,20 +107,30 @@ Các route bên dưới đều có middleware `auth`, `role:staff,admin`; route 
 
 ## HR hồ sơ và lead
 
+`hr.applications.index`/`show` và mọi thao tác bên dưới **scope theo cơ sở**: `staff` chỉ
+truy cập Application có `owner_branch_id = users.branch_id` của mình (403 nếu cố truy cập
+URL của cơ sở khác); `admin` không bị giới hạn. Xem `docs/CORE-FLOWS.md` mục 4.
+
 | Method | Path | Name | Controller@method | Quyền |
 |---|---|---|---|---|
 | GET | `/hr/ho-so/xuat-csv` | `hr.applications.export` | `ApplicationExportController@index` | admin |
-| GET | `/hr/ho-so` | `hr.applications.index` | `ApplicationController@index` | staff/admin |
-| GET | `/hr/ho-so/{application}` | `hr.applications.show` | `ApplicationController@show` | staff/admin |
-| POST | `/hr/ho-so/{application}/nhan-xu-ly` | `hr.applications.claim` | `AssignmentController@claim` | staff/admin |
+| GET | `/hr/ho-so` | `hr.applications.index` | `ApplicationController@index` | staff/admin (scope cơ sở) |
+| GET | `/hr/ho-so/{application}` | `hr.applications.show` | `ApplicationController@show` | staff/admin (scope cơ sở) |
+| POST | `/hr/ho-so/{application}/nhan-xu-ly` | `hr.applications.claim` | `AssignmentController@claim` | staff/admin (scope cơ sở) |
 | POST | `/hr/ho-so/{application}/gan-nhan-vien` | `hr.applications.assign` | `AssignmentController@assign` | admin |
-| POST | `/hr/ho-so/{application}/doi-giai-doan` | `hr.applications.stage` | `ApplicationStageController@store` | staff/admin |
-| POST | `/hr/ho-so/{application}/lien-he` | `hr.applications.contacts.store` | `ContactAttemptController@store` | staff/admin |
-| POST | `/hr/ho-so/{application}/ghi-chu` | `hr.applications.notes.store` | `ApplicationNoteController@store` | staff/admin |
+| POST | `/hr/ho-so/{application}/doi-giai-doan` | `hr.applications.stage` | `ApplicationStageController@store` | staff/admin (scope cơ sở) |
+| POST | `/hr/ho-so/{application}/lien-he` | `hr.applications.contacts.store` | `ContactAttemptController@store` | staff/admin (scope cơ sở) |
+| POST | `/hr/ho-so/{application}/lich-hen` | `hr.applications.appointments.store` | `AppointmentController@store` | staff/admin (scope cơ sở) |
+| PUT | `/hr/ho-so/{application}/lich-hen/{appointment}` | `hr.applications.appointments.update` | `AppointmentController@update` | staff/admin (scope cơ sở) — cập nhật `status`/`outcome` |
+| POST | `/hr/ho-so/{application}/chuyen-co-so` | `hr.applications.transfer-branch` | `ApplicationBranchTransferController@store` | admin |
+| POST | `/hr/ho-so/{application}/ghi-chu` | `hr.applications.notes.store` | `ApplicationNoteController@store` | staff/admin (scope cơ sở) |
 | PUT/DELETE | `/hr/ho-so/{application}/ghi-chu/{note}` | `hr.applications.notes.update/destroy` | `ApplicationNoteController@update/destroy` | owner/admin |
 | GET | `/hr/yeu-cau-tu-van` | `hr.leads.index` | `LeadRequestController@index` | staff/admin |
 | GET | `/hr/yeu-cau-tu-van/{leadRequest}` | `hr.leads.show` | `LeadRequestController@show` | staff/admin |
-| POST | `/hr/yeu-cau-tu-van/{leadRequest}/chuyen-doi` | `hr.leads.convert` | `LeadConversionController@store` | staff/admin |
+
+**Đã bỏ khỏi Phase 1** (chuyển Phase 2 — xem ADR-018, `ROADMAP.md`):
+`hr.leads.convert`/`LeadConversionController` — Phase 1 không chuyển đổi `lead_requests`
+thành `applications`. Nhân viên xử lý lead thủ công, không có route/action chuyển đổi.
 
 ## HR admin
 
