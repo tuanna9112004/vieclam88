@@ -2,35 +2,33 @@
 
 ## Phase / slice hiện tại
 
-**Giai đoạn 2 (Auth + Admin đầu tiên) DONE — gate 2.1-2.4 PUSH READY.** Nhóm 1 + Đăng nhập HR đã commit/push (`f9fde21`). Admin reset Staff password (`hr.staff.reset-password`, ADR-067 điểm 5) vừa xong, 62/62 test, chưa commit.
+Giai đoạn 1-2 DONE. **Giai đoạn 3 (Dữ liệu nền, Branch, Staff) đang thực hiện.**
 
-## Quyết định quan trọng đã đưa ra (và lý do)
-
-- Xóa 3 migration mặc định Laravel (`users`/`cache`/`jobs`) — sai thứ tự/schema so với Dictionary, tạo bảng hạ tầng thừa (`CACHE_STORE=file`/`QUEUE_CONNECTION=sync` không cần DB).
-- Tailwind (mặc định scaffold) → Bootstrap 5.3 + Alpine.js — đúng stack đã khóa, không tự đổi framework khi chưa có ADR.
-- Xóa 4 Branch Action rỗng, chỉ giữ `CreateStaffAction` — 4 class kia không có logic/không có caller, đúng "không class rỗng hàng loạt".
-- Chưa build Controller/Route/Blade cho `hr.branches.*`/`hr.staff.*` — chưa có auth foundation, dựng route không đăng nhập được thì không "chạy thử thủ công" được.
-- `.env.testing` tách DB test khỏi dev — đúng contract "test không được chạm database development".
-- Guard chặn nhầm DB đặt trong `createApplication()`, không phải sau `parent::setUp()` — `RefreshDatabase` chạy `migrate:fresh` bên trong `parent::setUp()`, đặt sau sẽ quá muộn (xác nhận qua đọc source Laravel).
-
-## Đã hoàn thành
-
-- Baseline Plan/Database/Claude Context v1.0 đóng băng (commit `10039ef`); Nhóm 1 + Đăng nhập HR (commit `2d2a3a9`, `f9fde21`, đã push): login/logout, rate limit, `EnsureUserIsActive` (ADR-077), `EnsurePasswordChanged` + `hr.password.change/update` (ADR-067), `robots.txt` chặn `/hr`.
-- Admin reset Staff password (`hr.staff.reset-password`, `UserPolicy`, `ResetStaffPasswordAction`): đưa `password_changed_at=null`, buộc Staff đổi lại; chỉ Admin reset được, chỉ target `role=staff` — 6 test mới.
-- `User::$fillable` bổ sung `password_changed_at` (trước đó bị guard âm thầm bỏ qua, chỉ "đúng" nhờ trùng default DB).
+- 3.1 Administrative units: DONE, đã push.
+- 3.2 Industrial parks: DB + Admin CRUD DONE, đã qua fix-review/review-changes APPROVE, push (`fa3d5dd`).
+- Staff Management: DONE — verify-task + review-changes APPROVE, commit `b354b4b` (kèm hotfix
+  `Controller.php` cho regression Industrial Park 500 tại `fa3d5dd`, đã vá).
+- Branches: DB + Policy + Request test hardening DONE — verify-task + review-changes APPROVE,
+  commit `eb501ea`. Admin CRUD (`BranchController`/routes/views) **chưa bắt đầu**.
+- Cả hai commit trên mới ở local `main`, **chưa push** lên remote.
 
 ## Verification gần nhất
 
 ```bash
-php artisan test                                    # PASS 62/62
-composer.phar validate / check-claude-config.py / check-claude-skills.py / git diff --check   # tất cả PASS
+php artisan test     # PASS 132/132 (tại commit eb501ea)
+git diff --check      # PASS
 ```
+
+## Working tree (chưa commit)
+
+`CLAUDE.md` — giữ nguyên, người dùng xác nhận, không tự sửa.
 
 ## Blockers
 
-Không có.
+Không có blocker kỹ thuật.
 
 ## Bước tiếp theo
 
-1. **NEXT:** Commit + push slice Admin reset Staff password khi người dùng xác nhận.
-2. Staff Management đầy đủ (`hr.staff.index/create/store/edit/update/lock/unlock`) hoặc Nhóm 2 (`ROADMAP.md`): `industrial_parks`, `work_shifts`, `recruitment_sources`, `settings`.
+1. **NEXT:** Xác nhận push `b354b4b`/`eb501ea` lên remote khi người dùng đồng ý.
+2. Gate tổng Giai đoạn 3 (3.1-3.4) trước khi mở Branches Admin CRUD hoặc sang Giai đoạn 4.
+3. Branches Admin CRUD (`hr.branches.*`): task `/implement` riêng, chưa bắt đầu.
