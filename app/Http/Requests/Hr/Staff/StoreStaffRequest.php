@@ -23,7 +23,7 @@ class StoreStaffRequest extends FormRequest
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:191', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'branch_id' => ['required', Rule::exists(Branch::class, 'id')->where('status', 'active')],
+            'branch_id' => ['required', Rule::exists(Branch::class, 'id')->where('status', 'active')->withoutTrashed()],
         ];
     }
 }

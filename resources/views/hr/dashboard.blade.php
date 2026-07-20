@@ -15,6 +15,7 @@
 
             @if (auth()->user()->isAdmin())
                 <a href="{{ route('hr.industrial-parks.index') }}" class="btn btn-outline-primary mt-3">Khu công nghiệp</a>
+                <a href="{{ route('hr.branches.index') }}" class="btn btn-outline-primary mt-3">Cơ sở</a>
             @endif
 
             <form method="POST" action="{{ route('hr.logout') }}" class="mt-3">

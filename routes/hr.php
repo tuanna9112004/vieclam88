@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Hr\Auth\HrAuthController;
+use App\Http\Controllers\Hr\BranchController;
 use App\Http\Controllers\Hr\DashboardController;
 use App\Http\Controllers\Hr\IndustrialParkController;
 use App\Http\Controllers\Hr\PasswordChangeController;
@@ -40,6 +41,17 @@ Route::prefix('hr')->name('hr.')->group(function () {
                 Route::get('/', [IndustrialParkController::class, 'index'])->name('index');
                 Route::post('/', [IndustrialParkController::class, 'store'])->name('store');
                 Route::put('{industrialPark}', [IndustrialParkController::class, 'update'])->name('update');
+            });
+
+            Route::prefix('co-so')->name('branches.')->group(function () {
+                Route::get('/', [BranchController::class, 'index'])->name('index');
+                Route::get('tao-moi', [BranchController::class, 'create'])->name('create');
+                Route::post('/', [BranchController::class, 'store'])->name('store');
+                Route::get('{branch}/sua', [BranchController::class, 'edit'])->name('edit');
+                Route::put('{branch}', [BranchController::class, 'update'])->name('update');
+                Route::delete('{branch}', [BranchController::class, 'destroy'])->name('destroy');
+                Route::post('{branch}/khoi-phuc', [BranchController::class, 'restore'])
+                    ->name('restore')->withTrashed();
             });
         });
     });

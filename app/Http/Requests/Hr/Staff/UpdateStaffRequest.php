@@ -28,7 +28,7 @@ class UpdateStaffRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:191', Rule::unique('users', 'email')->ignore($staff->id)],
-            'branch_id' => ['required', Rule::exists(Branch::class, 'id')->where('status', 'active')],
+            'branch_id' => ['required', Rule::exists(Branch::class, 'id')->where('status', 'active')->withoutTrashed()],
         ];
     }
 }
