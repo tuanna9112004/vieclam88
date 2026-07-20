@@ -6,6 +6,7 @@ use App\Models\AdministrativeUnit;
 use App\Models\Branch;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class BranchTest extends TestCase
@@ -64,5 +65,53 @@ class BranchTest extends TestCase
         $branch = Branch::factory()->create(['administrative_unit_id' => $unit->id]);
 
         $this->assertTrue($branch->administrativeUnit->is($unit));
+    }
+
+    public function test_name_is_required(): void
+    {
+        $this->expectException(QueryException::class);
+
+        Branch::factory()->create(['name' => null]);
+    }
+
+    public function test_status_only_accepts_defined_values(): void
+    {
+        $this->expectException(QueryException::class);
+
+        Branch::factory()->create(['status' => 'archived']);
+    }
+
+    public function test_status_defaults_to_active_when_not_specified(): void
+    {
+        // Insert thẳng qua query builder, không qua factory (factory luôn set 'status'), để
+        // xác nhận DB tự điền default 'active' khi cột không được truyền trong câu insert.
+        $id = DB::table('branches')->insertGetId([
+            'code' => 'DEFAULT-01',
+            'name' => 'Chi nhánh mặc định',
+            'administrative_unit_id' => AdministrativeUnit::factory()->create()->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->assertDatabaseHas('branches', ['id' => $id, 'status' => 'active']);
+    }
+
+    public function test_soft_deleted_branch_code_still_blocks_reuse_until_restored(): void
+    {
+        $branch = Branch::factory()->create(['code' => 'HN-01']);
+        $branch->delete();
+
+        $this->expectException(QueryException::class);
+
+        Branch::factory()->create(['code' => 'HN-01']);
+    }
+
+    public function test_restoring_a_branch_that_is_not_deleted_is_a_no_op(): void
+    {
+        $branch = Branch::factory()->create();
+
+        $branch->restore();
+
+        $this->assertDatabaseHas('branches', ['id' => $branch->id, 'deleted_at' => null]);
     }
 }

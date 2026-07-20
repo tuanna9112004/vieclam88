@@ -34,4 +34,12 @@ class BranchPolicyTest extends TestCase
         $this->assertFalse($staff->can('delete', $branch));
         $this->assertFalse($staff->can('restore', $branch));
     }
+
+    public function test_force_delete_is_always_denied_even_for_admin(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $branch = Branch::factory()->create();
+
+        $this->assertFalse($admin->can('forceDelete', $branch));
+    }
 }
