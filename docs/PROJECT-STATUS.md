@@ -2,20 +2,21 @@
 
 ## Phase / slice hiện tại
 
-Giai đoạn 1-2 DONE. **Giai đoạn 3 (Dữ liệu nền, Branch, Staff) đang thực hiện.**
+Giai đoạn 1-2 DONE. **Giai đoạn 3 (Dữ liệu nền, Branch, Staff) — Gate tổng đang chạy lại.**
 
 - 3.1 Administrative units: DONE, đã push.
-- 3.2 Industrial parks: DB + Admin CRUD DONE, đã qua fix-review/review-changes APPROVE, push (`fa3d5dd`).
-- Staff Management: DONE — verify-task + review-changes APPROVE, commit `b354b4b` (kèm hotfix
-  `Controller.php` cho regression Industrial Park 500 tại `fa3d5dd`, đã vá).
-- Branches: DB + Policy + Request test hardening DONE — verify-task + review-changes APPROVE,
-  commit `eb501ea`. Admin CRUD (`BranchController`/routes/views) **chưa bắt đầu**.
-- Cả hai commit trên mới ở local `main`, **chưa push** lên remote.
+- 3.2 Industrial parks: DONE, push (`fa3d5dd`).
+- 3.3 Branches: DB+Policy+Request (`eb501ea`) + Admin CRUD `hr.branches.*` + Gate end-to-end
+  Giai đoạn 3 (`24d92f8`) — DONE.
+- 3.4 Staff Management: DONE, commit `b354b4b` (kèm hotfix `Controller.php`).
+- Vá kèm trong `24d92f8`: `Store/UpdateStaffRequest` thiếu `withoutTrashed()` trên
+  `Rule::exists(Branch)` — vô hại khi chưa có route xóa Branch, nay đã chặn đúng.
+- 4 commit trên local `main`, **chưa push** lên remote.
 
 ## Verification gần nhất
 
 ```bash
-php artisan test     # PASS 132/132 (tại commit eb501ea)
+php artisan test     # PASS 151/151 (tại commit 24d92f8)
 git diff --check      # PASS
 ```
 
@@ -29,6 +30,6 @@ Không có blocker kỹ thuật.
 
 ## Bước tiếp theo
 
-1. **NEXT:** Xác nhận push `b354b4b`/`eb501ea` lên remote khi người dùng đồng ý.
-2. Gate tổng Giai đoạn 3 (3.1-3.4) trước khi mở Branches Admin CRUD hoặc sang Giai đoạn 4.
-3. Branches Admin CRUD (`hr.branches.*`): task `/implement` riêng, chưa bắt đầu.
+1. **NEXT:** Xác nhận push 4 commit (`b354b4b`, `eb501ea`, `f55df28`, `24d92f8`) lên remote.
+2. Chạy lại `/verify-task Giai đoạn 3` để xác nhận Gate DONE với Branch Admin CRUD mới.
+3. Sau khi gate tổng Giai đoạn 3 xác nhận DONE: mở Giai đoạn 4.
