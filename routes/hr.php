@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Hr\Auth\HrAuthController;
 use App\Http\Controllers\Hr\DashboardController;
+use App\Http\Controllers\Hr\IndustrialParkController;
 use App\Http\Controllers\Hr\PasswordChangeController;
 use App\Http\Controllers\Hr\StaffController;
 use App\Http\Middleware\EnsurePasswordChanged;
@@ -23,8 +24,23 @@ Route::prefix('hr')->name('hr.')->group(function () {
         Route::middleware(EnsurePasswordChanged::class)->group(function () {
             Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-            Route::post('nhan-vien/{staff}/dat-lai-mat-khau', [StaffController::class, 'resetPassword'])
-                ->name('staff.reset-password');
+            Route::prefix('nhan-vien')->name('staff.')->group(function () {
+                Route::get('/', [StaffController::class, 'index'])->name('index');
+                Route::get('tao-moi', [StaffController::class, 'create'])->name('create');
+                Route::post('/', [StaffController::class, 'store'])->name('store');
+                Route::get('{staff}/sua', [StaffController::class, 'edit'])->name('edit');
+                Route::put('{staff}', [StaffController::class, 'update'])->name('update');
+                Route::post('{staff}/khoa', [StaffController::class, 'lock'])->name('lock');
+                Route::post('{staff}/mo-khoa', [StaffController::class, 'unlock'])->name('unlock');
+                Route::post('{staff}/dat-lai-mat-khau', [StaffController::class, 'resetPassword'])
+                    ->name('reset-password');
+            });
+
+            Route::prefix('khu-cong-nghiep')->name('industrial-parks.')->group(function () {
+                Route::get('/', [IndustrialParkController::class, 'index'])->name('index');
+                Route::post('/', [IndustrialParkController::class, 'store'])->name('store');
+                Route::put('{industrialPark}', [IndustrialParkController::class, 'update'])->name('update');
+            });
         });
     });
 });

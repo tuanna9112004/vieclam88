@@ -13,6 +13,10 @@
         <div class="container py-5">
             <h1 class="h4">Xin chào, {{ auth()->user()->name }}</h1>
 
+            @if (auth()->user()->isAdmin())
+                <a href="{{ route('hr.industrial-parks.index') }}" class="btn btn-outline-primary mt-3">Khu công nghiệp</a>
+            @endif
+
             <form method="POST" action="{{ route('hr.logout') }}" class="mt-3">
                 @csrf
                 <button type="submit" class="btn btn-outline-secondary">Đăng xuất</button>
