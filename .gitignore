@@ -11,3 +11,22 @@
 /storage/logs/*.log
 __pycache__/
 *.py[cod]
+
+# Laravel
+*.log
+.DS_Store
+.phpunit.result.cache
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/database/database.sqlite
+/public/hot
+/public/storage
+/storage/pail
+Homestead.json
+Homestead.yaml
+Thumbs.db
+_ide_helper.php
