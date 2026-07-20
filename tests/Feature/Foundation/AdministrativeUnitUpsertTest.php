@@ -152,6 +152,26 @@ class AdministrativeUnitUpsertTest extends TestCase
         }
     }
 
+    public function test_reparenting_onto_a_preexisting_unrelated_cycle_does_not_hang(): void
+    {
+        $x = AdministrativeUnit::factory()->create(['official_code' => 'X']);
+        $y = AdministrativeUnit::factory()->create(['official_code' => 'Y', 'parent_id' => $x->id]);
+        // Dữ liệu hỏng có sẵn (không tạo qua Action): X <-> Y tạo thành cycle không liên quan tới $w.
+        $x->forceFill(['parent_id' => $y->id])->saveQuietly();
+
+        $w = AdministrativeUnit::factory()->create(['official_code' => 'W']);
+
+        $updated = (new UpsertAdministrativeUnitAction)->handle([
+            'official_code' => 'W',
+            'parent_id' => $x->id,
+            'name' => $w->name,
+            'slug' => $w->slug,
+            'type' => $w->type,
+        ]);
+
+        $this->assertSame($x->id, $updated->fresh()->parent_id);
+    }
+
     public function test_valid_reparenting_to_unrelated_unit_succeeds(): void
     {
         $oldParent = AdministrativeUnit::factory()->create(['official_code' => 'OLD']);

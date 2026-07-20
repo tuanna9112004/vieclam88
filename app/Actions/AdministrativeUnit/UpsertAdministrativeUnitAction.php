@@ -60,6 +60,7 @@ class UpsertAdministrativeUnitAction
         }
 
         $ancestorId = $newParentId;
+        $visited = [];
 
         while ($ancestorId !== null) {
             if ($ancestorId === $unit->id) {
@@ -67,6 +68,14 @@ class UpsertAdministrativeUnitAction
                     'parent_id' => 'Không thể gán parent tạo thành vòng lặp trong cây đơn vị hành chính.',
                 ]);
             }
+
+            // Dữ liệu hiện hữu có thể đã chứa cycle không liên quan tới $unit; dừng khi gặp lại
+            // một ancestor đã duyệt để tránh vòng lặp vô hạn thay vì lan truyền cycle cũ.
+            if (isset($visited[$ancestorId])) {
+                break;
+            }
+
+            $visited[$ancestorId] = true;
 
             $ancestorId = AdministrativeUnit::whereKey($ancestorId)->lockForUpdate()->value('parent_id');
         }
