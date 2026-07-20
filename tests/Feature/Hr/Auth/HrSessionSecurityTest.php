@@ -38,4 +38,30 @@ class HrSessionSecurityTest extends TestCase
         $response->assertRedirect(route('hr.login'));
         $this->assertGuest();
     }
+
+    public function test_account_locked_mid_session_loses_access_to_any_hr_route_not_just_dashboard(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+        $user->update(['status' => 'locked']);
+
+        $response = $this->get(route('hr.password.change'));
+
+        $response->assertRedirect(route('hr.login'));
+        $this->assertGuest();
+    }
+
+    public function test_account_locked_mid_session_posting_logout_still_ends_up_logged_out(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+        $user->update(['status' => 'locked']);
+
+        $response = $this->post(route('hr.logout'));
+
+        $response->assertRedirect(route('hr.login'));
+        $this->assertGuest();
+    }
 }

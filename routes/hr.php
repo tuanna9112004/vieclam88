@@ -3,6 +3,7 @@
 use App\Http\Controllers\Hr\Auth\HrAuthController;
 use App\Http\Controllers\Hr\DashboardController;
 use App\Http\Controllers\Hr\PasswordChangeController;
+use App\Http\Controllers\Hr\StaffController;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,9 @@ Route::prefix('hr')->name('hr.')->group(function () {
 
         Route::middleware(EnsurePasswordChanged::class)->group(function () {
             Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+            Route::post('nhan-vien/{staff}/dat-lai-mat-khau', [StaffController::class, 'resetPassword'])
+                ->name('staff.reset-password');
         });
     });
 });
