@@ -131,7 +131,7 @@ class IndustrialParkManagementTest extends TestCase
         $this->assertFalse($fresh->is_active);
     }
 
-    public function test_updating_industrial_park_requires_an_active_administrative_unit(): void
+    public function test_updating_industrial_park_requires_an_active_administrative_unit_when_transferring(): void
     {
         $admin = User::factory()->admin()->create();
         $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
@@ -146,6 +146,150 @@ class IndustrialParkManagementTest extends TestCase
 
         $response->assertSessionHasErrors('administrative_unit_id');
         $this->assertSame($unit->id, $park->fresh()->administrative_unit_id);
+    }
+
+    public function test_admin_can_deactivate_park_after_its_administrative_unit_becomes_inactive(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $park = IndustrialPark::factory()->create(['administrative_unit_id' => $unit->id, 'is_active' => true]);
+
+        $unit->update(['is_active' => false]);
+
+        $response = $this->actingAs($admin)->put(route('hr.industrial-parks.update', $park), [
+            'administrative_unit_id' => $unit->id,
+            'name' => $park->name,
+            'is_active' => '0',
+        ]);
+
+        $response->assertRedirect(route('hr.industrial-parks.index'));
+        $response->assertSessionDoesntHaveErrors();
+        $this->assertFalse($park->fresh()->is_active);
+    }
+
+    public function test_cannot_keep_park_active_while_its_administrative_unit_is_inactive(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $park = IndustrialPark::factory()->create(['administrative_unit_id' => $unit->id, 'is_active' => true]);
+
+        $unit->update(['is_active' => false]);
+
+        $response = $this->actingAs($admin)->put(route('hr.industrial-parks.update', $park), [
+            'administrative_unit_id' => $unit->id,
+            'name' => $park->name,
+            'is_active' => '1',
+        ]);
+
+        $response->assertSessionHasErrors('administrative_unit_id');
+        $this->assertTrue($park->fresh()->is_active);
+    }
+
+    public function test_cannot_transfer_park_to_a_different_inactive_administrative_unit(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $otherInactiveUnit = AdministrativeUnit::factory()->create(['is_active' => false]);
+        $park = IndustrialPark::factory()->create(['administrative_unit_id' => $unit->id, 'is_active' => true]);
+
+        $response = $this->actingAs($admin)->put(route('hr.industrial-parks.update', $park), [
+            'administrative_unit_id' => $otherInactiveUnit->id,
+            'name' => $park->name,
+            'is_active' => '0',
+        ]);
+
+        $response->assertSessionHasErrors('administrative_unit_id');
+        $this->assertSame($unit->id, $park->fresh()->administrative_unit_id);
+    }
+
+    public function test_can_transfer_park_to_a_different_active_administrative_unit(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $newUnit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $park = IndustrialPark::factory()->create(['administrative_unit_id' => $unit->id, 'is_active' => true]);
+
+        $response = $this->actingAs($admin)->put(route('hr.industrial-parks.update', $park), [
+            'administrative_unit_id' => $newUnit->id,
+            'name' => $park->name,
+            'is_active' => '1',
+        ]);
+
+        $response->assertRedirect(route('hr.industrial-parks.index'));
+        $response->assertSessionDoesntHaveErrors();
+        $this->assertSame($newUnit->id, $park->fresh()->administrative_unit_id);
+    }
+
+    public function test_same_name_under_different_administrative_units_is_valid(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $unitA = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $unitB = AdministrativeUnit::factory()->create(['is_active' => true]);
+
+        $this->actingAs($admin)->post(route('hr.industrial-parks.store'), [
+            'administrative_unit_id' => $unitA->id,
+            'name' => 'Khu công nghiệp Song Song',
+        ]);
+        $this->actingAs($admin)->post(route('hr.industrial-parks.store'), [
+            'administrative_unit_id' => $unitB->id,
+            'name' => 'Khu công nghiệp Song Song',
+        ]);
+
+        $this->assertDatabaseHas('industrial_parks', [
+            'administrative_unit_id' => $unitA->id,
+            'slug' => 'khu-cong-nghiep-song-song',
+        ]);
+        $this->assertDatabaseHas('industrial_parks', [
+            'administrative_unit_id' => $unitB->id,
+            'slug' => 'khu-cong-nghiep-song-song',
+        ]);
+    }
+
+    public function test_updating_name_regenerates_slug(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $park = IndustrialPark::factory()->create([
+            'administrative_unit_id' => $unit->id,
+            'name' => 'Ten cu',
+            'slug' => 'ten-cu',
+        ]);
+
+        $this->actingAs($admin)->put(route('hr.industrial-parks.update', $park), [
+            'administrative_unit_id' => $unit->id,
+            'name' => 'Tên mới hoàn toàn',
+            'is_active' => '1',
+        ]);
+
+        $this->assertSame('ten-moi-hoan-toan', $park->fresh()->slug);
+    }
+
+    public function test_transferring_park_regenerates_slug_scoped_to_new_administrative_unit(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $newUnit = AdministrativeUnit::factory()->create(['is_active' => true]);
+
+        // Đã có 1 KCN cùng tên tại đơn vị đích -> park chuyển tới phải nhận slug có hậu tố.
+        IndustrialPark::factory()->create([
+            'administrative_unit_id' => $newUnit->id,
+            'name' => 'Khu Trung Tam',
+            'slug' => 'khu-trung-tam',
+        ]);
+
+        $park = IndustrialPark::factory()->create([
+            'administrative_unit_id' => $unit->id,
+            'name' => 'Khu Trung Tam',
+            'slug' => 'khu-trung-tam',
+        ]);
+
+        $this->actingAs($admin)->put(route('hr.industrial-parks.update', $park), [
+            'administrative_unit_id' => $newUnit->id,
+            'name' => 'Khu Trung Tam',
+            'is_active' => '1',
+        ]);
+
+        $this->assertSame('khu-trung-tam-2', $park->fresh()->slug);
     }
 
     public function test_staff_cannot_update_industrial_park(): void
