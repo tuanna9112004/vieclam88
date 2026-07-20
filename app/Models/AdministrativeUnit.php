@@ -36,4 +36,9 @@ class AdministrativeUnit extends Model
     {
         return $this->hasMany(Branch::class);
     }
+
+    public function industrialParks(): HasMany
+    {
+        return $this->hasMany(IndustrialPark::class);
+    }
 }
