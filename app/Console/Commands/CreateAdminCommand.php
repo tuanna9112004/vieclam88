@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -45,15 +46,17 @@ class CreateAdminCommand extends Command
             return self::FAILURE;
         }
 
-        User::create([
-            'role' => 'admin',
-            'branch_id' => null,
-            'name' => $name,
-            'email' => $email,
-            'password' => Hash::make($password),
-            'status' => 'active',
-            'password_changed_at' => null,
-        ]);
+        DB::transaction(function () use ($name, $email, $password): void {
+            User::create([
+                'role' => 'admin',
+                'branch_id' => null,
+                'name' => $name,
+                'email' => $email,
+                'password' => Hash::make($password),
+                'status' => 'active',
+                'password_changed_at' => null,
+            ]);
+        });
 
         $this->info("Đã tạo Admin: {$email}. Bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên.");
 

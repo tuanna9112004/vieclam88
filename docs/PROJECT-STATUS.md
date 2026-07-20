@@ -2,7 +2,7 @@
 
 ## Phase / slice hiện tại
 
-**Nhóm 1 (nền tảng) DONE, đã commit.** Laravel 13.20.0 đúng stack (Bootstrap 5.3 + Alpine.js, `Asia/Ho_Chi_Minh`, locale `vi`). 37/37 test pass. Gate 1.1–1.4 (`about` + `test` + kiến trúc) đã kiểm chứng PASS.
+**Nhóm 1 (nền tảng) DONE, đã commit.** Đăng nhập HR **DONE** — login/logout, `EnsureUserIsActive` (ADR-077), `EnsurePasswordChanged` + `hr.password.change/update` (ADR-067), `robots.txt` chặn `/hr`. `/verify-task` + `/review-changes` PASS, 54/54 test. Chưa commit.
 
 ## Quyết định quan trọng đã đưa ra (và lý do)
 
@@ -15,15 +15,15 @@
 
 ## Đã hoàn thành
 
-- Baseline Plan/Database/Claude Context v1.0 đóng băng (commit `10039ef`); môi trường PHP 8.4.23/Composer 2.10.2/MariaDB 11.4.3 verify PASS.
-- Nhóm 1: `administrative_units`/`branches`/`users` (model/`BranchPolicy`/Action/console `app:create-admin`).
-- Test isolation (`.env.testing`) + guard fix (9 test mới); `.env.example` driver đồng bộ Nhóm 1.
+- Baseline Plan/Database/Claude Context v1.0 đóng băng (commit `10039ef`); Nhóm 1 nền tảng (commit `2d2a3a9`, đã push).
+- `hr.login`/`hr.login.store`/`hr.logout`/`hr.dashboard`/`hr.password.change`/`hr.password.update`: rate limit theo email+IP, regenerate session sau login, invalidate session khi logout, guest bị chặn `/hr/*`, `status=locked` không login được và mất quyền ngay giữa phiên (`EnsureUserIsActive`), `password_changed_at=null` ép về đổi mật khẩu (`EnsurePasswordChanged`), `robots.txt` chặn `/hr` — 17 test mới, 54/54 tổng.
+- `User::$fillable` bổ sung `password_changed_at` (trước đó `CreateAdminCommand`/`CreateStaffAction` gán field này bị guard âm thầm bỏ qua, chỉ "đúng" nhờ trùng default DB).
 
 ## Verification gần nhất
 
 ```bash
-php artisan test                                                    # PASS 37/37
-composer validate / check-claude-config.py / check-claude-skills.py / git diff --check   # tất cả PASS
+php artisan test        # PASS 54/54
+npm run build / check-claude-config.py / git diff --check   # tất cả PASS
 ```
 
 ## Blockers
@@ -32,5 +32,5 @@ Không có.
 
 ## Bước tiếp theo
 
-1. **NEXT:** Auth foundation (login, `EnsureUserIsActive`, `EnsurePasswordChanged`).
+1. **NEXT:** Commit slice Đăng nhập HR khi người dùng xác nhận.
 2. Nhóm 2 (`ROADMAP.md`): `industrial_parks`, `work_shifts`, `recruitment_sources`, `settings`.

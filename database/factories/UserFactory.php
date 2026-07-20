@@ -32,6 +32,7 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'password' => static::$password ??= Hash::make('password'),
             'status' => 'active',
+            'password_changed_at' => now(),
             'remember_token' => Str::random(10),
         ];
     }
@@ -48,6 +49,13 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'locked',
+        ]);
+    }
+
+    public function passwordNotChanged(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'password_changed_at' => null,
         ]);
     }
 }
