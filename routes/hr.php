@@ -8,6 +8,7 @@ use App\Http\Controllers\Hr\CompanyLocationController;
 use App\Http\Controllers\Hr\DashboardController;
 use App\Http\Controllers\Hr\IndustrialParkController;
 use App\Http\Controllers\Hr\JobController;
+use App\Http\Controllers\Hr\JobBranchTransferController;
 use App\Http\Controllers\Hr\JobVerificationController;
 use App\Http\Controllers\Hr\JobWorkflowController;
 use App\Http\Controllers\Hr\PasswordChangeController;
@@ -97,6 +98,9 @@ Route::prefix('hr')->name('hr.')->group(function () {
                 Route::put('{job}', [JobController::class, 'update'])->name('update');
                 Route::post('{job}/xac-nhan', [JobVerificationController::class, 'store'])->name('verify');
                 Route::post('{job}/xuat-ban', [JobWorkflowController::class, 'publish'])->name('publish');
+                Route::post('{job}/tam-dung', [JobWorkflowController::class, 'pause'])->name('pause');
+                Route::post('{job}/dong', [JobWorkflowController::class, 'close'])->name('close');
+                Route::post('{job}/chuyen-co-so', [JobBranchTransferController::class, 'store'])->name('transfer-branch');
             });
         });
     });

@@ -2,38 +2,38 @@
 
 ## Phase / slice hiện tại
 
-**Giai đoạn 1-3 DONE. Giai đoạn 4 (Company/Job) đang thực hiện.**
+**Giai đoạn 1-4 DONE (Nhóm 1-4 theo `ROADMAP.md`).** Chuẩn bị sang Nhóm 5 — candidate/application.
 
-- `companies`/`company_locations`/`company_contacts` (`09f5278`/`bd0a823`/`db64071`): schema +
-  Admin CRUD + Quick Create + policy — DONE.
-- `jobs`+`job_locations` (`6d0f5ae`): Job Draft (index/create/store/edit/update, chưa publish/
-  pause/close/verify/transfer-branch/destroy/restore) + Job Branch Contract + Quick Create
-  Company/Location trong form Job (AJAX, không rời màn hình) — DONE. Đã push tới `336c078`.
+- `companies`/`company_locations`/`company_contacts`: schema + Admin CRUD + Quick Create + policy.
+- `jobs`/`job_locations`/`job_work_shifts`: Draft (index/create/store/edit/update) + Job Branch
+  Contract + Quick Create Company/Location/Contact trong form Job.
+- `work_shifts`/`recruitment_sources`/`settings` (Nhóm 2): schema + seeder bắt buộc.
+- `job_verifications`/`job_status_histories`/`job_branch_histories`: schema + Status×Result
+  matrix (ADR-059) + `PublishJobAction` đủ 22 điều kiện (ADR-060) + `pause`/`close`/
+  `transfer-branch` qua `ChangeJobStatusAction`/`ChangeJobBranchAction` (action duy nhất, không
+  tự sửa `jobs.status`).
+- Nhóm 4 (Job) **hoàn tất chức năng** — còn thiếu Blade UI cho verify/publish/pause/close/
+  transfer-branch (mới có route backend).
 
-## Quyết định quan trọng (và lý do)
+## Quyết định quan trọng
 
-- Tách nhỏ hơn ROADMAP "Nhóm": mỗi bảng làm riêng `/db-task`→`/implement` — giảm rủi ro.
-- `company_contacts.status` = `varchar`+backed enum (ADR-055, không DB `enum()`); `is_primary`
-  enforce ở Action, không DB constraint (ADR-064, CRUD nội bộ ít đồng thời).
-- Job Draft chỉ bắt buộc title/company_id/owner_branch_id/created_by; Staff tự gán
-  `owner_branch_id` server-side, Admin bắt buộc chọn, `update` không bao giờ đổi cột này.
-- `job_locations` xây ngoài kế hoạch — cần để "Location lọc theo Company" có dữ liệu thật.
-- Quick Create tái dùng `Company(Location)Controller` có sẵn (nhánh JSON khi `wantsJson()`),
-  không tạo route/Action riêng — tránh duplicate logic. Đã dừng 3 lần khi thiếu dependency.
+- Salary Predicate: 2 mode loại trừ nhau, khớp `CORE-FLOWS.md`/`ACCEPTANCE-CRITERIA.md` — đã
+  sửa `ADR-060` (bản cũ ghi nhầm "1/4 độc lập", phát hiện qua `/verify-task`).
+- `company_contact_id` re-check cả lúc Store/Update lẫn lúc Publish.
+- `hr.jobs.transfer-branch` chỉ Admin, không có nhánh Staff-cùng-cơ-sở.
 
-## Vá kèm phát hiện trong lúc làm
+## Verification gần nhất
 
-`Controller.php` thiếu `AuthorizesRequests` (500 tại industrial-parks); `Store/UpdateStaffRequest`
-thiếu `withoutTrashed()` trên `Rule::exists(Branch)`; guard "không xóa Location khi Job đang
-dùng" (ADR-045) bổ sung khi `job_locations` sẵn sàng.
+`php artisan test` PASS **416/416** (gồm 1 test row-lock 2-connection thật, 1 test end-to-end
+draft→verify→publish→pause→republish→close→transfer-branch). Migration rollback+remigrate an
+toàn trên `vieclam88_test`. `composer validate`/`check-claude-*.py`/`git diff --check` sạch.
 
-## Verification gần nhất / Blockers
+## Blocker / tồn đọng
 
-`php artisan test` PASS 276/276 (tại `6d0f5ae`); `composer validate`/`npm run build`/`git diff
---check` PASS. Không blocker. `CLAUDE.md` còn 1 dòng chưa commit (giữ nguyên, đã xác nhận).
+- **Chưa commit:** pause/close/transfer-branch + 2 test mới (concurrency, end-to-end).
+- **Chưa push** `e66b851` lên `origin/main`.
 
 ## Bước tiếp theo
 
-1. **NEXT:** Job Publish Predicate (ADR-060) + `job_work_shifts`/`job_verifications`/
-   `job_status_histories`/`job_branch_histories`.
-2. `work_shifts`/`recruitment_sources`/`settings` (Nhóm 2) — cần trước khi gắn ca vào Job.
+1. Commit + xác nhận push phần Nhóm 4 còn lại.
+2. Nhóm 5 — `candidates`/`candidate_contacts` (schema trước, theo `/db-task`).
