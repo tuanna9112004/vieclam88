@@ -1,5 +1,6 @@
 # vieclam88 — Claude Code
 
+ƯU TIÊN TRẢ LỜI BẰNG TIẾNG VIỆT sau khi hoàn thành prompt
 ## Mục tiêu và stack
 
 Laravel monolith cho công ty cung ứng lao động miền Bắc: website public và HR tại `/hr`.
