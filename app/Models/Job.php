@@ -86,6 +86,11 @@ class Job extends Model
         return $this->hasMany(JobBranchHistory::class);
     }
 
+    public function applications(): HasMany
+    {
+        return $this->hasMany(Application::class);
+    }
+
     /**
      * Giá trị tính toán tầng ứng dụng, không phải cột DB (ADR-072, `docs/CORE-FLOWS.md` mục 2.2):
      * `jobs.status` giữ nguyên `published` cho tới khi có hành động tường minh pause/close.

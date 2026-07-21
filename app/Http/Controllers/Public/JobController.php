@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Actions\Application\IssueSubmissionTokenAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\JobIndexRequest;
 use App\Models\AdministrativeUnit;
 use App\Models\IndustrialPark;
 use App\Models\Job;
 use App\Models\WorkShift;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class JobController extends Controller
@@ -52,10 +54,22 @@ class JobController extends Controller
         ]);
     }
 
-    public function show(Job $job): View
+    public function show(Request $request, Job $job, IssueSubmissionTokenAction $issueSubmissionToken): View
     {
         // Job draft "chưa từng publish" không có trang chi tiết công khai (docs/CORE-FLOWS.md mục 2).
         abort_if($job->status === 'draft', 404);
+
+        // Submission Token Lifecycle (docs/CORE-FLOWS.md mục 3, ADR-041): chỉ sinh token khi Job
+        // còn nhận Application — form ứng tuyển thật thuộc slice sau, token đã sẵn sàng trong
+        // session cho slice đó dùng.
+        $isOpen = $job->isOpenForApplication();
+        $submissionToken = $isOpen ? $issueSubmissionToken->handle($request->session(), $job->id) : null;
+
+        // "Nơi ở hiện tại" trong form ứng tuyển — 1 dropdown đơn dùng chung administrative_units
+        // đang active (chỉ cần khi Job còn mở, giống filter administrativeUnits ở jobs.index).
+        $applicantAdministrativeUnits = $isOpen
+            ? AdministrativeUnit::where('is_active', true)->orderBy('name')->get(['id', 'name'])
+            : collect();
 
         $job->load([
             'company:id,name,industry',
@@ -85,6 +99,8 @@ class JobController extends Controller
         return view('public.jobs.show', [
             'job' => $job,
             'relatedJobs' => $relatedJobs,
+            'submissionToken' => $submissionToken,
+            'applicantAdministrativeUnits' => $applicantAdministrativeUnits,
         ]);
     }
 }

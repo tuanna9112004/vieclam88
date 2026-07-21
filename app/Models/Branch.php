@@ -30,4 +30,9 @@ class Branch extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function applications(): HasMany
+    {
+        return $this->hasMany(Application::class, 'owner_branch_id');
+    }
 }

@@ -162,6 +162,96 @@
         </div>
 
         <div class="col-lg-4">
+            @if ($isOpen)
+                <div class="card shadow-sm mb-4" style="position: sticky; top: 1rem;">
+                    <div class="card-body d-flex flex-column gap-2">
+                        <button type="button" class="btn btn-primary btn-lg" style="min-height:48px" data-bs-toggle="collapse" data-bs-target="#apply-form" aria-expanded="{{ $errors->any() ? 'true' : 'false' }}" aria-controls="apply-form">
+                            Ứng tuyển ngay
+                        </button>
+
+                        <div class="collapse mt-2 @if ($errors->any()) show @endif" id="apply-form">
+                            <form method="POST" action="{{ route('applications.store', $job->slug) }}" novalidate>
+                                @csrf
+                                <input type="hidden" name="submission_token" value="{{ $submissionToken }}">
+                                <div class="mb-2" style="position:absolute; left:-9999px" aria-hidden="true">
+                                    <label for="website">Để trống trường này</label>
+                                    <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+                                </div>
+
+                                <div class="mb-2">
+                                    <label for="full_name" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control @error('full_name') is-invalid @enderror" style="min-height:44px" id="full_name" name="full_name" value="{{ old('full_name') }}" required>
+                                    @error('full_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+
+                                <div class="mb-2">
+                                    <label for="phone" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                                    <input type="tel" class="form-control @error('phone') is-invalid @enderror" style="min-height:44px" id="phone" name="phone" value="{{ old('phone') }}" required>
+                                    @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+
+                                <div class="mb-2">
+                                    <label for="date_of_birth" class="form-label">Ngày sinh</label>
+                                    <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" style="min-height:44px" id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth') }}">
+                                    @error('date_of_birth')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+
+                                <button type="button" class="btn btn-link px-0 mb-2" style="min-height:44px" data-bs-toggle="collapse" data-bs-target="#apply-extra" aria-expanded="false" aria-controls="apply-extra">
+                                    Thông tin bổ sung
+                                </button>
+                                <div class="collapse @if (old('gender') || old('current_administrative_unit_id') || old('education_level') || old('experience_summary')) show @endif" id="apply-extra">
+                                    <div class="mb-2">
+                                        <label class="form-label d-block">Giới tính</label>
+                                        @foreach (['male' => 'Nam', 'female' => 'Nữ', 'other' => 'Khác'] as $value => $label)
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input @error('gender') is-invalid @enderror" type="radio" name="gender" id="gender_{{ $value }}" value="{{ $value }}" {{ old('gender') === $value ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="gender_{{ $value }}">{{ $label }}</label>
+                                            </div>
+                                        @endforeach
+                                        @error('gender')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label for="current_administrative_unit_id" class="form-label">Nơi ở hiện tại</label>
+                                        <select class="form-select @error('current_administrative_unit_id') is-invalid @enderror" style="min-height:44px" id="current_administrative_unit_id" name="current_administrative_unit_id">
+                                            <option value="">-- Chọn tỉnh/thành phố --</option>
+                                            @foreach ($applicantAdministrativeUnits as $unit)
+                                                <option value="{{ $unit->id }}" {{ (string) old('current_administrative_unit_id') === (string) $unit->id ? 'selected' : '' }}>{{ $unit->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('current_administrative_unit_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label for="education_level" class="form-label">Học vấn</label>
+                                        <input type="text" class="form-control @error('education_level') is-invalid @enderror" style="min-height:44px" id="education_level" name="education_level" value="{{ old('education_level') }}">
+                                        @error('education_level')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label for="experience_summary" class="form-label">Kinh nghiệm làm việc</label>
+                                        <textarea class="form-control @error('experience_summary') is-invalid @enderror" id="experience_summary" name="experience_summary" rows="3">{{ old('experience_summary') }}</textarea>
+                                        @error('experience_summary')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input @error('consent') is-invalid @enderror" type="checkbox" id="consent" name="consent" value="1" {{ old('consent') ? 'checked' : '' }} required>
+                                    <label class="form-check-label small" for="consent">
+                                        Tôi đồng ý cho phép thu thập và sử dụng thông tin trên để công ty liên hệ tư
+                                        vấn việc làm phù hợp.
+                                    </label>
+                                    @error('consent')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    @error('submission_token')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                                </div>
+
+                                <button type="submit" class="btn btn-primary w-100" style="min-height:48px">Gửi hồ sơ ứng tuyển</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="card shadow-sm mb-4" style="position: sticky; top: 1rem;">
                 <div class="card-body d-flex flex-column gap-2">
                     <h2 class="h6 mb-1">Liên hệ</h2>

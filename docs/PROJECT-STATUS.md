@@ -2,38 +2,38 @@
 
 ## Phase / slice hiện tại
 
-**Giai đoạn 1-4 DONE (Nhóm 1-4 theo `ROADMAP.md`).** Đã bổ sung lớp Public site (Job
-list/detail, trang chủ, sitemap) trên schema Nhóm 3-4 có sẵn. Nhóm 5 (candidate/application)
-chưa bắt đầu.
+**Giai đoạn 1-4 DONE.** Nhóm 5 (candidate/application): schema DONE (8 bảng) và **Luồng 3 (guest
+apply) DONE end-to-end** — form ứng tuyển thật đã hoạt động trên `jobs.show`.
 
-- Company/Job (HR): như trước — CRUD + Draft/Verify/Publish/Pause/Close/Transfer-branch đầy đủ
-  qua domain Action; còn thiếu Blade UI verify/publish/pause/close/transfer-branch (mới có route).
-- **Public site (mới):** `jobs.index` (filter KCN/đơn vị hành chính/công ty/lương/ca/xe đưa
-  đón/chỗ ở/từ khóa, sort, phân trang giữ query string, tránh N+1), `jobs.show` (paused/closed/
-  expired giữ URL đúng contract, CTA Branch luôn hiện, Company Contact chỉ khi `is_public`,
-  JobPosting JSON-LD chỉ khi active, việc làm liên quan), trang chủ, `sitemap.xml`.
+- Company/Job (HR): CRUD + Draft/Verify/Publish/Pause/Close/Transfer-branch qua Action; còn thiếu
+  Blade UI verify/publish/pause/close/transfer-branch.
+- Public site: `jobs.index`/`jobs.show` (form ứng tuyển thật, mới), trang chủ, `sitemap.xml`.
+- **`CreateApplicationAction`** — token/session (ADR-041) + `PhoneNormalizer` +
+  `LockSubmissionByPhoneAction` (ADR-061) + `MatchOrCreateCandidateAction` (mục 6.2) + tạo
+  `Application`/history/`candidate_duplicate_reviews` trong 1 transaction, idempotency + Case C.
+  Form đủ field tùy chọn CORE-FLOWS gốc (không có SĐT phụ); rate limit có test; mobile input
+  ≥44px đã xác nhận qua browser thật (`.claude/launch.json`).
 
 ## Quyết định quan trọng
 
-- Salary Predicate: 2 mode loại trừ nhau (ADR-060 đã sửa).
-- `company_contact_id` re-check cả lúc Store/Update lẫn Publish lẫn hiển thị public.
-- `hr.jobs.transfer-branch` chỉ Admin.
-- Public site **chưa có** form ứng tuyển thật (Luồng 3) và **chưa có** trang Company public
-  (`companies.index/show`) — trang chủ tạm bỏ khối "Top công ty" vì phụ thuộc trang này.
+- Salary Predicate: 2 mode loại trừ nhau (ADR-060 đã sửa). `hr.jobs.transfer-branch` chỉ Admin.
+- `PhoneNormalizer` chưa có ADR chính thức. Consent dùng text tĩnh — bảng `pages` chưa build.
+  "Nơi ở hiện tại" 1 dropdown đơn (không cascading Tỉnh/Quận). Chưa có trang Company public.
+- Bỏ SĐT phụ khỏi form (từng gây race unique `(candidate_id, job_id)`); Controller nay catch
+  `SubmissionLockTimeoutException` để trả lỗi thân thiện thay vì 500 (`/verify-task` Giai đoạn 7).
 
 ## Verification gần nhất
 
-`php artisan test` PASS **459/459** (416 cũ + 43 mới: JobListTest/JobShowTest/HomeTest/
-SeoTest). `npm run build` OK. `check-claude-config.py` OK, `git diff --check` sạch. Chưa chạy
-`composer validate` (không có `composer` trong PATH của môi trường chạy việc này).
+`php artisan test` PASS **575/575**. Đã submit thật qua browser mobile 375px (không tràn ngang,
+input ≥44px) và desktop — DB dev cục bộ, cleanup qua tinker, không đụng DB test. `npm run build`
+OK. `check-claude-config.py` OK, `git diff --check` sạch.
 
 ## Blocker / tồn đọng
 
-Không có — đã commit `712aad3` và push lên `origin/main`.
+Không có — chưa commit (chờ yêu cầu commit rõ ràng).
 
 ## Bước tiếp theo
 
-1. Luồng 3 — form ứng tuyển thật (submission_token, consent, honeypot, rate limit) để CTA
-   "Ứng tuyển ngay" hoạt động trên `jobs.show`.
-2. Public Company pages (`companies.index`/`companies.show`).
-3. Nhóm 5 — schema `candidates`/`candidate_contacts` (`/db-task`).
+1. Nhóm 5 — `ChangeApplicationStageAction` (Luồng 4/5: transition matrix, workflow cycle,
+   Contact/Appointment), Reopen, merge/anonymize Candidate, Duplicate Review resolve (Admin).
+2. Trang `pages` CMS + chính sách dữ liệu cá nhân thật; Public Company pages.

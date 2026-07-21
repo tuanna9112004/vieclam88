@@ -129,9 +129,15 @@ class JobShowTest extends TestCase
         $response->assertDontSee('application/ld+json', false);
     }
 
-    public function test_no_apply_button_is_rendered_for_any_status(): void
+    public function test_apply_button_only_rendered_for_open_job(): void
     {
-        foreach (['published', 'paused', 'closed'] as $status) {
+        $openJob = $this->createJob(['status' => 'published', 'title' => 'Job dang tuyen']);
+
+        $this->get(route('jobs.show', $openJob->slug))
+            ->assertOk()
+            ->assertSee('Ứng tuyển ngay');
+
+        foreach (['paused', 'closed'] as $status) {
             $job = $this->createJob(['status' => $status, 'title' => 'Job trang thai '.$status]);
 
             $this->get(route('jobs.show', $job->slug))

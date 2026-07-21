@@ -478,8 +478,10 @@ rollback toàn bộ, không để lại `candidates`/`applications` rác. Xem th
 Contract (mục 3.1, ADR-061) cho trường hợp 2 request đồng thời khác `submission_token`.
 
 **Trường bắt buộc tối thiểu:** họ tên, số điện thoại, Job, đồng ý chính sách dữ liệu.
-**Trường tùy chọn:** ngày sinh, giới tính, nơi ở hiện tại, số điện thoại khác, học vấn, kinh
-nghiệm.
+**Trường tùy chọn:** ngày sinh, giới tính, nơi ở hiện tại, học vấn, kinh nghiệm. Không có trường
+số điện thoại phụ — mỗi Application chỉ gắn đúng 1 số điện thoại, tránh 1 Candidate có nhiều
+`candidate_contacts` type=phone dẫn tới 2 lock key khác nhau cho cùng 1 người (rủi ro race khi 2
+request dùng 2 số khác nhau của cùng 1 người submit đồng thời — xem mục 3.1).
 
 **Bắt buộc kỹ thuật:** server-side validation, CSRF, rate limit, honeypot/chống spam,
 transaction, và **client không được tự gửi `stage`, `owner_branch_id`** — các trường này luôn
