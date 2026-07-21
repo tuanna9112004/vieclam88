@@ -13,6 +13,9 @@
         <div class="container py-5">
             <h1 class="h4">Xin chào, {{ auth()->user()->name }}</h1>
 
+            <a href="{{ route('hr.jobs.index') }}" class="btn btn-outline-primary mt-3">Việc làm</a>
+            <a href="{{ route('hr.companies.index') }}" class="btn btn-outline-primary mt-3">Công ty</a>
+
             @if (auth()->user()->isAdmin())
                 <a href="{{ route('hr.industrial-parks.index') }}" class="btn btn-outline-primary mt-3">Khu công nghiệp</a>
                 <a href="{{ route('hr.branches.index') }}" class="btn btn-outline-primary mt-3">Cơ sở</a>

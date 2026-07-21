@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Policies;
+
+use App\Models\Job;
+use App\Models\User;
+
+class JobPolicy
+{
+    /**
+     * hr.jobs.* (docs/ROUTE-MAP.md): Staff và Admin đều tạo được. Sửa Job: Admin không giới
+     * hạn, Staff chỉ sửa được Job thuộc đúng cơ sở mình (docs/CORE-FLOWS.md mục 1.1) — truy cập
+     * trực tiếp URL Job thuộc cơ sở khác phải 403, không chỉ ẩn nút.
+     */
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, Job $job): bool
+    {
+        return $user->isAdmin() || $job->owner_branch_id === $user->branch_id;
+    }
+}

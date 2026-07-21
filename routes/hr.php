@@ -2,8 +2,12 @@
 
 use App\Http\Controllers\Hr\Auth\HrAuthController;
 use App\Http\Controllers\Hr\BranchController;
+use App\Http\Controllers\Hr\CompanyContactController;
+use App\Http\Controllers\Hr\CompanyController;
+use App\Http\Controllers\Hr\CompanyLocationController;
 use App\Http\Controllers\Hr\DashboardController;
 use App\Http\Controllers\Hr\IndustrialParkController;
+use App\Http\Controllers\Hr\JobController;
 use App\Http\Controllers\Hr\PasswordChangeController;
 use App\Http\Controllers\Hr\StaffController;
 use App\Http\Middleware\EnsurePasswordChanged;
@@ -52,6 +56,43 @@ Route::prefix('hr')->name('hr.')->group(function () {
                 Route::delete('{branch}', [BranchController::class, 'destroy'])->name('destroy');
                 Route::post('{branch}/khoi-phuc', [BranchController::class, 'restore'])
                     ->name('restore')->withTrashed();
+            });
+
+            Route::prefix('cong-ty')->name('companies.')->group(function () {
+                Route::get('/', [CompanyController::class, 'index'])->name('index');
+                Route::get('tao-moi', [CompanyController::class, 'create'])->name('create');
+                Route::post('/', [CompanyController::class, 'store'])->name('store');
+                Route::get('{company}/sua', [CompanyController::class, 'edit'])->name('edit');
+                Route::put('{company}', [CompanyController::class, 'update'])->name('update');
+                Route::delete('{company}', [CompanyController::class, 'destroy'])->name('destroy');
+                Route::post('{company}/khoi-phuc', [CompanyController::class, 'restore'])
+                    ->name('restore')->withTrashed();
+            });
+
+            Route::prefix('cong-ty/{company}/dia-diem')->name('company-locations.')->group(function () {
+                Route::get('/', [CompanyLocationController::class, 'index'])->name('index');
+                Route::post('/', [CompanyLocationController::class, 'store'])->name('store');
+                Route::put('{location}', [CompanyLocationController::class, 'update'])->name('update');
+                Route::delete('{location}', [CompanyLocationController::class, 'destroy'])->name('destroy');
+                Route::post('{location}/khoi-phuc', [CompanyLocationController::class, 'restore'])
+                    ->name('restore')->withTrashed();
+            });
+
+            Route::prefix('cong-ty/{company}/dau-moi')->name('company-contacts.')->group(function () {
+                Route::get('/', [CompanyContactController::class, 'index'])->name('index');
+                Route::post('/', [CompanyContactController::class, 'store'])->name('store');
+                Route::put('{contact}', [CompanyContactController::class, 'update'])->name('update');
+                Route::delete('{contact}', [CompanyContactController::class, 'destroy'])->name('destroy');
+                Route::post('{contact}/khoi-phuc', [CompanyContactController::class, 'restore'])
+                    ->name('restore')->withTrashed();
+            });
+
+            Route::prefix('viec-lam')->name('jobs.')->group(function () {
+                Route::get('/', [JobController::class, 'index'])->name('index');
+                Route::get('tao-moi', [JobController::class, 'create'])->name('create');
+                Route::post('/', [JobController::class, 'store'])->name('store');
+                Route::get('{job}/sua', [JobController::class, 'edit'])->name('edit');
+                Route::put('{job}', [JobController::class, 'update'])->name('update');
             });
         });
     });
