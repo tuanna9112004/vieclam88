@@ -20,6 +20,9 @@ class ApplicationContactAttempt extends Model
             'channel' => 'string',
             'result' => 'string',
             'contacted_at' => 'datetime',
+            // $timestamps=false (append-only, khong co updated_at) — Eloquent khong tu cast
+            // created_at thanh Carbon trong truong hop nay, phai khai bao tuong minh.
+            'created_at' => 'datetime',
         ];
     }
 

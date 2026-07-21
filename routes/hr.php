@@ -1,10 +1,15 @@
 <?php
 
+use App\Http\Controllers\Hr\ApplicationController;
+use App\Http\Controllers\Hr\ApplicationNoteController;
+use App\Http\Controllers\Hr\ApplicationStageController;
+use App\Http\Controllers\Hr\AppointmentController;
 use App\Http\Controllers\Hr\Auth\HrAuthController;
 use App\Http\Controllers\Hr\BranchController;
 use App\Http\Controllers\Hr\CompanyContactController;
 use App\Http\Controllers\Hr\CompanyController;
 use App\Http\Controllers\Hr\CompanyLocationController;
+use App\Http\Controllers\Hr\ContactAttemptController;
 use App\Http\Controllers\Hr\DashboardController;
 use App\Http\Controllers\Hr\IndustrialParkController;
 use App\Http\Controllers\Hr\JobController;
@@ -101,6 +106,25 @@ Route::prefix('hr')->name('hr.')->group(function () {
                 Route::post('{job}/tam-dung', [JobWorkflowController::class, 'pause'])->name('pause');
                 Route::post('{job}/dong', [JobWorkflowController::class, 'close'])->name('close');
                 Route::post('{job}/chuyen-co-so', [JobBranchTransferController::class, 'store'])->name('transfer-branch');
+            });
+
+            Route::prefix('ho-so')->name('applications.')->group(function () {
+                Route::get('/', [ApplicationController::class, 'index'])->name('index');
+                Route::get('{application}', [ApplicationController::class, 'show'])->name('show');
+                Route::post('{application}/doi-giai-doan', [ApplicationStageController::class, 'store'])
+                    ->name('stage');
+                Route::post('{application}/lien-he', [ContactAttemptController::class, 'store'])
+                    ->name('contacts.store');
+                Route::post('{application}/lich-hen', [AppointmentController::class, 'store'])
+                    ->name('appointments.store');
+                Route::put('{application}/lich-hen/{appointment}', [AppointmentController::class, 'update'])
+                    ->name('appointments.update');
+                Route::post('{application}/ghi-chu', [ApplicationNoteController::class, 'store'])
+                    ->name('notes.store');
+                Route::put('{application}/ghi-chu/{note}', [ApplicationNoteController::class, 'update'])
+                    ->name('notes.update');
+                Route::delete('{application}/ghi-chu/{note}', [ApplicationNoteController::class, 'destroy'])
+                    ->name('notes.destroy');
             });
         });
     });

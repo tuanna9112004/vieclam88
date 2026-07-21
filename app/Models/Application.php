@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\PhoneNormalizer;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -100,5 +102,50 @@ class Application extends Model
     public function duplicateReviews(): HasMany
     {
         return $this->hasMany(CandidateDuplicateReview::class);
+    }
+
+    /**
+     * hr.applications.index (docs/CORE-FLOWS.md muc 9.2): tim theo ten Candidate hoac phone —
+     * ca submission_snapshot (submitted_phone_normalized) lan candidate_contacts hien tai, dung
+     * whereHas (EXISTS) de khong nhan doi dong.
+     */
+    public function scopeSearchCandidate(Builder $query, string $keyword): Builder
+    {
+        $normalizedPhone = PhoneNormalizer::normalize($keyword);
+
+        return $query->where(function (Builder $q) use ($keyword, $normalizedPhone) {
+            $q->whereHas('candidate', fn (Builder $cq) => $cq->where('full_name', 'like', "%{$keyword}%"));
+
+            // Chuoi tim kiem khong co chu so nao se normalize ve rong — LIKE '%%' se khop moi
+            // dong, khong duoc them dieu kien phone trong truong hop do.
+            if ($normalizedPhone !== '') {
+                $q->orWhere('submitted_phone_normalized', 'like', "%{$normalizedPhone}%")
+                    ->orWhereHas(
+                        'candidate.contacts',
+                        fn (Builder $cq) => $cq->where('normalized_value', 'like', "%{$normalizedPhone}%")
+                    );
+            }
+        });
+    }
+
+    /**
+     * "Ho so chua lien he" (docs/CORE-FLOWS.md muc 9.2): stage=new va chua co
+     * application_contact_attempts nao.
+     */
+    public function scopeUncontacted(Builder $query): Builder
+    {
+        return $query->where('stage', 'new')->whereDoesntHave('contactAttempts');
+    }
+
+    /**
+     * "Co lich goi lai/phong van" (docs/CORE-FLOWS.md muc 9.2): whereHas (EXISTS), khong JOIN
+     * truc tiep de tranh nhan doi dong khi 1 Application co nhieu Appointment.
+     */
+    public function scopeHasScheduledAppointment(Builder $query, string $type): Builder
+    {
+        return $query->whereHas(
+            'appointments',
+            fn (Builder $q) => $q->where('type', $type)->where('status', 'scheduled')
+        );
     }
 }

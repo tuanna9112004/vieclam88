@@ -14,6 +14,14 @@ class ApplicationBranchHistory extends Model
 
     public $timestamps = false;
 
+    protected function casts(): array
+    {
+        // $timestamps=false (append-only) — can cast tuong minh, xem ApplicationContactAttempt.
+        return [
+            'created_at' => 'datetime',
+        ];
+    }
+
     protected static function booted(): void
     {
         static::creating(function (ApplicationBranchHistory $history) {

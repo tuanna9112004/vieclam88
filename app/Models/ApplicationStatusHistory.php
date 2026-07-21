@@ -25,6 +25,8 @@ class ApplicationStatusHistory extends Model
             'close_reason' => 'string',
             'actor_type' => 'string',
             'metadata' => 'array',
+            // $timestamps=false (append-only) — can cast tuong minh, xem ApplicationContactAttempt.
+            'created_at' => 'datetime',
         ];
     }
 
