@@ -3,21 +3,34 @@
 namespace App\Http\Controllers\Hr;
 
 use App\Actions\CompanyContact\SaveCompanyContactAction;
+use App\Enums\CompanyContactStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Hr\CompanyContact\StoreCompanyContactRequest;
 use App\Http\Requests\Hr\CompanyContact\UpdateCompanyContactRequest;
 use App\Models\Company;
 use App\Models\CompanyContact;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class CompanyContactController extends Controller
 {
-    public function index(Company $company): View
+    public function index(Request $request, Company $company): View|JsonResponse
     {
         $this->authorize('viewAny', CompanyContact::class);
 
         $contacts = $company->companyContacts()->orderBy('name')->get();
+
+        // Quick Create tu form Job: dropdown Contact loc theo Company qua AJAX goi lai dung
+        // route nay, chi tra ve contact active (Job chi duoc gan contact active — CORE-FLOWS 392).
+        if ($request->wantsJson()) {
+            return response()->json(
+                $contacts->filter(fn ($contact) => $contact->status === CompanyContactStatus::Active)
+                    ->values()
+                    ->map(fn ($contact) => ['id' => $contact->id, 'name' => $contact->name])
+            );
+        }
 
         return view('hr.companies.contacts.index', compact('company', 'contacts'));
     }

@@ -2,6 +2,8 @@
 
 namespace App\Actions\Job;
 
+use App\Enums\CompanyContactStatus;
+use App\Models\CompanyContact;
 use App\Models\CompanyLocation;
 use App\Models\Job;
 use App\Models\JobLocation;
@@ -15,15 +17,17 @@ class SaveJobDraftAction
      * Job Draft Contract (docs/CORE-FLOWS.md mục 1.0, ADR-046): chỉ title/company_id/
      * owner_branch_id/created_by bắt buộc — mọi thông tin khác (mô tả, lương, ca, xác minh...)
      * được phép thiếu ở draft, bổ sung dần trước khi publish (ngoài phạm vi lượt này).
-     * `company_location_id` tùy chọn (Location cũng được phép thiếu ở draft) — nếu có, tái xác
-     * nhận thuộc đúng company đã chọn ngay tại đây, không chỉ tin FormRequest.
+     * `company_location_id`/`company_contact_id` tùy chọn (đều được phép thiếu ở draft) — nếu
+     * có, tái xác nhận thuộc đúng company đã chọn ngay tại đây, không chỉ tin FormRequest.
      *
-     * @param  array{title: string, company_id: int, owner_branch_id?: int, company_location_id?: ?int}  $data
+     * @param  array{title: string, company_id: int, owner_branch_id?: int, company_location_id?: ?int, company_contact_id?: ?int}  $data
      */
     public function handle(array $data, User $actor, ?Job $job = null): Job
     {
         $companyLocationId = $data['company_location_id'] ?? null;
         unset($data['company_location_id']);
+
+        $this->guardContactBelongsToCompany($data['company_contact_id'] ?? null, $data['company_id']);
 
         $data['slug'] = $this->uniqueSlug($data['title'], $job?->id);
 
@@ -71,6 +75,24 @@ class SaveJobDraftAction
             ['job_id' => $job->id, 'company_location_id' => $companyLocationId],
             ['is_primary' => true]
         );
+    }
+
+    protected function guardContactBelongsToCompany(?int $companyContactId, int $companyId): void
+    {
+        if (! $companyContactId) {
+            return;
+        }
+
+        $contact = CompanyContact::where('id', $companyContactId)
+            ->where('company_id', $companyId)
+            ->where('status', CompanyContactStatus::Active)
+            ->first();
+
+        if (! $contact) {
+            throw ValidationException::withMessages([
+                'company_contact_id' => 'Đầu mối không thuộc công ty đã chọn hoặc đã ngừng hoạt động.',
+            ]);
+        }
     }
 
     protected function uniqueSlug(string $title, ?int $ignoreId): string

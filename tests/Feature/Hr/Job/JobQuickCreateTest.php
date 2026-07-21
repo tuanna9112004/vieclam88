@@ -3,6 +3,7 @@
 namespace Tests\Feature\Hr\Job;
 
 use App\Models\Company;
+use App\Models\CompanyContact;
 use App\Models\CompanyLocation;
 use App\Models\Job;
 use App\Models\JobLocation;
@@ -157,6 +158,93 @@ class JobQuickCreateTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertDatabaseHas('company_locations', ['id' => $location->id, 'deleted_at' => null]);
+    }
+
+    public function test_job_can_be_created_with_contact_belonging_to_same_company(): void
+    {
+        $staff = User::factory()->create();
+        $company = Company::factory()->create();
+        $contact = CompanyContact::factory()->create(['company_id' => $company->id, 'status' => 'active']);
+
+        $response = $this->actingAs($staff)->post(route('hr.jobs.store'), [
+            'title' => 'Công nhân Có Đầu Mối',
+            'company_id' => $company->id,
+            'company_contact_id' => $contact->id,
+        ]);
+
+        $response->assertRedirect(route('hr.jobs.index'));
+        $this->assertDatabaseHas('jobs', ['title' => 'Công nhân Có Đầu Mối', 'company_contact_id' => $contact->id]);
+    }
+
+    public function test_job_contact_must_belong_to_selected_company(): void
+    {
+        $staff = User::factory()->create();
+        $companyA = Company::factory()->create();
+        $companyB = Company::factory()->create();
+        $contactOfB = CompanyContact::factory()->create(['company_id' => $companyB->id, 'status' => 'active']);
+
+        $response = $this->actingAs($staff)->post(route('hr.jobs.store'), [
+            'title' => 'Công nhân Sai Đầu Mối',
+            'company_id' => $companyA->id,
+            'company_contact_id' => $contactOfB->id,
+        ]);
+
+        $response->assertSessionHasErrors('company_contact_id');
+        $this->assertDatabaseMissing('jobs', ['title' => 'Công nhân Sai Đầu Mối']);
+    }
+
+    public function test_job_rejects_inactive_contact(): void
+    {
+        $staff = User::factory()->create();
+        $company = Company::factory()->create();
+        $contact = CompanyContact::factory()->create(['company_id' => $company->id, 'status' => 'inactive']);
+
+        $response = $this->actingAs($staff)->post(route('hr.jobs.store'), [
+            'title' => 'Công nhân Đầu Mối Ngừng Hoạt Động',
+            'company_id' => $company->id,
+            'company_contact_id' => $contact->id,
+        ]);
+
+        $response->assertSessionHasErrors('company_contact_id');
+        $this->assertDatabaseMissing('jobs', ['title' => 'Công nhân Đầu Mối Ngừng Hoạt Động']);
+    }
+
+    public function test_company_contact_index_returns_only_active_contacts_of_that_company(): void
+    {
+        $staff = User::factory()->create();
+        $companyA = Company::factory()->create();
+        $companyB = Company::factory()->create();
+        CompanyContact::factory()->create(['company_id' => $companyA->id, 'name' => 'Chị Lan', 'status' => 'active']);
+        CompanyContact::factory()->create(['company_id' => $companyA->id, 'name' => 'Anh Nam', 'status' => 'inactive']);
+        CompanyContact::factory()->create(['company_id' => $companyB->id, 'name' => 'Chị Hoa', 'status' => 'active']);
+
+        $response = $this->actingAs($staff)->getJson(route('hr.company-contacts.index', $companyA));
+
+        $response->assertOk();
+        $response->assertJsonCount(1);
+        $response->assertJsonFragment(['name' => 'Chị Lan']);
+        $response->assertJsonMissing(['name' => 'Anh Nam']);
+        $response->assertJsonMissing(['name' => 'Chị Hoa']);
+    }
+
+    public function test_updating_job_can_clear_selected_contact(): void
+    {
+        $staff = User::factory()->create();
+        $company = Company::factory()->create();
+        $contact = CompanyContact::factory()->create(['company_id' => $company->id, 'status' => 'active']);
+        $job = Job::factory()->create([
+            'owner_branch_id' => $staff->branch_id,
+            'company_id' => $company->id,
+            'company_contact_id' => $contact->id,
+        ]);
+
+        $this->actingAs($staff)->put(route('hr.jobs.update', $job), [
+            'title' => $job->title,
+            'company_id' => $job->company_id,
+            'company_contact_id' => '',
+        ]);
+
+        $this->assertNull($job->fresh()->company_contact_id);
     }
 
     public function test_updating_job_location_selection_replaces_old_one(): void

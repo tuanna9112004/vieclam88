@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Hr\Job;
 
+use App\Enums\CompanyContactStatus;
 use App\Models\Company;
+use App\Models\CompanyContact;
 use App\Models\CompanyLocation;
 use App\Models\Job;
 use Illuminate\Contracts\Validation\Validator;
@@ -33,6 +35,7 @@ class UpdateJobRequest extends FormRequest
             'title' => ['required', 'string', 'max:200'],
             'company_id' => ['required', Rule::exists(Company::class, 'id')->withoutTrashed()],
             'company_location_id' => ['nullable', Rule::exists(CompanyLocation::class, 'id')->withoutTrashed()],
+            'company_contact_id' => ['nullable', Rule::exists(CompanyContact::class, 'id')->withoutTrashed()],
         ];
     }
 
@@ -40,6 +43,7 @@ class UpdateJobRequest extends FormRequest
     {
         $validator->after(function (Validator $validator) {
             $this->guardLocationBelongsToCompany($validator);
+            $this->guardContactBelongsToCompany($validator);
         });
     }
 
@@ -55,6 +59,27 @@ class UpdateJobRequest extends FormRequest
 
         if ($location && (int) $location->company_id !== (int) $this->input('company_id')) {
             $validator->errors()->add('company_location_id', 'Địa điểm không thuộc công ty đã chọn.');
+        }
+    }
+
+    protected function guardContactBelongsToCompany(Validator $validator): void
+    {
+        $contactId = $this->input('company_contact_id');
+
+        if (empty($contactId)) {
+            return;
+        }
+
+        $contact = CompanyContact::find($contactId);
+
+        if (! $contact || (int) $contact->company_id !== (int) $this->input('company_id')) {
+            $validator->errors()->add('company_contact_id', 'Đầu mối không thuộc công ty đã chọn.');
+
+            return;
+        }
+
+        if ($contact->status !== CompanyContactStatus::Active) {
+            $validator->errors()->add('company_contact_id', 'Đầu mối đã ngừng hoạt động.');
         }
     }
 }

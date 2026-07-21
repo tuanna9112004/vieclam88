@@ -64,4 +64,24 @@ class Job extends Model
     {
         return $this->hasMany(JobLocation::class);
     }
+
+    public function jobWorkShifts(): HasMany
+    {
+        return $this->hasMany(JobWorkShift::class);
+    }
+
+    public function jobVerifications(): HasMany
+    {
+        return $this->hasMany(JobVerification::class);
+    }
+
+    public function jobStatusHistories(): HasMany
+    {
+        return $this->hasMany(JobStatusHistory::class);
+    }
+
+    public function jobBranchHistories(): HasMany
+    {
+        return $this->hasMany(JobBranchHistory::class);
+    }
 }

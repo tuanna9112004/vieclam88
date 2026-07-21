@@ -67,21 +67,31 @@
                     </div>
                 </div>
 
+                <div class="mb-3">
+                    <label for="company_contact_id" class="form-label">Đầu mối liên hệ (nếu có)</label>
+                    <select class="form-select" id="company_contact_id" name="company_contact_id" disabled>
+                        <option value="">-- Đang tải --</option>
+                    </select>
+                </div>
+
                 <button type="submit" class="btn btn-primary w-100">Lưu</button>
             </form>
         </div>
 
         @php
             $initialLocationId = old('company_location_id', $primaryLocation?->id);
+            $initialContactId = old('company_contact_id', $job->company_contact_id);
         @endphp
 
         <script>
             (function () {
                 const companySelect = document.getElementById('company_id');
                 const locationSelect = document.getElementById('company_location_id');
+                const contactSelect = document.getElementById('company_contact_id');
                 const toggleNewLocationBtn = document.getElementById('toggle-new-location');
                 const csrfToken = document.querySelector('input[name="_token"]').value;
                 const initialLocationId = @json($initialLocationId);
+                const initialContactId = @json($initialContactId);
 
                 function loadLocations(companyId, selectedId) {
                     if (!companyId) {
@@ -109,8 +119,33 @@
                         });
                 }
 
+                function loadContacts(companyId, selectedId) {
+                    if (!companyId) {
+                        contactSelect.innerHTML = '<option value="">-- Chưa chọn công ty --</option>';
+                        contactSelect.disabled = true;
+                        return;
+                    }
+
+                    fetch(`/hr/cong-ty/${companyId}/dau-moi`, { headers: { Accept: 'application/json' } })
+                        .then((r) => r.json())
+                        .then((contacts) => {
+                            contactSelect.innerHTML = '<option value="">-- Không có --</option>';
+                            contacts.forEach((contact) => {
+                                const opt = document.createElement('option');
+                                opt.value = contact.id;
+                                opt.textContent = contact.name;
+                                if (selectedId && String(contact.id) === String(selectedId)) {
+                                    opt.selected = true;
+                                }
+                                contactSelect.appendChild(opt);
+                            });
+                            contactSelect.disabled = false;
+                        });
+                }
+
                 companySelect.addEventListener('change', function () {
                     loadLocations(this.value, null);
+                    loadContacts(this.value, null);
                 });
 
                 document.getElementById('company_search').addEventListener('input', function () {
@@ -157,6 +192,7 @@
                             document.getElementById('new-company-name').value = '';
                             document.getElementById('new-company-panel').classList.add('d-none');
                             loadLocations(company.id, null);
+                            loadContacts(company.id, null);
                         })
                         .catch(() => {
                             errorEl.textContent = 'Không tạo được công ty — kiểm tra lại tên.';
@@ -199,6 +235,7 @@
                 });
 
                 loadLocations(companySelect.value, initialLocationId);
+                loadContacts(companySelect.value, initialContactId);
             })();
         </script>
     </body>

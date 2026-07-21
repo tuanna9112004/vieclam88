@@ -393,12 +393,18 @@ thay thế câu chung chung "các trường bắt buộc theo nghiệp vụ đã
    `job_verification_valid_days` — Staff bị từ chối nếu sai; Admin override được nhưng bắt buộc
    `job_status_histories.reason` (ADR-058). 22. Người thao tác có quyền publish Job này (Staff
    đúng cơ sở hoặc Admin — mục 1.1).
-3. **Salary Predicate chính thức** — lương được coi là hợp lệ khi **ít nhất một** trong 4 điều
-   kiện sau đúng (không yêu cầu tất cả, các điều kiện độc lập, không loại trừ nhau):
-   - `salary_min` khác null, **hoặc** `salary_max` khác null; **hoặc**
-   - `salary_base` khác null; **hoặc**
-   - `salary_period = negotiable`; **hoặc**
-   - `salary_description` khác null và khác chuỗi rỗng sau khi trim.
+3. **Salary Predicate chính thức** — đúng **một trong hai mode loại trừ nhau** (khớp
+   `docs/CORE-FLOWS.md` mục 1.2 và `docs/ACCEPTANCE-CRITERIA.md` mục 1.2 — bản trước của mục này
+   ghi nhầm thành "ít nhất 1/4 điều kiện độc lập, không loại trừ nhau", mâu thuẫn với cả hai
+   nguồn trên, đã sửa lại cho khớp):
+   - **Negotiable mode:** `salary_period = negotiable`; **bắt buộc** `salary_min`, `salary_max`,
+     `salary_base` đều `NULL` (không được lưu negotiable cùng lương số); `salary_description`
+     được phép null hoặc có nội dung thực.
+   - **Numeric/described mode:** `salary_period != negotiable`; có ít nhất một trong
+     `salary_min`, `salary_max`, `salary_base` là số **dương**, **hoặc** `salary_description` có
+     nội dung thực sau khi trim.
+   `salary_min <= salary_max` (khi cả hai có giá trị) đã là DB CHECK constraint riêng
+   (`chk_jobs_salary_range`), không lặp lại ở predicate.
 4. **Shift Predicate chính thức** — ca làm được coi là hợp lệ khi: **có ít nhất 1 bản ghi
    `job_work_shifts`** gắn với Job (`COUNT(job_work_shifts WHERE job_id = ?) >= 1`). Đây là điều
    kiện duy nhất (single contract) — Phase 1 **không** thêm trường mô tả ca làm tự do cấp Job làm
