@@ -20,6 +20,7 @@ end-to-end, **Giai đoạn 8 (HR xử lý Application) DONE** — đã commit + 
 - CSV Export & Audit Log: `ExportApplicationsCsvAction` & `hr.applications.export` (Mục 9 / ADR-019 / ADR-053 — stream CSV dòng theo dòng, chống CSV Formula Injection qua `CsvSanitizer`, phân quyền Branch isolation cho Staff, ghi nhật ký `export_logs`).
 - Dashboard HR Phase 1: `GetDashboardStatsAction` & `GetAdminDashboardStatsAction` & `hr.dashboard` (Mục 9.1 / ADR-058 — Staff/Admin Dashboard với 11 thẻ KPI card cố định, tỷ lệ chuyển đổi % Application->Started, bộ lọc khoảng ngày/cơ sở/công ty/job, bảng thống kê Top Jobs & Companies, tính số đếm chính xác sau transfer/merge/duplicate).
 - Database Audit & Schema Integrity: `DatabaseIntegrityTest` (Audit 26 bảng schema, FK onDelete restrict/cascade, unique constraints `(candidate_id, job_id)`, append-only history models, rollback & migrate lifecycle, production seed `DemoSeeder`).
+- MariaDB Backup & Restore Runbook: `MARIADB-BACKUP-RESTORE.md` & `DatabaseBackupCommand` (`php artisan db:backup`) & `DatabaseRestoreTestCommand` (`php artisan db:restore-test`) (Mục Vận Hành / Security — tự động export SQL theo thứ tự phụ thuộc, loại trừ cột STORED GENERATED, SHA256 checksum verification, retention 30 ngày, và khôi phục thử nghiệm vào CSDL độc lập an toàn).
 
 ## Quyết định quan trọng (kèm lý do)
 
