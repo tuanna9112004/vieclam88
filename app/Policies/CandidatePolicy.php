@@ -44,4 +44,12 @@ class CandidatePolicy
     {
         return $user->isAdmin();
     }
+
+    /**
+     * docs/CORE-FLOWS.md mục 7.3: Chỉ Admin được ẩn danh (anonymize) candidate.
+     */
+    public function anonymize(User $user, Candidate $candidate): bool
+    {
+        return $user->isAdmin();
+    }
 }
