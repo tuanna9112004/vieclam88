@@ -3,33 +3,11 @@
   "autoMemoryEnabled": false,
   "permissions": {
     "allow": [
-      "Bash(git status*)",
-      "Bash(git diff*)",
-      "Bash(git log*)",
-      "Bash(git show*)",
-      "Bash(git grep*)",
-      "Bash(php artisan test*)",
-      "Bash(php artisan route:list*)",
-      "Bash(php artisan about*)",
-      "Bash(php artisan migrate:status*)",
-      "Bash(npm run build*)",
-      "Bash(composer validate*)",
-      "Bash(python scripts/check-claude-skills.py*)",
-      "Bash(python scripts/check-claude-config.py*)",
-      "Bash(python -m py_compile*)"
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)"
     ],
-    "ask": [
-      "Bash(composer create-project*)",
-      "Bash(composer install*)",
-      "Bash(composer update*)",
-      "Bash(npm install*)",
-      "Bash(npm ci*)",
-      "Bash(php artisan migrate*)",
-      "Bash(git commit*)",
-      "Bash(git tag*)",
-      "Bash(git push*)",
-      "Bash(rm *)"
-    ],
+    "ask": [],
     "deny": [
       "Read(./.env)",
       "Read(./storage/app/private/**)",
