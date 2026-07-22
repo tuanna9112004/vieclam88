@@ -53,6 +53,17 @@ npm run build
 
 `/vibe-task` là điểm vào mặc định; danh mục đầy đủ tại `docs/CLAUDE-SKILLS.md`. Skills nằm trong `.claude/skills/`.
 
+## Tiến độ hoàn thành Giai đoạn 9 - 10 & Core Admin Operations (PASS 700/700 tests)
+
+- **Transfer Application Branch (Luồng 6.1):** `TransferApplicationBranchAction` (Admin-only, lockForUpdate, Branch history, chuyển quyền tức thì).
+- **Candidate Duplicate Review (Luồng 6.2.2):** `ResolveCandidateDuplicateReviewAction` & `hr.duplicate-reviews` (Admin-only, nguồn sự thật server-side, không tự merge, đồng bộ `needs_duplicate_review`).
+- **Candidate Merge (Luồng 6.3):** `MergeCandidateAction` (Admin-only, root resolution, chống self/cycle merge, khóa source candidate, giữ lịch sử, close duplicate application).
+- **Candidate Anonymization (ADR-056):** `AnonymizeCandidateAction` (Admin-only, PII contract: mask candidates, contacts, 6 cột application PII, khóa merge/edit/reopen, giữ audit metadata).
+- **CSV Export & Audit Log (Mục 9):** `ExportApplicationsCsvAction` & `hr.applications.export` (Stream CSV dòng theo dòng, `CsvSanitizer` chống Formula Injection, Staff Branch isolation, ghi `export_logs`).
+- **Staff & Admin Dashboard Phase 1 (Mục 9.1 / ADR-058):** `GetDashboardStatsAction` & `GetAdminDashboardStatsAction` & `hr.dashboard` (11 thẻ KPI cards có link filter, Tỷ lệ chuyển đổi % Application->Started, bộ lọc Khoảng ngày/Cơ sở/Công ty/Job, Top Jobs & Companies breakdown, đếm chuẩn sau transfer/merge/duplicate).
+- **Database Baseline Audit (Mục DB):** `DatabaseIntegrityTest` (Audit 26 bảng schema, FK `restrictOnDelete`, unique `(candidate_id, job_id)`, append-only history models, rollback & migrate lifecycle, production seed `DemoSeeder`).
+- **MariaDB Backup & Restore Runbook (Mục Vận Hành):** `MARIADB-BACKUP-RESTORE.md` & `DatabaseBackupCommand` (`php artisan db:backup`) & `DatabaseRestoreTestCommand` (`php artisan db:restore-test`) (Export SQL theo topological order, loại trừ cột STORED GENERATED, SHA256 checksum verification, retention 30 ngày, restore test an toàn vào database thử nghiệm độc lập).
+
 ## Compact
 
 Giữ mục tiêu, acceptance criteria, file đổi, lệnh/kết quả, blocker và tối đa 3 bước tiếp theo; bỏ output dài và kế hoạch cũ.
