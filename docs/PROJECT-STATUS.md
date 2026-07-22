@@ -14,6 +14,7 @@ end-to-end, **Giai đoạn 8 (HR xử lý Application) DONE** — đã commit + 
   — Branch isolation, actor/workflow_cycle server-side, `lockForUpdate`, transition matrix 5.1 +
   Reopen 5.5, `TransferApplicationBranchAction` (Luồng 6.1 — chuyển cơ sở ngoại lệ chỉ Admin), timeline tổng hợp 5 bảng lịch sử (không bảng mới). Chưa có export, Dashboard KPI,
   Blade form thao tác trên trang show (route đã có, UI chưa build).
+- Candidate Duplicate Review (Admin): `hr.duplicate-reviews.index/.show/.resolve` — xem 2 candidate cạnh nhau, `ResolveCandidateDuplicateReviewAction` (Luồng 6.2.2 — không tự merge, đồng bộ `needs_duplicate_review` khi không còn pending), Blade UI đầy đủ.
 
 ## Quyết định quan trọng (kèm lý do)
 

@@ -12,6 +12,7 @@ use App\Http\Controllers\Hr\CompanyController;
 use App\Http\Controllers\Hr\CompanyLocationController;
 use App\Http\Controllers\Hr\ContactAttemptController;
 use App\Http\Controllers\Hr\DashboardController;
+use App\Http\Controllers\Hr\DuplicateReviewController;
 use App\Http\Controllers\Hr\IndustrialParkController;
 use App\Http\Controllers\Hr\JobController;
 use App\Http\Controllers\Hr\JobBranchTransferController;
@@ -128,6 +129,12 @@ Route::prefix('hr')->name('hr.')->group(function () {
                     ->name('notes.destroy');
                 Route::post('{application}/chuyen-co-so', [ApplicationBranchTransferController::class, 'store'])
                     ->name('transfer-branch');
+            });
+
+            Route::prefix('nghi-ngo-trung')->name('duplicate-reviews.')->group(function () {
+                Route::get('/', [DuplicateReviewController::class, 'index'])->name('index');
+                Route::get('{duplicateReview}', [DuplicateReviewController::class, 'show'])->name('show');
+                Route::post('{duplicateReview}/xu-ly', [DuplicateReviewController::class, 'resolve'])->name('resolve');
             });
         });
     });
