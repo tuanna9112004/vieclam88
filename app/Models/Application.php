@@ -141,11 +141,13 @@ class Application extends Model
      * "Co lich goi lai/phong van" (docs/CORE-FLOWS.md muc 9.2): whereHas (EXISTS), khong JOIN
      * truc tiep de tranh nhan doi dong khi 1 Application co nhieu Appointment.
      */
-    public function scopeHasScheduledAppointment(Builder $query, string $type): Builder
+    public function scopeHasScheduledAppointment(Builder $query, string $type, ?string $date = null): Builder
     {
         return $query->whereHas(
             'appointments',
-            fn (Builder $q) => $q->where('type', $type)->where('status', 'scheduled')
+            fn (Builder $q) => $q->where('type', $type)
+                ->where('status', 'scheduled')
+                ->when($date, fn (Builder $q2) => $q2->whereDate('scheduled_at', $date))
         );
     }
 }

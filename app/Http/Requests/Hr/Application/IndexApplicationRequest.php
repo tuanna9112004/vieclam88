@@ -28,8 +28,11 @@ class IndexApplicationRequest extends FormRequest
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'uncontacted' => ['nullable', 'in:1'],
+            'processing' => ['nullable', 'in:1'],
             'has_callback' => ['nullable', 'in:1'],
+            'callback_today' => ['nullable', 'in:1'],
             'has_interview' => ['nullable', 'in:1'],
+            'interview_today' => ['nullable', 'in:1'],
             'needs_duplicate_review' => ['nullable', 'in:1'],
         ];
     }

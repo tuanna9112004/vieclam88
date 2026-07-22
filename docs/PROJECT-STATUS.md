@@ -18,6 +18,7 @@ end-to-end, **Giai đoạn 8 (HR xử lý Application) DONE** — đã commit + 
 - Candidate Merge (Admin): `MergeCandidateAction` (Luồng 6.3 — root resolution, chống self/cycle merge, không tự reopen duplicate closed application, giữ lịch sử).
 - Candidate Anonymization (Admin): `AnonymizeCandidateAction` (Mục 7 / ADR-056 — PII contract: mask candidates, candidate_contacts và 6 cột PII trên applications, giữ nguyên audit/business metadata, không hoàn tác, khóa merge/update/reopen).
 - CSV Export & Audit Log: `ExportApplicationsCsvAction` & `hr.applications.export` (Mục 9 / ADR-019 / ADR-053 — stream CSV dòng theo dòng, chống CSV Formula Injection qua `CsvSanitizer`, phân quyền Branch isolation cho Staff, ghi nhật ký `export_logs`).
+- Dashboard HR Phase 1: `GetDashboardStatsAction` & `hr.dashboard` (Mục 9.1 — 9 thẻ KPI card cố định có link điều hướng lọc trực tiếp, tối ưu SQL Aggregate chống N+1, phân quyền Branch isolation cho Staff & bộ lọc cơ sở cho Admin).
 
 ## Quyết định quan trọng (kèm lý do)
 
