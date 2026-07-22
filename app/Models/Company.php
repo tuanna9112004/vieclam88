@@ -33,4 +33,9 @@ class Company extends Model
     {
         return $this->hasMany(CompanyContact::class);
     }
+
+    public function jobs(): HasMany
+    {
+        return $this->hasMany(Job::class);
+    }
 }
