@@ -3,7 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\AdministrativeUnit;
+use App\Models\Application;
+use App\Models\ApplicationAppointment;
 use App\Models\Branch;
+use App\Models\Candidate;
+use App\Models\CandidateContact;
 use App\Models\Company;
 use App\Models\CompanyContact;
 use App\Models\CompanyLocation;
@@ -544,5 +548,152 @@ class DemoSeeder extends Seeder
                 }
             }
         }
+
+        // 7. Seed Candidates & Applications for Dashboard Testing
+        $cand1 = Candidate::create(['public_id' => (string) Str::ulid(), 'full_name' => 'Nguyen Van An', 'full_name_normalized' => 'nguyen van an', 'status' => 'active']);
+        CandidateContact::create(['candidate_id' => $cand1->id, 'type' => 'phone', 'value' => '0912345678', 'normalized_value' => '0912345678', 'is_primary' => true]);
+
+        $cand2 = Candidate::create(['public_id' => (string) Str::ulid(), 'full_name' => 'Tran Thi Binh', 'full_name_normalized' => 'tran thi binh', 'status' => 'active']);
+        CandidateContact::create(['candidate_id' => $cand2->id, 'type' => 'phone', 'value' => '0987654321', 'normalized_value' => '0987654321', 'is_primary' => true]);
+
+        $cand3 = Candidate::create(['public_id' => (string) Str::ulid(), 'full_name' => 'Le Van Cuong', 'full_name_normalized' => 'le van cuong', 'status' => 'active']);
+        CandidateContact::create(['candidate_id' => $cand3->id, 'type' => 'phone', 'value' => '0933445566', 'normalized_value' => '0933445566', 'is_primary' => true]);
+
+        $cand4 = Candidate::create(['public_id' => (string) Str::ulid(), 'full_name' => 'Pham Thi Dung', 'full_name_normalized' => 'pham thi dung', 'status' => 'active']);
+        CandidateContact::create(['candidate_id' => $cand4->id, 'type' => 'phone', 'value' => '0977889900', 'normalized_value' => '0977889900', 'is_primary' => true]);
+
+        $cand5 = Candidate::create(['public_id' => (string) Str::ulid(), 'full_name' => 'Hoang Van Em', 'full_name_normalized' => 'hoang van em', 'status' => 'active']);
+        CandidateContact::create(['candidate_id' => $cand5->id, 'type' => 'phone', 'value' => '0966554433', 'normalized_value' => '0966554433', 'is_primary' => true]);
+
+        $firstJob = Job::first();
+        $secondJob = Job::skip(1)->first();
+
+        // App 1: New Today (uncontacted)
+        Application::create([
+            'public_id' => (string) Str::ulid(),
+            'submission_token' => (string) Str::uuid(),
+            'candidate_id' => $cand1->id,
+            'job_id' => $firstJob->id,
+            'owner_branch_id' => $firstJob->owner_branch_id,
+            'submitted_full_name' => 'Nguyen Van An',
+            'submitted_phone' => '0912345678',
+            'submitted_phone_normalized' => '0912345678',
+            'submission_snapshot' => ['full_name' => 'Nguyen Van An', 'phone' => '0912345678'],
+            'job_snapshot' => ['title' => $firstJob->title],
+            'consent_version' => 'v1.0',
+            'consent_text_hash' => hash('sha256', 'consent'),
+            'stage' => 'new',
+            'workflow_cycle' => 1,
+            'consent_ip' => '127.0.0.1',
+            'consent_user_agent' => 'Mozilla/5.0',
+            'consented_at' => now(),
+            'created_at' => now(),
+        ]);
+
+        // App 2: Contacting + Scheduled Callback Today
+        $app2 = Application::create([
+            'public_id' => (string) Str::ulid(),
+            'submission_token' => (string) Str::uuid(),
+            'candidate_id' => $cand2->id,
+            'job_id' => $firstJob->id,
+            'owner_branch_id' => $firstJob->owner_branch_id,
+            'submitted_full_name' => 'Tran Thi Binh',
+            'submitted_phone' => '0987654321',
+            'submitted_phone_normalized' => '0987654321',
+            'submission_snapshot' => ['full_name' => 'Tran Thi Binh', 'phone' => '0987654321'],
+            'job_snapshot' => ['title' => $firstJob->title],
+            'consent_version' => 'v1.0',
+            'consent_text_hash' => hash('sha256', 'consent'),
+            'stage' => 'contacting',
+            'workflow_cycle' => 1,
+            'consent_ip' => '127.0.0.1',
+            'consent_user_agent' => 'Mozilla/5.0',
+            'consented_at' => now()->subDay(),
+            'created_at' => now()->subDay(),
+        ]);
+        ApplicationAppointment::create([
+            'application_id' => $app2->id,
+            'type' => 'callback',
+            'scheduled_at' => now()->setHour(14)->setMinute(0),
+            'status' => 'scheduled',
+            'note' => 'Gọi lại trao đổi ca làm việc',
+            'created_by' => $admin->id,
+            'workflow_cycle' => 1,
+        ]);
+
+        // App 3: Interview Scheduled + Interview Today
+        $app3 = Application::create([
+            'public_id' => (string) Str::ulid(),
+            'submission_token' => (string) Str::uuid(),
+            'candidate_id' => $cand3->id,
+            'job_id' => $secondJob->id,
+            'owner_branch_id' => $secondJob->owner_branch_id,
+            'submitted_full_name' => 'Le Van Cuong',
+            'submitted_phone' => '0933445566',
+            'submitted_phone_normalized' => '0933445566',
+            'submission_snapshot' => ['full_name' => 'Le Van Cuong', 'phone' => '0933445566'],
+            'job_snapshot' => ['title' => $secondJob->title],
+            'consent_version' => 'v1.0',
+            'consent_text_hash' => hash('sha256', 'consent'),
+            'stage' => 'interview_scheduled',
+            'workflow_cycle' => 1,
+            'consent_ip' => '127.0.0.1',
+            'consent_user_agent' => 'Mozilla/5.0',
+            'consented_at' => now()->subDays(2),
+            'created_at' => now()->subDays(2),
+        ]);
+        ApplicationAppointment::create([
+            'application_id' => $app3->id,
+            'type' => 'interview',
+            'scheduled_at' => now()->setHour(15)->setMinute(30),
+            'status' => 'scheduled',
+            'note' => 'Phỏng vấn trực tiếp tại văn phòng cơ sở',
+            'created_by' => $admin->id,
+            'workflow_cycle' => 1,
+        ]);
+
+        // App 4: Waiting Start
+        Application::create([
+            'public_id' => (string) Str::ulid(),
+            'submission_token' => (string) Str::uuid(),
+            'candidate_id' => $cand4->id,
+            'job_id' => $firstJob->id,
+            'owner_branch_id' => $firstJob->owner_branch_id,
+            'submitted_full_name' => 'Pham Thi Dung',
+            'submitted_phone' => '0977889900',
+            'submitted_phone_normalized' => '0977889900',
+            'submission_snapshot' => ['full_name' => 'Pham Thi Dung', 'phone' => '0977889900'],
+            'job_snapshot' => ['title' => $firstJob->title],
+            'consent_version' => 'v1.0',
+            'consent_text_hash' => hash('sha256', 'consent'),
+            'stage' => 'waiting_start',
+            'workflow_cycle' => 1,
+            'consent_ip' => '127.0.0.1',
+            'consent_user_agent' => 'Mozilla/5.0',
+            'consented_at' => now()->subDays(3),
+            'created_at' => now()->subDays(3),
+        ]);
+
+        // App 5: Started (Đã đi làm)
+        Application::create([
+            'public_id' => (string) Str::ulid(),
+            'submission_token' => (string) Str::uuid(),
+            'candidate_id' => $cand5->id,
+            'job_id' => $secondJob->id,
+            'owner_branch_id' => $secondJob->owner_branch_id,
+            'submitted_full_name' => 'Hoang Van Em',
+            'submitted_phone' => '0966554433',
+            'submitted_phone_normalized' => '0966554433',
+            'submission_snapshot' => ['full_name' => 'Hoang Van Em', 'phone' => '0966554433'],
+            'job_snapshot' => ['title' => $secondJob->title],
+            'consent_version' => 'v1.0',
+            'consent_text_hash' => hash('sha256', 'consent'),
+            'stage' => 'started',
+            'workflow_cycle' => 1,
+            'consent_ip' => '127.0.0.1',
+            'consent_user_agent' => 'Mozilla/5.0',
+            'consented_at' => now()->subDays(5),
+            'created_at' => now()->subDays(5),
+        ]);
     }
 }
