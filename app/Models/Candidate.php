@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'public_id', 'full_name', 'date_of_birth', 'gender', 'current_administrative_unit_id',
     'address_detail', 'education_level', 'experience_summary', 'preferred_shift',
-    'available_from', 'status',
+    'available_from', 'status', 'merged_into_candidate_id', 'merged_at', 'merged_by', 'merge_reason',
 ])]
 class Candidate extends Model
 {
@@ -66,5 +66,50 @@ class Candidate extends Model
     public function anonymizedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'anonymized_by');
+    }
+
+    /**
+     * docs/CORE-FLOWS.md mục 6.3 — Tìm Candidate root còn active trong merged family.
+     */
+    public function resolveRoot(): self
+    {
+        $current = $this;
+        $visited = [];
+
+        while ($current->merged_into_candidate_id !== null && ! in_array($current->id, $visited, true)) {
+            $visited[] = $current->id;
+            $parent = self::find($current->merged_into_candidate_id);
+            if (! $parent) {
+                break;
+            }
+            $current = $parent;
+        }
+
+        return $current;
+    }
+
+    /**
+     * docs/CORE-FLOWS.md mục 6.3 — Lấy danh sách ID toàn bộ candidate trong merged family.
+     * @return array<int, int>
+     */
+    public function getMergedFamilyIds(): array
+    {
+        $root = $this->resolveRoot();
+        $familyIds = [$root->id];
+        $queue = [$root->id];
+
+        while (! empty($queue)) {
+            $currentId = array_shift($queue);
+            $childrenIds = self::where('merged_into_candidate_id', $currentId)->pluck('id')->all();
+
+            foreach ($childrenIds as $childId) {
+                if (! in_array($childId, $familyIds, true)) {
+                    $familyIds[] = $childId;
+                    $queue[] = $childId;
+                }
+            }
+        }
+
+        return $familyIds;
     }
 }
