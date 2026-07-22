@@ -71,4 +71,12 @@ class ApplicationPolicy
     {
         return $user->isAdmin();
     }
+
+    /**
+     * hr.applications.export: Staff va Admin deu co quyen xuat CSV (Staff bi ranh buoc theo co so minh).
+     */
+    public function export(User $user): bool
+    {
+        return true;
+    }
 }

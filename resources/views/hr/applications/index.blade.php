@@ -65,6 +65,7 @@
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm">Lọc</button>
                     <a href="{{ route('hr.applications.index') }}" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
+                    <a href="{{ route('hr.applications.export', request()->query()) }}" class="btn btn-outline-success btn-sm">Xuất CSV</a>
                 </div>
             </form>
 

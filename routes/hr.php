@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Hr\ApplicationBranchTransferController;
 use App\Http\Controllers\Hr\ApplicationController;
+use App\Http\Controllers\Hr\ApplicationExportController;
 use App\Http\Controllers\Hr\ApplicationNoteController;
 use App\Http\Controllers\Hr\ApplicationStageController;
 use App\Http\Controllers\Hr\AppointmentController;
@@ -112,6 +113,7 @@ Route::prefix('hr')->name('hr.')->group(function () {
 
             Route::prefix('ho-so')->name('applications.')->group(function () {
                 Route::get('/', [ApplicationController::class, 'index'])->name('index');
+                Route::get('xuat-csv', [ApplicationExportController::class, 'index'])->name('export');
                 Route::get('{application}', [ApplicationController::class, 'show'])->name('show');
                 Route::post('{application}/doi-giai-doan', [ApplicationStageController::class, 'store'])
                     ->name('stage');
