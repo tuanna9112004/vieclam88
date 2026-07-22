@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Hr\ApplicationBranchTransferController;
 use App\Http\Controllers\Hr\ApplicationController;
 use App\Http\Controllers\Hr\ApplicationNoteController;
 use App\Http\Controllers\Hr\ApplicationStageController;
@@ -125,6 +126,8 @@ Route::prefix('hr')->name('hr.')->group(function () {
                     ->name('notes.update');
                 Route::delete('{application}/ghi-chu/{note}', [ApplicationNoteController::class, 'destroy'])
                     ->name('notes.destroy');
+                Route::post('{application}/chuyen-co-so', [ApplicationBranchTransferController::class, 'store'])
+                    ->name('transfer-branch');
             });
         });
     });

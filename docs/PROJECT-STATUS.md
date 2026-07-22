@@ -10,9 +10,9 @@ end-to-end, **Giai đoạn 8 (HR xử lý Application) DONE** — đã commit + 
 - Public site: `jobs.index`/`jobs.show` (form ứng tuyển thật), trang chủ, `sitemap.xml`.
 - Luồng 3: `CreateApplicationAction` — token/session, lock theo phone, matching Candidate,
   idempotency + Case C; rate limit, mobile ≥44px đã xác nhận qua browser thật.
-- Giai đoạn 8: `hr.applications.index/.show/.contacts/.appointments(store+update)/.notes/.stage`
+- Giai đoạn 8: `hr.applications.index/.show/.contacts/.appointments(store+update)/.notes/.stage/.transfer-branch`
   — Branch isolation, actor/workflow_cycle server-side, `lockForUpdate`, transition matrix 5.1 +
-  Reopen 5.5, timeline tổng hợp 5 bảng lịch sử (không bảng mới). Chưa có export, Dashboard KPI,
+  Reopen 5.5, `TransferApplicationBranchAction` (Luồng 6.1 — chuyển cơ sở ngoại lệ chỉ Admin), timeline tổng hợp 5 bảng lịch sử (không bảng mới). Chưa có export, Dashboard KPI,
   Blade form thao tác trên trang show (route đã có, UI chưa build).
 
 ## Quyết định quan trọng (kèm lý do)

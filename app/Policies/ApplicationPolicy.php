@@ -63,4 +63,12 @@ class ApplicationPolicy
     {
         return $user->isAdmin() || $application->owner_branch_id === $user->branch_id;
     }
+
+    /**
+     * hr.applications.transfer-branch (docs/CORE-FLOWS.md muc 6.1): chi Admin moi duoc chuyen co so.
+     */
+    public function transferBranch(User $user, Application $application): bool
+    {
+        return $user->isAdmin();
+    }
 }
