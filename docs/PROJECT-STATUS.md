@@ -19,6 +19,7 @@ end-to-end, **Giai đoạn 8 (HR xử lý Application) DONE** — đã commit + 
 - Candidate Anonymization (Admin): `AnonymizeCandidateAction` (Mục 7 / ADR-056 — PII contract: mask candidates, candidate_contacts và 6 cột PII trên applications, giữ nguyên audit/business metadata, không hoàn tác, khóa merge/update/reopen).
 - CSV Export & Audit Log: `ExportApplicationsCsvAction` & `hr.applications.export` (Mục 9 / ADR-019 / ADR-053 — stream CSV dòng theo dòng, chống CSV Formula Injection qua `CsvSanitizer`, phân quyền Branch isolation cho Staff, ghi nhật ký `export_logs`).
 - Dashboard HR Phase 1: `GetDashboardStatsAction` & `GetAdminDashboardStatsAction` & `hr.dashboard` (Mục 9.1 / ADR-058 — Staff/Admin Dashboard với 11 thẻ KPI card cố định, tỷ lệ chuyển đổi % Application->Started, bộ lọc khoảng ngày/cơ sở/công ty/job, bảng thống kê Top Jobs & Companies, tính số đếm chính xác sau transfer/merge/duplicate).
+- Database Audit & Schema Integrity: `DatabaseIntegrityTest` (Audit 26 bảng schema, FK onDelete restrict/cascade, unique constraints `(candidate_id, job_id)`, append-only history models, rollback & migrate lifecycle, production seed `DemoSeeder`).
 
 ## Quyết định quan trọng (kèm lý do)
 
