@@ -8,7 +8,7 @@ effort: high
 
 Thực hiện database task: **$ARGUMENTS**
 
-1. Đọc `docs/PROJECT-STATUS.md`, `.Codex/rules/database-schema.md`, đúng bảng trong Dictionary và quan hệ trong ERD.
+1. Đọc `docs/PROJECT-STATUS.md`, `.claude/rules/database-schema.md`, đúng bảng trong Dictionary và quan hệ trong ERD.
 2. Đọc rule domain/ADR được tham chiếu; không tải toàn bộ docs khi task chỉ liên quan một nhóm bảng.
 3. Trước edit, nêu:
    - migration order/dependency;

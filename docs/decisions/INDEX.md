@@ -4,7 +4,7 @@ Nguồn sự thật cho ADR của dự án. Nội dung ADR được chia theo ch
 
 ## Nhóm quyết định
 
-- [Kiến trúc và nền tảng](architecture-and-platform.md) — ADR-001..ADR-078 theo chủ đề, không liên tục.
+- [Kiến trúc và nền tảng](architecture-and-platform.md) — ADR-001..ADR-080 theo chủ đề, không liên tục.
 - [Phạm vi và sản phẩm](scope-and-product.md) — ADR-012..ADR-072 theo chủ đề, không liên tục.
 - [Company và Job domain](company-and-job-domain.md) — ADR-008..ADR-074 theo chủ đề, không liên tục.
 - [Candidate và Application domain](candidate-and-application-domain.md) — ADR-005..ADR-076 theo chủ đề, không liên tục.
@@ -23,16 +23,16 @@ Nguồn sự thật cho ADR của dự án. Nội dung ADR được chia theo ch
 | [ADR-007](candidate-and-application-domain.md#adr-007) | Application lưu snapshot tại thời điểm ứng tuyển | `candidate-and-application-domain.md` |
 | [ADR-008](company-and-job-domain.md#adr-008) | Một `job` là một đợt tuyển dụng, không tái sử dụng job cũ | `company-and-job-domain.md` |
 | [ADR-009](candidate-and-application-domain.md#adr-009) | Tách pipeline xử lý khỏi lịch sử liên hệ (contact attempts) | `candidate-and-application-domain.md` |
-| [ADR-010](architecture-and-platform.md#adr-010) | Dùng `administrative_units` phân cấp, không lưu chuỗi tự do | `architecture-and-platform.md` |
-| [ADR-011](company-and-job-domain.md#adr-011) | Không lặp địa điểm giữa `jobs` và `company_locations` | `company-and-job-domain.md` |
+| [ADR-010](architecture-and-platform.md#adr-010) | Dùng `administrative_units` phân cấp, không lưu chuỗi tự do *(target thay bằng ADR-080, chưa migrate)* | `architecture-and-platform.md` |
+| [ADR-011](company-and-job-domain.md#adr-011) | Không lặp địa điểm giữa `jobs` và `company_locations` *(target thay bằng ADR-080, chưa migrate)* | `company-and-job-domain.md` |
 | [ADR-012](scope-and-product.md#adr-012) | Không tạo `referrer_id` mơ hồ, chưa xây module cộng tác viên | `scope-and-product.md` |
 | [ADR-013](security-privacy-and-operations.md#adr-013) | CSV cho xuất dữ liệu, ghi log mỗi lần xuất | `security-privacy-and-operations.md` |
-| [ADR-014](architecture-and-platform.md#adr-014) | `users.role` dạng enum đơn giản, chưa xây RBAC | `architecture-and-platform.md` |
-| [ADR-015](company-and-job-domain.md#adr-015) | Thêm `branches` (cơ sở nội bộ), tách khỏi `company_locations` | `company-and-job-domain.md` |
+| [ADR-014](architecture-and-platform.md#adr-014) | `users.role` dạng enum đơn giản, chưa xây RBAC *(target thay bằng ADR-080, chưa migrate)* | `architecture-and-platform.md` |
+| [ADR-015](company-and-job-domain.md#adr-015) | Thêm `branches` (cơ sở nội bộ), tách khỏi `company_locations` *(target thay bằng ADR-080, chưa migrate)* | `company-and-job-domain.md` |
 | [ADR-016](candidate-and-application-domain.md#adr-016) | Application copy `owner_branch_id` từ Job lúc tạo, không suy ra động | `candidate-and-application-domain.md` |
 | [ADR-017](candidate-and-application-domain.md#adr-017) | Duplicate handling contract: 3 trường hợp tách biệt, không gộp chung logic | `candidate-and-application-domain.md` |
 | [ADR-018](scope-and-product.md#adr-018) | Chuyển đổi Lead (`lead_requests`) thành Application dời sang Phase 2 | `scope-and-product.md` |
-| [ADR-019](security-privacy-and-operations.md#adr-019) | "Audit trail theo từng action", không xây "audit log" tổng quát | `security-privacy-and-operations.md` |
+| [ADR-019](security-privacy-and-operations.md#adr-019) | "Audit trail theo từng action", không xây "audit log" tổng quát *(mở rộng bởi ADR-080 — thêm `activity_logs` bổ sung cho hành động chưa có audit trail riêng, không thay thế)* | `security-privacy-and-operations.md` |
 | [ADR-020](security-privacy-and-operations.md#adr-020) | Staff chỉ xem Application thuộc cơ sở phụ trách (thay vì toàn bộ) | `security-privacy-and-operations.md` |
 | [ADR-021](scope-and-product.md#adr-021) | Bỏ Lead, Assignment và Favorites khỏi phạm vi database Phase 1 (siết phạm vi lần 2) | `scope-and-product.md` |
 | [ADR-022](candidate-and-application-domain.md#adr-022) | Idempotency contract: `applications.submission_token` | `candidate-and-application-domain.md` |
@@ -58,17 +58,17 @@ Nguồn sự thật cho ADR của dự án. Nội dung ADR được chia theo ch
 | [ADR-042](scope-and-product.md#adr-042) | Job Verification Scheduler Contract: chỉ cảnh báo ở Phase 1, không tự động pause | `scope-and-product.md` |
 | [ADR-043](scope-and-product.md#adr-043) | Quy tắc hiển thị Job `closed`/`paused`: giữ URL, giữ CTA, không xây "liên hệ tư vấn chung" | `scope-and-product.md` |
 | [ADR-044](company-and-job-domain.md#adr-044) | Sửa lỗi hướng quan hệ ERD: `administrative_units` ↔ `branches`, `candidates.current_administrative_unit_id` | `company-and-job-domain.md` |
-| [ADR-045](company-and-job-domain.md#adr-045) | Company & Company Location Quick Create Contract; `company_locations.administrative_unit_id`/`address_detail` đổi thành nullable | `company-and-job-domain.md` |
+| [ADR-045](company-and-job-domain.md#adr-045) | Company & Company Location Quick Create Contract; `company_locations.administrative_unit_id`/`address_detail` đổi thành nullable *(target thay bằng ADR-080, chưa migrate)* | `company-and-job-domain.md` |
 | [ADR-046](company-and-job-domain.md#adr-046) | Job Draft Contract chính thức; chốt `jobs.owner_branch_id` NOT NULL từ lúc tạo (không còn nullable ở draft) | `company-and-job-domain.md` |
 | [ADR-047](company-and-job-domain.md#adr-047) | Job Publish Contract: thêm điều kiện xác minh còn tuyển và điều kiện địa điểm đủ rõ, kèm admin override có kiểm soát | `company-and-job-domain.md` |
 | [ADR-048](company-and-job-domain.md#adr-048) | Job Verification: tách `last_checked_at` (mọi lần xác nhận) khỏi `last_verified_at` (chỉ khi `still_open`) | `company-and-job-domain.md` |
 | [ADR-049](scope-and-product.md#adr-049) | Phân loại 3 nhóm blocker (Migration / Go-live / Phase 2 decision); tách khỏi điều kiện chuyển Giai đoạn 1 | `scope-and-product.md` |
 | [ADR-050](architecture-and-platform.md#adr-050) | Initial Admin Bootstrap Contract (`php artisan app:create-admin`) | `architecture-and-platform.md` |
 | [ADR-051](architecture-and-platform.md#adr-051) | Seeder Classification: production-safe / demo-test / dữ liệu vận hành thật | `architecture-and-platform.md` |
-| [ADR-052](company-and-job-domain.md#adr-052) | Validation tỉnh/thành khớp với khu công nghiệp (`company_locations` ↔ `industrial_parks`) | `company-and-job-domain.md` |
+| [ADR-052](company-and-job-domain.md#adr-052) | Validation tỉnh/thành khớp với khu công nghiệp (`company_locations` ↔ `industrial_parks`) *(target thay bằng ADR-080, chưa migrate)* | `company-and-job-domain.md` |
 | [ADR-053](company-and-job-domain.md#adr-053) | Company Location/Contact: tách quyền xóa/khôi phục về riêng Admin (sửa lỗ hổng Route Map) | `company-and-job-domain.md` |
 | [ADR-054](company-and-job-domain.md#adr-054) | Job Branch Transfer: chỉ cho phép khi `draft`/`paused`, cấm tuyệt đối khi `closed` hoặc đã xóa | `company-and-job-domain.md` |
-| [ADR-055](architecture-and-platform.md#adr-055) | Enum Strategy: VARCHAR + PHP backed enum cho enum phụ chưa chốt, gỡ bỏ migration blocker | `architecture-and-platform.md` |
+| [ADR-055](architecture-and-platform.md#adr-055) | Enum Strategy: VARCHAR + PHP backed enum cho enum phụ chưa chốt, gỡ bỏ migration blocker *(phần `employment_type` target thay bằng ADR-080, chưa migrate)* | `architecture-and-platform.md` |
 | [ADR-056](security-privacy-and-operations.md#adr-056) | PII schema tối thiểu cho `applications`: nullability và cơ chế anonymize (tách khỏi retention) | `security-privacy-and-operations.md` |
 | [ADR-057](scope-and-product.md#adr-057) | Phase 1 Plan Baseline v1.0 (freeze chính thức) | `scope-and-product.md` |
 | [ADR-058](company-and-job-domain.md#adr-058) | Job Verification: publish chỉ dựa vào bản ghi mới nhất, thêm `job_verification_valid_days` | `company-and-job-domain.md` |
@@ -92,6 +92,8 @@ Nguồn sự thật cho ADR của dự án. Nội dung ADR được chia theo ch
 | [ADR-076](candidate-and-application-domain.md#adr-076) | Cùng Job phải được kiểm tra trên toàn merged family | `candidate-and-application-domain.md` |
 | [ADR-077](security-privacy-and-operations.md#adr-077) | Tài khoản bị khóa mất quyền ở request kế tiếp | `security-privacy-and-operations.md` |
 | [ADR-078](architecture-and-platform.md#adr-078) | Final Consistency Patch và semantic checker mở rộng | `architecture-and-platform.md` |
+| [ADR-079](architecture-and-platform.md#adr-079) | Administrative dataset source: import từ `provinces.open-api.vn` (resolve ADR-070) | `architecture-and-platform.md` |
+| [ADR-080](architecture-and-platform.md#adr-080) | Chốt baseline kiến trúc Phase 2: áp dụng đề xuất "cấu trúc lại" (PDF v1.1) — chưa migrate code | `architecture-and-platform.md` |
 
 ## Quy tắc cập nhật
 

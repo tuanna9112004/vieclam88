@@ -1,4 +1,11 @@
-# Roadmap — vieclam88
+# Roadmap — vieclam88 (LỊCH SỬ — Phase 1 đã DONE)
+
+> **Đóng băng, không cập nhật checklist bên dưới.** File này ghi kế hoạch Giai đoạn 0–4 từ trước
+> khi code Phase 1 tồn tại; checkbox `[ ]`/`[x]` bên dưới **không phản ánh hiện trạng thật** (Phase
+> 1 đã DONE — 28 bảng, 106 route, 6 luồng nghiệp vụ, 811/817 test, theo
+> `docs/refactor/00-CURRENT-BASELINE.md`). Trạng thái thật luôn ở `docs/PROJECT-STATUS.md`. Kế
+> hoạch cho giai đoạn tiếp theo (tái cấu trúc theo Baseline 1.1) nằm ở `docs/refactor/PLAYBOOK.md` +
+> `docs/refactor/TASK-INDEX.md` (tra theo `TASK x.y`), không phải file này.
 
 Lộ trình theo Giai đoạn 0–4 (Phase 1) + backlog Phase 2. Trạng thái tiến độ chi tiết nhất luôn
 nằm ở `docs/PROJECT-STATUS.md` — file này chỉ giữ checklist theo giai đoạn, cập nhật `[x]` khi
@@ -97,8 +104,8 @@ ADR-054).
   anonymize ở Giai đoạn 3/4, không ảnh hưởng schema (`candidates.anonymized_at`/`anonymized_by`,
   `applications.submission_snapshot` JSON đã đủ cho mọi phương án).
 - Giá trị `job_verification_valid_days` (mục 1.3, ADR-058) — mặc định tắt, không ảnh hưởng schema.
-- Nguồn dữ liệu `administrative_units` chính thức (provenance, ADR-070) — không ảnh hưởng schema
-  (`official_code`/`valid_from`/`valid_to`/`is_active` đã đủ).
+- ~~Nguồn dữ liệu `administrative_units` chính thức~~ — đã chốt (ADR-079): API
+  `provinces.open-api.vn`, nhập qua `php artisan administrative-units:import`.
 - Có cần cơ chế redact/kiểm duyệt free-text mạnh hơn hay không (mục 7.3.1, ADR-071) — tùy chọn,
   không ảnh hưởng schema.
 - Nội dung chính sách bảo mật/consent hiển thị qua `pages` (nội dung văn bản, không phải schema).

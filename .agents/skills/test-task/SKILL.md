@@ -8,7 +8,7 @@ effort: high
 
 Tạo hoặc cải thiện test cho: **$ARGUMENTS**
 
-1. Đọc `.Codex/rules/testing.md`, acceptance criteria và rule domain liên quan.
+1. Đọc `.claude/rules/testing.md`, acceptance criteria và rule domain liên quan.
 2. Xác định hành vi cần chứng minh, không bắt đầu từ mục tiêu “tăng coverage”.
 3. Chọn cấp test thấp nhất vẫn chứng minh được contract:
    - unit cho normalization/predicate thuần;

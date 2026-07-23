@@ -8,6 +8,12 @@ mà các bảng này phải hỗ trợ ở `docs/CORE-FLOWS.md`. Database: **Mar
 mọi tính năng dùng trong file này (generated column, unique index trên generated column, CHECK
 constraint, recursive CTE, JSON, row locking) đều được hỗ trợ đầy đủ từ bản này.
 
+> **Mục 9.29–9.36 và các đoạn "Thay đổi mục tiêu Phase 2" bên dưới mô tả kiến trúc TARGET đã
+> duyệt ở ADR-080 (`docs/decisions/architecture-and-platform.md`), CHƯA có trong database thật
+> đang chạy.** Toàn bộ mục 9.1–9.28 còn lại là schema **thật, đúng migration hiện có** — vẫn là
+> căn cứ duy nhất khi viết code hôm nay. Chỉ code theo phần "target"/mục 9.29+ khi task thuộc đúng
+> batch trong `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`.
+
 `lead_requests`, `favorites`, `application_assignment_histories` **không** nằm trong database
 Phase 1 (ADR-021). `applications.assigned_to`, `applications.referral_code`,
 `candidates.user_id` **không** tồn tại trong schema Phase 1 (ADR-028, ADR-029) — `users.role`
@@ -104,6 +110,12 @@ Candidate Account, nay không còn áp dụng (ADR-028); thêm lại nếu Phase
 
 **Chính sách xóa:** không hard delete. Ngừng sử dụng → `status = locked`.
 
+**Thay đổi mục tiêu Phase 2 (ADR-080, chưa migrate):** `role` mở rộng thành
+`enum(staff,branch_admin,super_admin)` — `admin` hiện tại tương đương `super_admin` (không giới
+hạn cơ sở); `branch_admin` là vai trò mới, `branch_id` bắt buộc (giống `staff` nhưng thêm quyền
+quản lý user/job/report trong phạm vi cơ sở mình, chưa có Policy nào xử lý hôm nay). Batch 3 ở
+`docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`.
+
 ---
 
 ## 9.2. `candidates`
@@ -143,7 +155,17 @@ ngoài UI (ví dụ dữ liệu rác/spam nghiêm trọng), giữ lại vì Merg
 kiện "candidate chưa `deleted_at`" như lớp phòng vệ trước can thiệp đó. Candidate `status =
 merged` không được dùng để tạo application mới, không được sửa, không được làm nguồn/đích của
 merge khác. Candidate `status = anonymized` không được làm nguồn/đích của merge. Không hard
-delete candidate đang có application. Truy vấn "merged family" và quy tắc đầy đủ:
+delete candidate đang có application.
+
+**Thay đổi mục tiêu Phase 2 (ADR-080, chưa migrate):** thêm các cột thông tin bổ sung theo PDF mục
+9.3 (đều nullable, không bắt buộc ở form đầu): `marital_status` enum, `foreign_language`
+string(150), `ethnicity` string(100), `citizen_id_number` string(20) (dữ liệu nhạy cảm — mã hóa/che
+khi hiển thị, cùng mức bảo vệ như PII hiện có ở `applications`), `citizen_id_issued_date` date,
+`citizen_id_issued_place` string(150), `personal_introduction` text. `education_level`/
+`experience_summary` đã có sẵn, không đổi. Batch 6 ở `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`
+(cùng batch với `candidate_documents`, mục 9.35).
+
+Truy vấn "merged family" và quy tắc đầy đủ:
 `docs/CORE-FLOWS.md` mục 6.3.
 
 ---
@@ -196,12 +218,20 @@ kiểm tra thêm họ tên (khớp chính xác sau chuẩn hóa) và ngày sinh 
 **Chính sách xóa:** không hard delete. Đơn vị cũ → `is_active = false`, `valid_to` = ngày hết
 hiệu lực, giữ lại phục vụ dữ liệu lịch sử.
 
-**Provenance contract (ADR-070):** import/upsert dữ liệu thật dựa trên `official_code` khi có
-giá trị, `root_slug_key`/`(parent_id, slug)` khi chưa có mã chính thức. Đơn vị `is_active=false`
-**không** được chọn cho dữ liệu mới (`company_locations`/`branches`/
-`candidates.current_administrative_unit_id`) — kiểm tra ở Form Request. **Nguồn dữ liệu hành
-chính chính thức (văn bản/API nào) chưa xác nhận — [CẦN CHỐT VỚI CÔNG TY]** — go-live blocker,
-không migration blocker (schema đã đủ: `official_code`/`valid_from`/`valid_to`/`is_active`).
+**Provenance contract (ADR-070, nguồn dữ liệu chốt ở ADR-079):** import/upsert dữ liệu thật dựa
+trên `official_code` khi có giá trị, `root_slug_key`/`(parent_id, slug)` khi chưa có mã chính
+thức. Đơn vị `is_active=false` **không** được chọn cho dữ liệu mới (`company_locations`/
+`branches`/`candidates.current_administrative_unit_id`) — kiểm tra ở Form Request. Nguồn dữ liệu
+chính thức: API `provinces.open-api.vn` (v2), nhập qua `php artisan administrative-units:import`
+(`app/Console/Commands/ImportAdministrativeUnitsCommand.php`) — khớp `official_code` với field
+`code` (mã GSO) của API, không gọi API lúc runtime.
+
+**Thay đổi mục tiêu Phase 2 (ADR-080, chưa migrate):** thay bằng 2 bảng `provinces`+`wards` (mục
+9.29/9.30) — dữ liệu đã tương đương (tỉnh/thành → xã/phường, mã GSO) nhờ ADR-079, chỉ đổi cấu
+trúc bảng (bỏ tự tham chiếu N cấp, chỉ còn đúng 2 cấp cứng). Batch 1 ở
+`docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`; **không xóa `administrative_units`** cho tới Contract
+(batch 9) vì `branches`/`company_locations`/`candidates`/`industrial_parks` vẫn còn FK tới bảng
+này ở batch 1.
 
 ---
 
@@ -220,6 +250,12 @@ không migration blocker (schema đã đủ: `official_code`/`valid_from`/`valid
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 
 **Chính sách xóa:** không hard delete khi đã có location tham chiếu.
+
+**Thay đổi mục tiêu Phase 2 (ADR-080, chưa migrate):** thêm `branch_id` (FK `branches.id`, chi
+nhánh quản lý chính) và chuyển quan hệ địa chỉ từ 1-N (`administrative_unit_id`) sang N-N với
+`wards` qua bảng mới `industrial_park_wards` (mục 9.31) — một KCN có thể trải nhiều xã/phường. Giữ
+`administrative_unit_id` tới khi Contract (batch 9) để không phá dữ liệu cũ giữa chừng. Batch 2 ở
+`docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`.
 
 ---
 
@@ -290,6 +326,13 @@ nào đọc/ghi "primary location của Company" — điều kiện publish/tìm
 khái niệm "primary" ở 2 tầng khác nhau — không tạo cột dự phòng.
 
 **Chính sách xóa:** soft delete.
+
+**Thay đổi mục tiêu Phase 2 (ADR-080, chưa migrate):** PDF liệt bảng này vào nhóm không nên tồn
+tại — địa điểm làm việc chuyển hẳn về `jobs.work_ward_id` (mục 9.9), company chỉ giữ 1 trụ sở
+(`companies.headquarters_ward_id`, chưa thiết kế cột này ở mục 9.6 vì phụ thuộc quyết định chi
+tiết khi thực thi batch 5/7). **Không xóa bảng này cho tới Contract (batch 9)** —
+`job_locations`/`JobLocation` vẫn là cơ chế địa chỉ Job thật đang chạy. Batch 5/7 ở
+`docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`.
 
 ---
 
@@ -373,6 +416,25 @@ hỗ trợ predicate cảnh báo xác minh (mục 1.3), dùng chung cho danh sá
 delete job đã có application.** Một job là một đợt tuyển dụng — không tái sử dụng job đã
 đóng cho đợt mới (ADR-008). Job `draft` bỏ dùng được xử lý bằng soft delete, không phải
 transition trạng thái.
+
+**Thay đổi mục tiêu Phase 2 (ADR-080, chưa migrate):**
+- `company_id` chuyển **nullable**, thêm `job_type enum(company,direct)` — `direct` không cần
+  company, dùng `employer_display_name` thay thế; validation chi tiết cho luồng "tuyển trực tiếp"
+  **[CẦN CHỐT VỚI CÔNG TY]** trước khi code batch 7 (PDF không mô tả đủ chi tiết).
+- Thêm `work_ward_id` (FK `wards.id`, **bắt buộc**) và `industrial_park_id` (FK
+  `industrial_parks.id`, tùy chọn — nếu có, `work_ward_id` phải thuộc KCN đó qua
+  `industrial_park_wards`) — thay cho cơ chế `job_locations`/`company_locations` hiện tại.
+- Thêm `industry_id` (FK `industries.id`, mục 9.32, bắt buộc trước publish).
+- `employment_type` (varchar+PHP enum hiện tại) chuyển sang `employment_type_id` (FK
+  `employment_types.id`, mục 9.33) — bảng danh mục có 5 giá trị (thêm `freelance`/`internship` so
+  với enum hiện tại chỉ có 4).
+- `salary_period=negotiable` hiện tại tương đương `salary_negotiable=true` của PDF — **không đổi
+  field**, giữ nguyên `salary_min/max/base/period/currency` (đã bao quát hơn PDF).
+- `job_locations`/`company_location_id` **giữ nguyên tới Contract (batch 9)** — batch 5 chỉ thêm
+  cột mới song song (nullable), backfill từ `job_locations` hiện có, chưa xóa gì.
+
+Batch 4 (`industries`/`employment_types`), 5 (`work_ward_id`/`industry_id`/`employment_type_id`),
+7 (`company_id` nullable) ở `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`.
 
 ---
 
@@ -518,6 +580,11 @@ Index bắt buộc: `(stage, created_at)`, `(job_id, stage, created_at)`, `(sour
 sở).
 
 **Chính sách xóa:** không hard delete.
+
+**Ghi chú PDF:** PDF mục 10.3 có `assigned_user_id` (nullable, "Phase 1 có thể chưa gán") —
+**không phải gap mới**, đã nằm trong `docs/PHASE-2-BACKLOG.md` (mục Assignment/claim) từ trước,
+loại trừ tường minh khỏi Phase 1 (ADR-021) lẫn khỏi baseline ADR-080. Chỉ thêm khi có quyết định
+riêng mở Assignment, không tự động theo PDF.
 
 ---
 
@@ -803,6 +870,148 @@ thuần, xem ghi chú `updated_at` ở trên).
 
 ---
 
+## Mục 9.29–9.36 — Bảng target Phase 2 (ADR-080, CHƯA tồn tại trong database thật)
+
+> Toàn bộ 7 bảng dưới đây **chưa có migration nào tạo ra**, chỉ là thiết kế mục tiêu theo PDF
+> "cấu trúc lại". Không viết code tham chiếu các bảng/cột này trừ khi đang thực thi đúng batch
+> tương ứng ở `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`. Format cột giữ đúng quy ước các mục 9.1–9.28
+> ở trên để khi migrate thật có thể chuyển thẳng thành migration.
+
+## 9.29. `provinces` (target — batch 1)
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| code | string(20) | — | không | — | — | ✓ | — | — | Mã GSO — backfill từ `administrative_units.official_code` cấp root |
+| name | string(150) | — | không | — | — | — | — | — | |
+| is_active | boolean | — | không | true | ✓ | — | — | — | Ẩn khỏi form mới khi không còn hoạt động |
+| created_at | timestamp | — | có | now | — | — | — | — | |
+| updated_at | timestamp | — | có | now | — | — | — | — | |
+
+**Chính sách xóa:** không hard delete — `is_active=false`.
+
+## 9.30. `wards` (target — batch 1)
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| province_id | bigint | ✓ | không | — | ✓ | — | provinces.id | RESTRICT | |
+| code | string(20) | — | không | — | — | ✓ | — | — | Mã GSO — backfill từ `administrative_units.official_code` cấp lá |
+| name | string(150) | — | không | — | — | — | — | — | |
+| is_active | boolean | — | không | true | ✓ | — | — | — | |
+| created_at | timestamp | — | có | now | — | — | — | — | |
+| updated_at | timestamp | — | có | now | — | — | — | — | |
+
+**Chính sách xóa:** không hard delete — `is_active=false`. Index `(province_id, is_active)`.
+
+## 9.31. `industrial_park_wards` (target — batch 2)
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| industrial_park_id | bigint | ✓ | không | — | ✓ | — | industrial_parks.id | CASCADE | |
+| ward_id | bigint | ✓ | không | — | ✓ | — | wards.id | RESTRICT | |
+| is_primary | boolean | — | không | false | — | — | — | — | Đánh dấu địa bàn chính |
+
+`UNIQUE(industrial_park_id, ward_id)` — không tạo liên kết trùng. Pivot, có thể cascade delete
+theo `industrial_park_id`.
+
+## 9.32. `industries` (target — batch 4, độc lập, không xung đột bảng hiện có)
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| name | string(150) | — | không | — | — | — | — | — | |
+| slug | string(170) | — | không | — | — | ✓ | — | — | |
+| description | text | — | có | null | — | — | — | — | |
+| sort_order | smallint | ✓ | không | 0 | — | — | — | — | |
+| is_active | boolean | — | không | true | ✓ | — | — | — | |
+| created_at | timestamp | — | có | now | — | — | — | — | |
+| updated_at | timestamp | — | có | now | — | — | — | — | |
+
+**Chính sách xóa:** không hard delete khi đã có `jobs.industry_id` tham chiếu — `is_active=false`.
+
+## 9.33. `employment_types` (target — batch 4, độc lập; thay `JobEmploymentType` PHP enum)
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| name | string(100) | — | không | — | — | — | — | — | Tên hiển thị tiếng Việt (vd "Việc chính thức") |
+| slug | string(120) | — | không | — | — | ✓ | — | — | `full-time`, `part-time`, `temporary`, `freelance`, `internship` — 5 giá trị seed mặc định theo PDF |
+| description | text | — | có | null | — | — | — | — | |
+| sort_order | smallint | ✓ | không | 0 | — | — | — | — | |
+| is_active | boolean | — | không | true | ✓ | — | — | — | |
+| created_at | timestamp | — | có | now | — | — | — | — | |
+| updated_at | timestamp | — | có | now | — | — | — | — | |
+
+**Chính sách xóa:** không hard delete khi đã có `jobs.employment_type_id` tham chiếu —
+`is_active=false`. Seeder upsert theo `slug`, idempotent.
+
+## 9.34. `job_images` (target — batch 6, độc lập, không xung đột bảng hiện có)
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| job_id | bigint | ✓ | không | — | ✓ | — | jobs.id | CASCADE | |
+| file_path | string(255) | — | không | — | — | — | — | — | Đường dẫn đã chuẩn hóa, tên file ngẫu nhiên |
+| original_name | string(255) | — | có | null | — | — | — | — | |
+| mime_type | string(100) | — | không | — | — | — | — | — | `image/jpeg`, `image/png`, `image/webp` |
+| file_size | bigint | ✓ | không | — | — | — | — | — | Byte; giới hạn 5MB kiểm ở Form Request |
+| alt_text | string(255) | — | có | null | — | — | — | — | SEO/accessibility |
+| is_primary | boolean | — | không | false | — | — | — | — | Tối đa 1 ảnh đại diện/job — khóa bằng generated unique key cùng pattern `job_locations.primary_flag_job_id` |
+| sort_order | smallint | ✓ | không | 0 | — | — | — | — | |
+| created_at | timestamp | — | có | now | — | — | — | — | |
+| updated_at | timestamp | — | có | now | — | — | — | — | |
+
+Index `(job_id, sort_order)`. Tối đa 10 ảnh/job (giới hạn ở application, đặt trong config).
+
+**Chính sách xóa:** cascade delete theo `job_id` (ảnh phụ thuộc hoàn toàn vào job, không có lịch sử
+tham chiếu độc lập). Xóa file vật lý phải kiểm quyền trước, không để file rác.
+
+## 9.35. `candidate_documents` (target — batch 6, độc lập; CV PDF/avatar chưa có ở Phase 1)
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| candidate_id | bigint | ✓ | không | — | ✓ | — | candidates.id | CASCADE | |
+| application_id | bigint | ✓ | có | null | — | — | applications.id | SET NULL | Gắn CV đúng lần ứng tuyển; `avatar` không cần gắn application |
+| document_type | varchar(20) [varchar+enum] | — | không | — | ✓ | — | — | — | PHP backed enum: `cv`, `avatar` (theo ADR-055 — enum phụ chưa chốt mở rộng) |
+| file_path | string(255) | — | không | — | — | — | — | — | Private storage, không public URL trực tiếp |
+| original_name | string(255) | — | không | — | — | — | — | — | |
+| mime_type | string(100) | — | không | — | — | — | — | — | CV: `application/pdf` only; avatar: `image/jpeg,image/png,image/webp` |
+| file_size | bigint | ✓ | không | — | — | — | — | — | CV giới hạn 5MB (kiểm MIME thật, không chỉ đuôi file) |
+| uploaded_at | timestamp | — | không | now | — | — | — | — | |
+
+**Chính sách xóa:** không hard delete khi `application_id` còn active — CV phải giữ đúng trạng thái
+tại thời điểm ứng tuyển (không bị ghi đè khi candidate nộp job khác). Tải/xem chỉ qua controller
+có kiểm quyền theo Branch, không lộ URL công khai.
+
+## 9.36. `activity_logs` (target — batch 6, đã chốt: mở rộng ADR-019, không thay thế)
+
+PDF liệt `activity_logs` là bảng "Hệ thống" ghi mọi thao tác nhạy cảm (mục IV.A: "Thay đổi quan
+trọng phải có activity log"). **Đã chốt (xác nhận trực tiếp 23/07/2026):** thêm `activity_logs`
+làm sổ chung, **bổ sung thêm** cho các thao tác chưa có bảng lịch sử riêng (vd sửa `companies`,
+`industrial_parks`, `settings`, danh mục `industries`/`employment_types`) — **không thay thế**
+các bảng audit trail chuyên biệt hiện có (`job_status_histories`, `application_status_histories`,
+`application_branch_histories`, `job_branch_histories`, `export_logs`...), vì các bảng đó có cột
+cấu trúc riêng theo đúng ngữ cảnh nghiệp vụ (from/to status, reason...), giàu thông tin hơn 1 dòng
+`activity_logs` chung chung. ADR-019 được **mở rộng** (không đảo ngược) — xem ADR-080.
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| user_id | bigint | ✓ | không | — | ✓ | — | users.id | RESTRICT | Người thực hiện |
+| action | string(100) | — | không | — | ✓ | — | — | — | Vd `company.updated`, `settings.updated` |
+| subject_type | string(100) | — | không | — | ✓ | — | — | — | Polymorphic — tên model |
+| subject_id | bigint | ✓ | không | — | ✓ | — | — | — | Polymorphic — id bản ghi bị sửa |
+| changes | json | — | có | null | — | — | — | — | Before/after, chỉ field thay đổi |
+| ip | string(45) | — | có | null | — | — | — | — | |
+| created_at | timestamp | — | có | now | — | — | — | — | Append-only, không `updated_at` |
+
+**Chính sách xóa:** không xóa, không sửa (append-only).
+
+---
+
 ## Chính sách xóa — tổng hợp
 
 | Bảng | Chính sách |
@@ -868,6 +1077,11 @@ vì có dependency bắt buộc.
 
 Chia theo 7 nhóm triển khai (mỗi nhóm có migration + model + policy + request + action + test
 riêng trước khi sang nhóm kế): xem `ROADMAP.md` mục "Giai đoạn 1".
+
+**Thứ tự migration cho 7 bảng target Phase 2 (mục 9.29–9.35, ADR-080, chưa chạy):** không chèn
+vào thứ tự 28 bảng ở trên — chạy ở migration riêng theo đúng 9 batch của
+`docs/PHASE-2-ARCHITECTURE-PROPOSAL.md` (`provinces`→`wards`→`industrial_park_wards`→
+`industries`/`employment_types`→cột mới trên `jobs`→`job_images`/`candidate_documents`).
 
 ## Hạ tầng Laravel Phase 1 (ADR-066)
 

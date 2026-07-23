@@ -11,7 +11,7 @@
 5. `docs/ROUTE-MAP.md` — route, role và action dự kiến.
 6. `docs/ACCEPTANCE-CRITERIA.md` — điều kiện nghiệm thu/test.
 7. `docs/decisions/INDEX.md` — quyết định kiến trúc theo chủ đề.
-8. `ROADMAP.md` — thứ tự triển khai.
+8. `ROADMAP.md` — lịch sử triển khai Phase 1 (đã DONE, đóng băng); kế hoạch tiếp theo ở `docs/refactor/`.
 9. `docs/PROJECT-STATUS.md` — trạng thái phiên hiện tại, không phải nguồn nghiệp vụ.
 
 Khi hai nguồn cùng cấp mâu thuẫn, dừng task liên quan và ghi blocker vào `docs/PROJECT-STATUS.md`.
@@ -21,9 +21,12 @@ Khi hai nguồn cùng cấp mâu thuẫn, dừng task liên quan và ghi blocker
 | Nhóm | Tài liệu | Vai trò |
 |---|---|---|
 | Phạm vi | `docs/PHASE-1-SCOPE.md`, `docs/PHASE-2-BACKLOG.md` | In scope/out of scope |
+| Đề xuất kiến trúc | `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md` | Kiến trúc/gap-analysis đích (PDF ngoài luồng) — **chưa áp dụng**; KHÔNG còn quyết định thứ tự thi công, xem `docs/refactor/BATCH-TASK-MAP.md` |
+| Refactor playbook | `docs/refactor/PLAYBOOK.md`, `docs/refactor/TASK-INDEX.md`, `docs/refactor/tasks/`, `docs/refactor/BATCH-TASK-MAP.md` | Cách vận hành + tra cứu từng `TASK x.y` (nguồn: `docs/VIECLAM88_15_KE_HOACH_SUA_SLASH_COMMANDS_V2.1_TOI_UU.pdf`); `BATCH-TASK-MAP.md` đối chiếu với Batch ADR-080, **thứ tự Task x.y là chính thức** |
+| Refactor baseline | `docs/refactor/00-CURRENT-BASELINE.md`, `docs/refactor/01-ROLLBACK-PLAN.md` | Snapshot kỹ thuật + kế hoạch backup/rollback trước khi chạy batch migration Phase 2 (kết quả TASK 0.1) |
 | Nghiệp vụ | `docs/CORE-FLOWS.md` | 6 luồng cốt lõi, pipeline, verification, duplicate/merge |
 | Database | `docs/DATABASE-DICTIONARY.md`, `docs/ERD.md` | Schema chi tiết và quan hệ |
-| Delivery | `ROADMAP.md`, `docs/PROJECT-STATUS.md` | Giai đoạn và trạng thái hiện tại |
+| Delivery | `ROADMAP.md` (lịch sử, đóng băng), `docs/PROJECT-STATUS.md` (trạng thái thật) | Giai đoạn Phase 1 đã qua và trạng thái hiện tại |
 | Claude workflow | `docs/CLAUDE-SKILLS.md` | Chọn skill, luồng vibe coding và ví dụ lệnh |
 | Contract | `docs/ROUTE-MAP.md`, `docs/ACCEPTANCE-CRITERIA.md` | Route/policy và testable outcomes |
 | Quyết định | `docs/decisions/INDEX.md` | ADR chia theo chủ đề |

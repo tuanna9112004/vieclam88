@@ -264,10 +264,9 @@ lý đơn vị hết hiệu lực sau sáp nhập — đơn vị cũ **không** 
 `candidates.current_administrative_unit_id` mới tạo không được chọn đơn vị `is_active = false`,
 kiểm tra ở Form Request) nhưng vẫn giữ để tra cứu lịch sử. Cơ chế upsert: `official_code` khi có
 giá trị, `(parent_id, slug)`/`root_slug_key` (ADR-065) khi đơn vị chưa có mã chính thức. **Nguồn
-dữ liệu hành chính cụ thể (văn bản/API nào, đơn vị nào cung cấp) chưa được xác nhận — [CẦN CHỐT
-VỚI CÔNG TY]** — go-live blocker (ảnh hưởng chất lượng dữ liệu vận hành thật), **không phải
-migration blocker** vì schema (`official_code`, `valid_from`, `valid_to`, `is_active`) đã đủ hỗ
-trợ bất kỳ nguồn nào công ty chọn.
+dữ liệu hành chính cụ thể đã chốt: API `provinces.open-api.vn` (v2) — xem ADR-079.** Không phải
+migration blocker vì schema (`official_code`, `valid_from`, `valid_to`, `is_active`) đã đủ hỗ trợ
+bất kỳ nguồn nào công ty chọn.
 
 **Lý do:** Việt Nam đang trong giai đoạn sáp nhập đơn vị hành chính (đã ghi nhận từ ADR-010) —
 nếu không có quy tắc rõ về nguồn/khóa upsert, việc import lại dữ liệu khi có thay đổi địa giới sẽ
@@ -314,3 +313,72 @@ Administrative Unit nullable. Checker chặn live rule verification cũ, Scope 1
 transfer “chỉ cần không published”, route gộp method, Salary Predicate cũ, thiếu multi-root/
 family invariant, thiếu active-user middleware và ownership Company Contact. Content baseline
 frozen; Git baseline chỉ hoàn tất sau commit/tag được người dùng cho phép.
+
+<a id="adr-079"></a>
+
+## ADR-079 — Administrative dataset source: import từ `provinces.open-api.vn` (resolve ADR-070)
+
+**Quyết định:** Chốt nguồn dữ liệu hành chính chính thức (go-live blocker nêu ở ADR-070) là API
+công khai `provinces.open-api.vn` (v2 — dữ liệu sau sáp nhập 07/2025, 2 cấp tỉnh/thành →
+phường/xã, field `code` là mã GSO). Nhập dữ liệu qua lệnh console
+`php artisan administrative-units:import` (`app/Console/Commands/ImportAdministrativeUnitsCommand.php`),
+tái sử dụng nguyên `UpsertAdministrativeUnitAction` (khóa `official_code` = `(string) code` từ
+API — đúng cơ chế upsert ADR-070 đã thiết kế sẵn, không đổi schema). Command chỉ tạo/cập nhật,
+**không** tự `is_active = false` các bản ghi vắng mặt trong response (tránh khoá nhầm đơn vị đang
+được `branches`/`company_locations`/`candidates` tham chiếu chỉ vì một lần gọi API thiếu dữ
+liệu). Website (Public/HR) tiếp tục đọc từ `administrative_units` nội bộ như hiện tại — **không**
+gọi API lúc runtime; import là thao tác admin tự chạy khi cần (giống `db:backup`), không chạy tự
+động trong migration/seeder/CI để tránh phụ thuộc mạng khi test/deploy. Trang CRUD thủ công
+`hr/administrative-units` vẫn giữ nguyên làm công cụ override cục bộ (vd tắt `is_active` một đơn
+vị vì lý do nghiệp vụ riêng, không liên quan thay đổi địa giới từ nguồn nhà nước).
+
+<a id="adr-080"></a>
+
+## ADR-080 — Chốt baseline kiến trúc Phase 2: áp dụng đề xuất "cấu trúc lại" (PDF v1.1)
+
+**Quyết định:** Công ty xác nhận áp dụng đề xuất trong `bao_cao_cau_truc_lai_du_an_vieclam88_v1.1.pdf`
+làm baseline nghiệp vụ/kiến trúc cho Phase 2 — ma trận đối chiếu đầy đủ và lộ trình migration ở
+`docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`. Thay đổi chính: role 3 cấp (`super_admin`/`branch_admin`/
+`staff` thay `admin`/`staff`); địa chỉ hành chính chuyển từ `administrative_units` tự tham chiếu
+sang 2 bảng `provinces`+`wards`; `industrial_parks` chuyển quan hệ 1-N sang N-N với `wards` qua
+`industrial_park_wards`, thêm `branch_id` quản lý chính; bỏ `company_locations`, `jobs` mang địa
+chỉ riêng qua `work_ward_id` (bắt buộc) + `industrial_park_id` (tùy chọn); `jobs.company_id`
+chuyển nullable (thêm `job_type=direct` không cần company); thêm bảng mới `industries`,
+`employment_types` (thay `JobEmploymentType` enum), `job_images`, `candidate_documents`
+(CV PDF/avatar); thêm cột hồ sơ ứng viên (`marital_status`/`foreign_language`/`ethnicity`/
+`citizen_id_*`/`personal_introduction` trên `candidates`); thêm `activity_logs` (chốt bổ sung
+23/07/2026 — xem chi tiết bên dưới).
+
+**Bổ sung `activity_logs` (mở rộng ADR-019, không thay thế):** công ty xác nhận thêm bảng
+`activity_logs` chung cho các thao tác chưa có audit trail riêng (sửa `companies`,
+`industrial_parks`, `settings`, danh mục `industries`/`employment_types`) — giữ nguyên toàn bộ
+audit trail chuyên biệt hiện có (`job_status_histories`, `application_status_histories`,
+`application_branch_histories`, `job_branch_histories`, `export_logs`) vì các bảng đó có cấu trúc
+cột giàu ngữ cảnh nghiệp vụ hơn. ADR-019 vẫn đúng cho phần đã áp dụng, chỉ không còn là quy tắc
+"duy nhất" — hành động mới không có bảng lịch sử riêng thì dùng `activity_logs`.
+
+**Supersede/ảnh hưởng** (giữ nguyên nội dung ADR cũ để tra cứu lịch sử, không xóa — chỉ không còn
+là baseline hiện hành sau khi migration Phase 2 hoàn tất): ADR-010 (`administrative_units` phân
+cấp — dữ liệu tỉnh/xã đã tương đương nhờ ADR-079, chỉ đổi cấu trúc bảng), ADR-014 (`users.role`
+enum đơn giản), ADR-011 (không lặp địa điểm `jobs`/`company_locations` — nay địa điểm chuyển hẳn
+về `jobs`), ADR-015 (`branches` tách khỏi `company_locations`), ADR-045/052 (`company_locations`
+Quick Create/khớp KCN — bảng nguồn không còn), ADR-055 phần `employment_type` (thay bằng bảng FK
+`employment_types`; phần "enum phụ khác chưa chốt" của ADR-055 vẫn còn hiệu lực).
+
+**Trạng thái thực thi:** Quyết định baseline đã chốt, **CHƯA migrate code/schema**. Không sửa
+migration/model/route hiện có trong cùng đợt ghi ADR này — đúng nguyên tắc Additive-first (P01)
+mà chính PDF đề xuất, khớp "An toàn thao tác" của `CLAUDE.md`. Thực thi theo lộ trình
+Expand→Backfill→Switch→Contract ở `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md` mục "Kế hoạch
+migration", qua các task/slice riêng (`/db-task`, `/vibe-task`) từng bước, không gộp một lần.
+
+**Lý do:** Công ty đã xác nhận trực tiếp áp dụng PDF làm hướng đi chính thức. Ghi nhận bằng ADR để
+không "âm thầm chọn một bên" và để migration sau này có căn cứ tường minh. Nguồn sự thật schema
+**hiện tại** (`DATABASE-DICTIONARY.md`/`ERD.md`/`ROUTE-MAP.md`) **giữ nguyên không đổi** cho tới
+khi migration thực sự chạy — tránh mọi phiên code sau viết nhầm vào cột/bảng chưa tồn tại trong
+database thật.
+
+**Lý do:** Schema (`official_code` unique-khi-có-giá-trị, cơ chế upsert theo ADR-070) đã được
+thiết kế sẵn đúng cho trường hợp có nguồn dữ liệu ngoài cung cấp mã chuẩn — chỉ cần bổ sung cơ chế
+nhập, không cần đổi 4 bảng có FK (`branches`, `industrial_parks`, `company_locations`,
+`candidates`) hay CRUD hiện có. Giữ nhập-về-DB-nội-bộ (thay vì gọi API mỗi request) để không thêm
+phụ thuộc runtime vào dịch vụ bên thứ ba, giữ đúng nguyên tắc kiến trúc Phase 1 (`.claude/rules/architecture.md`).

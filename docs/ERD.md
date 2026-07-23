@@ -349,6 +349,89 @@ erDiagram
     }
 ```
 
+## Sơ đồ mục tiêu Phase 2 (ADR-080, CHƯA migrate)
+
+> Sơ đồ trên (28 bảng) là **hiện trạng thật đang chạy** — không đổi. Khối dưới đây chỉ thể hiện
+> quan hệ/bảng **mục tiêu** theo `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md` (ADR-080), chi tiết cột ở
+> `docs/DATABASE-DICTIONARY.md` mục 9.29–9.35. Chưa có migration nào tạo ra các bảng này.
+
+```mermaid
+erDiagram
+    provinces ||--o{ wards : "province_id"
+    industrial_parks }o--o{ wards : "N-N qua industrial_park_wards"
+    branches ||--o{ industrial_parks : "branch_id (target, thay administrative_unit_id)"
+    industries ||--o{ jobs : "industry_id (target)"
+    employment_types ||--o{ jobs : "employment_type_id (target, thay JobEmploymentType enum)"
+    wards ||--o{ jobs : "work_ward_id (target, bắt buộc, thay job_locations)"
+    industrial_parks |o--o{ jobs : "industrial_park_id (target, tùy chọn)"
+    jobs ||--o{ job_images : "job_id"
+    candidates ||--o{ candidate_documents : "candidate_id"
+    applications |o--o{ candidate_documents : "application_id (nullable — avatar không cần gắn)"
+
+    provinces {
+        bigint id PK
+        string code UK "mã GSO — backfill từ administrative_units.official_code"
+        bool is_active
+    }
+
+    wards {
+        bigint id PK
+        bigint province_id FK
+        string code UK "mã GSO"
+        bool is_active
+    }
+
+    industrial_park_wards {
+        bigint id PK
+        bigint industrial_park_id FK
+        bigint ward_id FK
+        bool is_primary
+    }
+
+    industries {
+        bigint id PK
+        string slug UK
+        bool is_active
+    }
+
+    employment_types {
+        bigint id PK
+        string slug UK "full-time, part-time, temporary, freelance, internship"
+        bool is_active
+    }
+
+    job_images {
+        bigint id PK
+        bigint job_id FK
+        bool is_primary "tối đa 1/job"
+        int sort_order
+    }
+
+    candidate_documents {
+        bigint id PK
+        bigint candidate_id FK
+        bigint application_id FK "nullable"
+        enum document_type "cv, avatar"
+        string mime_type "cv: application/pdf only"
+    }
+
+    activity_logs {
+        bigint id PK
+        bigint user_id FK
+        string action
+        string subject_type "polymorphic"
+        bigint subject_id "polymorphic"
+        json changes "before/after, nullable"
+    }
+```
+
+**`activity_logs`: CẦN CHỐT trước khi migrate** — mâu thuẫn ADR-019 (audit trail theo từng
+action, không phải 1 bảng log chung). Xem `docs/DATABASE-DICTIONARY.md` mục 9.36.
+
+**Không đổi cùng lúc:** `administrative_units`, `company_locations`, `job_locations` vẫn giữ
+nguyên tới batch Contract (batch 9) — sơ đồ target chỉ *thêm* bảng/quan hệ mới song song, không
+xóa gì ở batch Expand/Backfill.
+
 ## Ghi chú đọc sơ đồ
 
 - **Pivot tables**: `job_locations` (job ↔ company_locations), `job_work_shifts` (job ↔

@@ -2,6 +2,12 @@
 
 6 luồng nghiệp vụ mà các route dưới đây phải hỗ trợ đúng: `docs/CORE-FLOWS.md`.
 
+> Toàn bộ route dưới đây là route **thật đang chạy**. ADR-080 (kiến trúc mục tiêu Phase 2,
+> `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`) chưa xác định route/UI cụ thể cho `industries`,
+> `employment_types`, `job_images`, `candidate_documents`, `branch_admin` — PDF chỉ đặc tả dữ
+> liệu, không đặc tả route. Không thêm route theo suy đoán; route mới sẽ được ghi vào bảng dưới
+> khi task migrate tương ứng thực sự triển khai.
+
 Quy ước:
 - Public ở `routes/web.php`; HR ở `routes/hr.php` với prefix/name `hr.`.
 - Route động dùng implicit binding (`{job:slug}`, `{company:slug}`) hoặc `whereNumber()`.

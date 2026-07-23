@@ -15,6 +15,35 @@ staff` VÀ `users.branch_id = applications.owner_branch_id`, HOẶC `users.role 
 không bị giới hạn cơ sở). Không dùng cụm "Staff/admin cùng cơ sở" (không chính xác — admin
 không cần cùng cơ sở).
 
+## Định hướng Phase 2 (ADR-080, CHƯA áp dụng)
+
+> Toàn bộ nội dung mục 0–9 bên dưới mô tả đúng luồng nghiệp vụ **đang chạy thật**. Đoạn này chỉ
+> tóm tắt các thay đổi luồng mà ADR-080 (`docs/decisions/architecture-and-platform.md`) đã duyệt
+> làm mục tiêu Phase 2 — chi tiết đầy đủ ở `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`, schema target
+> ở `docs/DATABASE-DICTIONARY.md` mục 9.29–9.35. Không code theo đoạn này khi task không thuộc
+> đúng batch migration đang thực thi.
+
+- **Phân quyền**: thêm vai trò `branch_admin` (batch 3) giữa `staff` và `super_admin` (= `admin`
+  hiện tại) — quy ước "Staff thuộc đúng cơ sở hoặc Admin" ở trên **chưa đổi** cho tới khi batch 3
+  chạy và có Policy cho `branch_admin`.
+- **Địa chỉ**: nhân viên chọn tỉnh/xã từ `provinces`/`wards` thay `administrative_units` (batch 1)
+  — luồng Quick Create Company Location mục 0.3 giữ nguyên tinh thần "chưa biết thì để trống",
+  chỉ đổi bảng nguồn.
+- **KCN**: một KCN có thể trải nhiều xã/phường (batch 2) — luồng xác nhận nhu cầu tuyển tại KCN
+  không đổi, chỉ đổi cách khớp ward hợp lệ.
+- **Company/Job**: thêm luồng "tuyển trực tiếp" (`job_type=direct`, không cần Company) — **điều
+  kiện xác nhận nhu cầu, ai được tạo, hiển thị public thế nào [CẦN CHỐT VỚI CÔNG TY]** trước khi
+  code batch 7; địa chỉ làm việc chuyển hẳn vào Job (`work_ward_id`) thay vì qua Company Location
+  (batch 5).
+- **Chuyên ngành/loại hình**: Job bắt buộc chọn `industry_id` và `employment_type_id` từ danh mục
+  (batch 4/5) thay vì loại hình tự do hiện tại — thêm điều kiện publish mới, không thay các điều
+  kiện `PUB-*` hiện có.
+- **Ảnh Job, CV ứng viên**: 2 tính năng hoàn toàn mới (batch 6), không thay đổi luồng nộp hồ sơ
+  hiện tại (mục 3) — chỉ thêm bước upload tùy chọn.
+- **Không đổi**: chống trùng Candidate/Application, `workflow_cycle`, Duplicate Review/Merge,
+  Reopen, Transfer Branch, Anonymize, Verification Scheduler — PDF không đề cập các luồng này,
+  giữ nguyên nội dung mục 5–7 bên dưới.
+
 ## 0. Phạm vi Phase 1
 
 Phase 1 chỉ xử lý hồ sơ ứng viên gửi về qua **form ứng tuyển trên website**
@@ -1094,7 +1123,7 @@ decision, không chặn việc viết migration Phase 1.
 | 2 | Mức độ mask/xóa cụ thể cho `submission_snapshot` khi anonymize (mục 7.2) | Go-live blocker | Ảnh hưởng nội dung **Action** anonymize (mask 1 phần hay xóa hẳn từng trường); cấu trúc schema đã chốt ở mục 7.2.1 (ADR-056) không đổi dù chọn phương án nào |
 | 3 | Có bật `job_auto_pause_enabled = true` ở giai đoạn sau hay không (mục 1.3) | Phase 2 decision | Mặc định `false`, không code path nào thực thi ở Phase 1; chỉ cần bổ sung 2 cột (`actor_type`/`changed_by` nullable cho `job_status_histories`) bằng migration riêng **nếu và khi** công ty xác nhận bật |
 | 4 | Giá trị `job_verification_valid_days` (mục 1.3, ADR-058) | Go-live blocker | Mặc định tắt (`null` = không kiểm tra độ mới, chỉ cần "mới nhất = still_open"); schema (`settings`) đã đủ cho mọi giá trị công ty chọn sau này |
-| 5 | Nguồn dữ liệu `administrative_units` chính thức (mục provenance, ADR-070) | Go-live blocker | Ảnh hưởng chất lượng dữ liệu vận hành thật, không ảnh hưởng schema (`official_code`/`valid_from`/`valid_to`/`is_active` đã đủ) |
+| 5 | ~~Nguồn dữ liệu `administrative_units` chính thức~~ — **đã chốt (ADR-079):** API `provinces.open-api.vn`, nhập qua `php artisan administrative-units:import` | Resolved | Không còn blocker; `official_code` khớp mã GSO từ API |
 | 6 | Có cần cơ chế redact/kiểm duyệt mạnh hơn cho nội dung free-text (Note/Contact Log/Appointment) hay không (mục 7.3.1, ADR-071) | Go-live blocker (tùy chọn, không bắt buộc phải có) | Không ảnh hưởng schema — các cột free-text đã đúng kiểu dữ liệu cần thiết |
 
 ### 8.2. Enum phụ — đề xuất mặc định, KHÔNG còn là migration blocker (ADR-055)
