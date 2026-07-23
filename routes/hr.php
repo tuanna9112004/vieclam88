@@ -8,6 +8,9 @@ use App\Http\Controllers\Hr\ApplicationStageController;
 use App\Http\Controllers\Hr\AppointmentController;
 use App\Http\Controllers\Hr\Auth\HrAuthController;
 use App\Http\Controllers\Hr\BranchController;
+use App\Http\Controllers\Hr\CandidateAnonymizeController;
+use App\Http\Controllers\Hr\CandidateController;
+use App\Http\Controllers\Hr\CandidateMergeController;
 use App\Http\Controllers\Hr\CompanyContactController;
 use App\Http\Controllers\Hr\CompanyController;
 use App\Http\Controllers\Hr\CompanyLocationController;
@@ -137,6 +140,12 @@ Route::prefix('hr')->name('hr.')->group(function () {
                 Route::get('/', [DuplicateReviewController::class, 'index'])->name('index');
                 Route::get('{duplicateReview}', [DuplicateReviewController::class, 'show'])->name('show');
                 Route::post('{duplicateReview}/xu-ly', [DuplicateReviewController::class, 'resolve'])->name('resolve');
+            });
+
+            Route::prefix('ung-vien')->name('candidates.')->group(function () {
+                Route::get('{candidate}', [CandidateController::class, 'show'])->name('show');
+                Route::post('{candidate}/gop', [CandidateMergeController::class, 'store'])->name('merge');
+                Route::post('{candidate}/an-danh', [CandidateAnonymizeController::class, 'store'])->name('anonymize');
             });
         });
     });
