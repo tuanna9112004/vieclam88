@@ -1018,6 +1018,36 @@ cấu trúc riêng theo đúng ngữ cảnh nghiệp vụ (from/to status, reaso
 
 ---
 
+## Bảng chuyển tiếp migration (không tính vào 28 bảng Phase 1 hay 8 bảng target Phase 2 ở trên)
+
+> Không dùng heading `9.X` để checker `scripts/check-claude-config.py` (đối chiếu số bảng nghiệp
+> vụ Phase 1/target Phase 2) không nhầm bảng này vào một trong hai nhóm đó. Bảng dưới đây chỉ là
+> giàn giáo (scaffolding) phục vụ quá trình migrate, dự kiến drop ở TASK 12.4 (Contract) sau khi
+> switch hoàn tất và ổn định — xem `docs/VIECLAM88_TASK_REGISTRY_V2.3.md` TASK 12.4.
+
+### `administrative_unit_mappings` (TASK 1.2, tạo ở migration `2025_02_01_000003`)
+
+Ghi kết quả map từng `administrative_units` sang `provinces`/`wards` mới, dùng bởi
+`locations:backfill-administrative-units`. TASK 1.3 sẽ đọc bảng này để backfill FK ward trên các
+bảng nghiệp vụ; task này **không tự cập nhật** FK đó.
+
+| Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
+| administrative_unit_id | bigint | ✓ | không | — | ✓ | ✓ | administrative_units.id | RESTRICT | Một unit cũ chỉ có một mapping |
+| province_id | bigint | ✓ | có | null | — | — | provinces.id | RESTRICT | Chỉ set khi `status=mapped` |
+| ward_id | bigint | ✓ | có | null | — | — | wards.id | RESTRICT | Chỉ set khi `status=mapped` và unit là cấp lá |
+| status | enum(mapped,ambiguous,missing,invalid_parent) | — | không | — | ✓ | — | — | — | |
+| reason | text | — | có | null | — | — | — | — | Giải thích khi không mapped |
+| mapped_at | timestamp | — | có | null | — | — | — | — | |
+| created_at | timestamp | — | có | now | — | — | — | — | |
+| updated_at | timestamp | — | có | now | — | — | — | — | |
+
+**Chính sách xóa:** không hard delete trong Phase 1/2 vận hành — chỉ drop toàn bảng ở TASK 12.4
+sau khi các FK ward trên bảng nghiệp vụ (TASK 1.3) đã switch ổn định và không còn đọc bảng này.
+
+---
+
 ## Chính sách xóa — tổng hợp
 
 | Bảng | Chính sách |
