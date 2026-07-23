@@ -13,6 +13,15 @@ class AdministrativeUnit extends Model
 {
     use HasFactory;
 
+    public const TYPES = [
+        'province',
+        'city',
+        'commune',
+        'ward',
+        'special_zone',
+        'legacy_district',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -40,5 +49,32 @@ class AdministrativeUnit extends Model
     public function industrialParks(): HasMany
     {
         return $this->hasMany(IndustrialPark::class);
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function descendantIds(): array
+    {
+        $descendantIds = [];
+        $frontier = [$this->getKey()];
+
+        while ($frontier !== []) {
+            $children = self::query()
+                ->whereIn('parent_id', $frontier)
+                ->pluck('id')
+                ->map(static fn ($id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id !== $this->getKey() && ! isset($descendantIds[$id]))
+                ->values()
+                ->all();
+
+            foreach ($children as $childId) {
+                $descendantIds[$childId] = true;
+            }
+
+            $frontier = $children;
+        }
+
+        return array_keys($descendantIds);
     }
 }

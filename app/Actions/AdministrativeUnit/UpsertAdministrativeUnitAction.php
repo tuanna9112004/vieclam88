@@ -16,13 +16,16 @@ class UpsertAdministrativeUnitAction
      * duyệt chuỗi ancestor chống cycle) là atomic dưới ghi đồng thời.
      *
      * @param  array{official_code?: ?string, parent_id?: ?int, name: string, slug: string, type: string, is_active?: bool, valid_from?: ?string, valid_to?: ?string}  $data
+     * @param  AdministrativeUnit|null  $target  Bản ghi route-bound cần cập nhật; null thì dùng khóa upsert ADR-070.
      */
-    public function handle(array $data): AdministrativeUnit
+    public function handle(array $data, ?AdministrativeUnit $target = null): AdministrativeUnit
     {
-        return DB::transaction(function () use ($data) {
-            $existing = $this->resolveExisting($data);
+        return DB::transaction(function () use ($data, $target) {
+            $existing = $target
+                ? AdministrativeUnit::whereKey($target->getKey())->lockForUpdate()->firstOrFail()
+                : $this->resolveExisting($data);
 
-            if ($existing) {
+            if ($existing && ! $target) {
                 $existing = AdministrativeUnit::whereKey($existing->id)->lockForUpdate()->first();
             }
 

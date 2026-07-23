@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Hr;
 
 use App\Actions\Job\CloseJobAction;
+use App\Actions\Job\DuplicateJobAction;
 use App\Actions\Job\PauseJobAction;
 use App\Actions\Job\PublishJobAction;
 use App\Enums\JobCloseReason;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Hr\Job\CloseJobRequest;
+use App\Http\Requests\Hr\Job\DuplicateJobRequest;
 use App\Http\Requests\Hr\Job\PauseJobRequest;
 use App\Http\Requests\Hr\Job\PublishJobRequest;
 use App\Models\Job;
@@ -15,6 +17,18 @@ use Illuminate\Http\RedirectResponse;
 
 class JobWorkflowController extends Controller
 {
+    public function duplicate(
+        DuplicateJobRequest $request,
+        Job $job,
+        DuplicateJobAction $action
+    ): RedirectResponse {
+        $duplicate = $action->handle($job, $request->user());
+
+        return redirect()
+            ->route('hr.jobs.edit', $duplicate)
+            ->with('status', 'Đã tạo bản sao Job ở trạng thái nháp.');
+    }
+
     public function publish(PublishJobRequest $request, Job $job, PublishJobAction $action): RedirectResponse
     {
         $action->handle($job, $request->user(), $request->validated('verification_override_reason'));

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Hr\AdministrativeUnitController;
 use App\Http\Controllers\Hr\ApplicationBranchTransferController;
 use App\Http\Controllers\Hr\ApplicationController;
 use App\Http\Controllers\Hr\ApplicationExportController;
@@ -17,12 +18,15 @@ use App\Http\Controllers\Hr\CompanyLocationController;
 use App\Http\Controllers\Hr\ContactAttemptController;
 use App\Http\Controllers\Hr\DashboardController;
 use App\Http\Controllers\Hr\DuplicateReviewController;
+use App\Http\Controllers\Hr\FaqController;
 use App\Http\Controllers\Hr\IndustrialParkController;
-use App\Http\Controllers\Hr\JobController;
 use App\Http\Controllers\Hr\JobBranchTransferController;
+use App\Http\Controllers\Hr\JobController;
 use App\Http\Controllers\Hr\JobVerificationController;
 use App\Http\Controllers\Hr\JobWorkflowController;
+use App\Http\Controllers\Hr\PageController;
 use App\Http\Controllers\Hr\PasswordChangeController;
+use App\Http\Controllers\Hr\SettingController;
 use App\Http\Controllers\Hr\StaffController;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -42,6 +46,35 @@ Route::prefix('hr')->name('hr.')->group(function () {
 
         Route::middleware(EnsurePasswordChanged::class)->group(function () {
             Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+            Route::prefix('cau-hinh')->name('settings.')->group(function () {
+                Route::get('/', [SettingController::class, 'index'])->name('index');
+                Route::put('/', [SettingController::class, 'update'])->name('update');
+            });
+
+            Route::prefix('trang')->name('pages.')->group(function () {
+                Route::get('/', [PageController::class, 'index'])->name('index');
+                Route::get('tao-moi', [PageController::class, 'create'])->name('create');
+                Route::post('/', [PageController::class, 'store'])->name('store');
+                Route::get('{page}/sua', [PageController::class, 'edit'])->name('edit');
+                Route::put('{page}', [PageController::class, 'update'])->name('update');
+                Route::delete('{page}', [PageController::class, 'destroy'])->name('destroy');
+            });
+
+            Route::prefix('cau-hoi-thuong-gap')->name('faqs.')->group(function () {
+                Route::get('/', [FaqController::class, 'index'])->name('index');
+                Route::get('tao-moi', [FaqController::class, 'create'])->name('create');
+                Route::post('/', [FaqController::class, 'store'])->name('store');
+                Route::get('{faq}/sua', [FaqController::class, 'edit'])->name('edit');
+                Route::put('{faq}', [FaqController::class, 'update'])->name('update');
+                Route::delete('{faq}', [FaqController::class, 'destroy'])->name('destroy');
+            });
+
+            Route::prefix('don-vi-hanh-chinh')->name('administrative-units.')->group(function () {
+                Route::get('/', [AdministrativeUnitController::class, 'index'])->name('index');
+                Route::post('/', [AdministrativeUnitController::class, 'store'])->name('store');
+                Route::put('{administrativeUnit}', [AdministrativeUnitController::class, 'update'])->name('update');
+            });
 
             Route::prefix('nhan-vien')->name('staff.')->group(function () {
                 Route::get('/', [StaffController::class, 'index'])->name('index');
@@ -111,7 +144,11 @@ Route::prefix('hr')->name('hr.')->group(function () {
                 Route::post('{job}/xuat-ban', [JobWorkflowController::class, 'publish'])->name('publish');
                 Route::post('{job}/tam-dung', [JobWorkflowController::class, 'pause'])->name('pause');
                 Route::post('{job}/dong', [JobWorkflowController::class, 'close'])->name('close');
+                Route::post('{job}/nhan-ban', [JobWorkflowController::class, 'duplicate'])->name('duplicate');
                 Route::post('{job}/chuyen-co-so', [JobBranchTransferController::class, 'store'])->name('transfer-branch');
+                Route::delete('{job}', [JobController::class, 'destroy'])->name('destroy');
+                Route::post('{job}/khoi-phuc', [JobController::class, 'restore'])
+                    ->name('restore')->withTrashed();
             });
 
             Route::prefix('ho-so')->name('applications.')->group(function () {

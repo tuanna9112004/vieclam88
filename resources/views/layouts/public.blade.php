@@ -10,15 +10,28 @@
     @hasSection('canonical')
         <link rel="canonical" href="@yield('canonical')">
     @endif
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="@yield('title', config('app.name', 'vieclam88'))">
+    @hasSection('meta_description')
+        <meta property="og:description" content="@yield('meta_description')">
+    @endif
+    @hasSection('canonical')
+        <meta property="og:url" content="@yield('canonical')">
+    @endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
 <body class="bg-light">
     <header class="border-bottom bg-white">
-        <div class="container py-3">
+        <div class="container py-3 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
             <a href="{{ route('jobs.index') }}" class="fs-4 fw-bold text-decoration-none text-dark">
                 {{ config('app.name', 'vieclam88') }}
             </a>
+            <nav class="d-flex flex-wrap gap-2" aria-label="Điều hướng chính">
+                <a href="{{ route('jobs.index') }}" class="btn btn-sm btn-outline-primary">Việc làm</a>
+                <a href="{{ route('companies.index') }}" class="btn btn-sm btn-outline-primary">Công ty</a>
+                <a href="{{ route('contact.show') }}" class="btn btn-sm btn-outline-primary">Liên hệ</a>
+            </nav>
         </div>
     </header>
 

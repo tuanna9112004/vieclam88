@@ -133,6 +133,37 @@
                                             @can('update', $job)
                                                 <a href="{{ route('hr.jobs.edit', $job) }}" class="btn btn-sm btn-outline-secondary">Sửa</a>
                                             @endcan
+
+                                            @can('duplicate', $job)
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('hr.jobs.duplicate', $job) }}"
+                                                    class="d-inline"
+                                                    onsubmit="return confirm('Tạo một Job nháp mới từ dữ liệu nghiệp vụ của Job {{ $job->code }}? Hồ sơ, lịch sử và xác minh sẽ không được sao chép.')"
+                                                >
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                        Nhân bản
+                                                    </button>
+                                                </form>
+                                            @endcan
+
+                                            @can('delete', $job)
+                                                @if (in_array($job->status, ['draft', 'closed'], true) && $job->applications_count === 0)
+                                                    <form
+                                                        method="POST"
+                                                        action="{{ route('hr.jobs.destroy', $job) }}"
+                                                        class="d-inline"
+                                                        onsubmit="return confirm('Xóa mềm Job {{ $job->code }}? Job sẽ rời khỏi danh sách nhưng Admin có thể khôi phục sau.')"
+                                                    >
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                            Xóa
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @endcan
                                         </div>
                                     </td>
                                 </tr>
@@ -149,6 +180,61 @@
             <div class="mt-4">
                 {{ $jobs->links() }}
             </div>
+
+            @if ($trashedJobs !== null && $trashedJobs->isNotEmpty())
+                <section class="card shadow-sm mt-5" aria-labelledby="deleted-jobs-title">
+                    <div class="card-header bg-white">
+                        <h2 class="h5 mb-1" id="deleted-jobs-title">Job đã xóa</h2>
+                        <p class="small text-muted mb-0">
+                            Khôi phục chỉ thành công khi mã, slug, công ty, cơ sở và các tham chiếu vẫn hợp lệ.
+                        </p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mã</th>
+                                    <th>Tên vị trí</th>
+                                    <th>Công ty</th>
+                                    <th>Cơ sở</th>
+                                    <th>Đã xóa lúc</th>
+                                    <th class="text-end">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($trashedJobs as $job)
+                                    <tr>
+                                        <td class="fw-bold">{{ $job->code }}</td>
+                                        <td>{{ $job->title }}</td>
+                                        <td>{{ $job->company?->name ?? 'Không còn khả dụng' }}</td>
+                                        <td>{{ $job->ownerBranch?->name ?? 'Không còn khả dụng' }}</td>
+                                        <td>{{ $job->deleted_at?->format('d/m/Y H:i') }}</td>
+                                        <td class="text-end">
+                                            @can('restore', $job)
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('hr.jobs.restore', $job) }}"
+                                                    class="d-inline"
+                                                    onsubmit="return confirm('Khôi phục Job {{ $job->code }}? Hệ thống sẽ kiểm tra lại toàn bộ mã, slug và tham chiếu trước khi khôi phục.')"
+                                                >
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                                        Khôi phục
+                                                    </button>
+                                                </form>
+                                            @endcan
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="mt-4">
+                    {{ $trashedJobs->links() }}
+                </div>
+            @endif
         </div>
     </body>
 </html>

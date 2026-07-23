@@ -67,6 +67,26 @@ class JobPolicy
         return $user->isAdmin() || $job->owner_branch_id === $user->branch_id;
     }
 
+    public function duplicate(User $user, Job $job): bool
+    {
+        return $user->isAdmin() || $job->owner_branch_id === $user->branch_id;
+    }
+
+    public function delete(User $user, Job $job): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function restore(User $user, Job $job): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDelete(User $user, Job $job): bool
+    {
+        return false;
+    }
+
     /**
      * hr.jobs.transfer-branch (docs/CORE-FLOWS.md mục 1.1, ADR-054): chỉ Admin — Staff không có
      * quyền/route đổi owner_branch_id dưới bất kỳ hình thức nào, kể cả Job cơ sở mình.

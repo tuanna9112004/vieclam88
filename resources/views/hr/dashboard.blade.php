@@ -25,6 +25,7 @@
                         <a href="{{ route('hr.duplicate-reviews.index') }}" class="btn btn-outline-warning me-2">Nghi ngờ trùng</a>
                         <a href="{{ route('hr.industrial-parks.index') }}" class="btn btn-outline-secondary me-2">KCN</a>
                         <a href="{{ route('hr.branches.index') }}" class="btn btn-outline-secondary me-2">Cơ sở</a>
+                        <a href="{{ route('hr.settings.index') }}" class="btn btn-outline-secondary me-2">Cấu hình</a>
                     @endif
 
                     <form method="POST" action="{{ route('hr.logout') }}" class="d-inline">
