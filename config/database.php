@@ -134,6 +134,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | MariaDB Backup/Restore Client Binaries
+    |--------------------------------------------------------------------------
+    |
+    | Mặc định giả định mariadb-dump/mariadb đã có trong PATH của server (đúng
+    | với cài đặt gói client MariaDB tiêu chuẩn trên Linux). Chỉ override qua
+    | env khi binary nằm ở đường dẫn khác (ví dụ máy phát triển Windows).
+    |
+    */
+
+    'backup' => [
+        'mariadb_dump_binary' => env('MARIADB_DUMP_BINARY', 'mariadb-dump'),
+        'mariadb_client_binary' => env('MARIADB_CLIENT_BINARY', 'mariadb'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Redis Databases
     |--------------------------------------------------------------------------
     |

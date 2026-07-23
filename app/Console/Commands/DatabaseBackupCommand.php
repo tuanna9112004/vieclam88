@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 class DatabaseBackupCommand extends Command
@@ -12,140 +11,204 @@ class DatabaseBackupCommand extends Command
                             {--path= : Thư mục lưu file backup (mặc định storage/app/backups)}
                             {--retention=30 : Số ngày lưu trữ file backup cũ}';
 
-    protected $description = 'Thực hiện sao lưu CSDL MariaDB/MySQL kèm SHA256 checksum và quản lý retention';
+    protected $description = 'Sao lưu CSDL MariaDB qua mariadb-dump, nén gzip streaming, kèm SHA256 checksum và retention an toàn';
+
+    private const FILENAME_PREFIX = 'vieclam88_backup_';
 
     public function handle(): int
     {
-        $this->info('--- BẮT ĐẦU QUY TRÌNH SAO LƯU CSDL MARIADB/MYSQL ---');
+        $this->info('--- BẮT ĐẦU QUY TRÌNH SAO LƯU CSDL MARIADB (mariadb-dump) ---');
 
         $backupDir = $this->option('path') ?: storage_path('app/backups');
         if (! File::exists($backupDir)) {
             File::makeDirectory($backupDir, 0700, true, true);
         }
+        @chmod($backupDir, 0700);
 
-        $dbName = config('database.connections.mysql.database') ?? config('database.connections.mariadb.database');
+        $connectionConfig = $this->resolveConnectionConfig();
+        $database = $connectionConfig['database'];
+
         $timestamp = now()->format('Ymd_His');
-        $filename = "backup_{$dbName}_{$timestamp}.sql";
+        $filename = self::FILENAME_PREFIX."{$timestamp}.sql.gz";
         $filePath = "{$backupDir}/{$filename}";
+        $plainSqlPath = "{$backupDir}/.".self::FILENAME_PREFIX."{$timestamp}.sql.tmp";
 
-        $this->info("Đang tạo bản sao lưu CSDL [{$dbName}] vào file: {$filePath}...");
+        $defaultsFile = null;
 
         try {
-            $tables = DB::select('SHOW TABLES');
-            $dbKey = "Tables_in_{$dbName}";
+            $defaultsFile = $this->writeDefaultsExtraFile($connectionConfig);
+            $dumpBinary = config('database.backup.mariadb_dump_binary', 'mariadb-dump');
 
-            $sqlContent = "-- Vieclam88 MariaDB/MySQL Database Backup\n";
-            $sqlContent .= "-- Created at: " . now()->toIso8601String() . "\n";
-            $sqlContent .= "-- Database: {$dbName}\n\n";
-            $sqlContent .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
+            $this->info("Đang chạy {$dumpBinary} cho CSDL [{$database}]...");
+            $this->runMariadbDumpToPlainFile($dumpBinary, $defaultsFile, $database, $plainSqlPath);
 
-            $topologicalOrder = [
-                'administrative_units',
-                'branches',
-                'users',
-                'industrial_parks',
-                'companies',
-                'company_locations',
-                'company_contacts',
-                'jobs',
-                'job_locations',
-                'job_verifications',
-                'job_status_histories',
-                'job_branch_histories',
-                'work_shifts',
-                'recruitment_sources',
-                'settings',
-                'job_work_shifts',
-                'candidates',
-                'candidate_contacts',
-                'applications',
-                'candidate_duplicate_reviews',
-                'application_status_histories',
-                'application_contact_attempts',
-                'application_appointments',
-                'application_branch_histories',
-                'application_notes',
-                'export_logs',
-                'migrations',
-            ];
+            $this->info('Đang nén gzip theo luồng (streaming)...');
+            $this->compressFileToGzip($plainSqlPath, $filePath);
 
-            $allTableNames = array_map(fn($t) => $t->$dbKey ?? current((array)$t), $tables);
-
-            usort($allTableNames, function ($a, $b) use ($topologicalOrder) {
-                $posA = array_search($a, $topologicalOrder, true);
-                $posB = array_search($b, $topologicalOrder, true);
-                if ($posA !== false && $posB !== false) return $posA <=> $posB;
-                if ($posA !== false) return -1;
-                if ($posB !== false) return 1;
-                return strcmp($a, $b);
-            });
-
-            foreach ($allTableNames as $table) {
-
-                // Structure
-                $createStmt = DB::select("SHOW CREATE TABLE `{$table}`")[0]->{'Create Table'};
-                $sqlContent .= "DROP TABLE IF EXISTS `{$table}`;\n";
-                $sqlContent .= $createStmt . ";\n\n";
-
-                // Data
-                $columns = DB::select("SHOW COLUMNS FROM `{$table}`");
-                $insertableCols = [];
-                foreach ($columns as $col) {
-                    $extra = strtolower($col->Extra ?? '');
-                    if (! str_contains($extra, 'generated') && ! str_contains($extra, 'stored') && ! str_contains($extra, 'virtual')) {
-                        $insertableCols[] = $col->Field;
-                    }
-                }
-
-                $rows = DB::table($table)->get();
-                foreach ($rows as $row) {
-                    $rowArray = (array) $row;
-                    $filteredRow = array_intersect_key($rowArray, array_flip($insertableCols));
-
-                    $values = array_map(function ($val) {
-                        if ($val === null) return 'NULL';
-                        return DB::getPdo()->quote($val);
-                    }, $filteredRow);
-
-                    $cols = array_map(fn($c) => "`{$c}`", array_keys($filteredRow));
-                    $sqlContent .= "INSERT INTO `{$table}` (" . implode(', ', $cols) . ") VALUES (" . implode(', ', $values) . ");\n";
-                }
-                $sqlContent .= "\n";
-            }
-
-            $sqlContent .= "SET FOREIGN_KEY_CHECKS=1;\n";
-
-            File::put($filePath, $sqlContent);
-
-            // Compute SHA256 Checksum
             $sha256 = hash_file('sha256', $filePath);
             $shaFilePath = "{$filePath}.sha256";
             File::put($shaFilePath, "{$sha256}  {$filename}\n");
 
-            $this->info("✓ Tạo file SQL backup thành công: " . number_format(filesize($filePath)) . " bytes");
+            chmod($filePath, 0600);
+            chmod($shaFilePath, 0600);
+
+            $this->info('✓ Backup thành công: '.number_format(filesize($filePath)).' bytes (nén gzip)');
             $this->info("✓ SHA256 Checksum: {$sha256}");
 
-            // Clean old backups according to retention policy
-            $retentionDays = (int) $this->option('retention');
-            $cutoff = now()->subDays($retentionDays)->timestamp;
-            $deletedCount = 0;
-
-            foreach (File::files($backupDir) as $file) {
-                if ($file->getMTime() < $cutoff) {
-                    File::delete($file->getPathname());
-                    $deletedCount++;
-                }
-            }
-
-            if ($deletedCount > 0) {
-                $this->info("✓ Đã dọn dẹp {$deletedCount} file backup cũ vượt quá thời hạn retention ({$retentionDays} ngày).");
-            }
+            $this->applyRetentionPolicy($backupDir, (int) $this->option('retention'));
 
             $this->info('--- HOÀN THÀNH QUY TRÌNH SAO LƯU CSDL THÀNH CÔNG ---');
             return Command::SUCCESS;
         } catch (\Throwable $e) {
-            $this->error('LỖI SAO LƯU CSDL: ' . $e->getMessage());
+            if (File::exists($filePath)) {
+                @unlink($filePath);
+            }
+            $this->error('LỖI SAO LƯU CSDL: '.$e->getMessage());
             return Command::FAILURE;
+        } finally {
+            if ($defaultsFile !== null && File::exists($defaultsFile)) {
+                @unlink($defaultsFile);
+            }
+            if (File::exists($plainSqlPath)) {
+                @unlink($plainSqlPath);
+            }
         }
+    }
+
+    /**
+     * @return array{host: string, port: int|string, username: string, password: string, database: string}
+     */
+    protected function resolveConnectionConfig(): array
+    {
+        $connectionName = config('database.default');
+        $config = config("database.connections.{$connectionName}");
+
+        return [
+            'host' => $config['host'] ?? '127.0.0.1',
+            'port' => $config['port'] ?? 3306,
+            'username' => $config['username'] ?? 'root',
+            'password' => $config['password'] ?? '',
+            'database' => $config['database'],
+        ];
+    }
+
+    /**
+     * Ghi credential vào defaults-extra-file tạm (0600), không truyền password qua CLI args/env.
+     */
+    protected function writeDefaultsExtraFile(array $connectionConfig): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'vieclam88_mariadb_');
+        if ($path === false) {
+            throw new \RuntimeException('Không thể tạo file defaults-extra-file tạm.');
+        }
+
+        $ini = "[client]\n"
+            ."host={$connectionConfig['host']}\n"
+            ."port={$connectionConfig['port']}\n"
+            ."user={$connectionConfig['username']}\n"
+            ."password={$connectionConfig['password']}\n";
+
+        File::put($path, $ini);
+        chmod($path, 0600);
+
+        return $path;
+    }
+
+    /**
+     * Chạy mariadb-dump, output stdout được OS redirect thẳng ra file — PHP không giữ
+     * nội dung dump trong bộ nhớ ở bước này.
+     */
+    protected function runMariadbDumpToPlainFile(string $binary, string $defaultsFile, string $database, string $plainSqlPath): void
+    {
+        $stderrFile = tempnam(sys_get_temp_dir(), 'vieclam88_backup_stderr_');
+
+        $command = [
+            $binary,
+            '--defaults-extra-file='.$defaultsFile,
+            '--single-transaction',
+            '--quick',
+            '--routines',
+            '--triggers',
+            $database,
+        ];
+
+        $descriptorSpec = [
+            0 => ['pipe', 'r'],
+            1 => ['file', $plainSqlPath, 'w'],
+            2 => ['file', $stderrFile, 'w'],
+        ];
+
+        $process = proc_open($command, $descriptorSpec, $pipes);
+        if (! is_resource($process)) {
+            @unlink($stderrFile);
+            throw new \RuntimeException("Không thể khởi chạy tiến trình {$binary}.");
+        }
+
+        fclose($pipes[0]);
+        $exitCode = proc_close($process);
+
+        $stderrOutput = File::exists($stderrFile) ? File::get($stderrFile) : '';
+        @unlink($stderrFile);
+
+        if ($exitCode !== 0) {
+            throw new \RuntimeException("mariadb-dump thất bại (exit {$exitCode}): ".$this->sanitizeProcessMessage($stderrOutput));
+        }
+    }
+
+    /**
+     * Nén file SQL thuần sang .gz theo từng chunk 256KB — bộ nhớ không phụ thuộc kích thước DB.
+     */
+    protected function compressFileToGzip(string $sourcePath, string $destGzPath): void
+    {
+        $in = fopen($sourcePath, 'rb');
+        $out = gzopen($destGzPath, 'wb9');
+
+        if ($in === false || $out === false) {
+            throw new \RuntimeException('Không thể nén file backup sang gzip.');
+        }
+
+        while (! feof($in)) {
+            $chunk = fread($in, 262144);
+            if ($chunk === false || $chunk === '') {
+                continue;
+            }
+            gzwrite($out, $chunk);
+        }
+
+        fclose($in);
+        gzclose($out);
+    }
+
+    /**
+     * Chỉ xóa đúng artifact backup (prefix + .sql.gz / .sql.gz.sha256) quá hạn retention,
+     * không đụng file khác trong thư mục.
+     */
+    protected function applyRetentionPolicy(string $backupDir, int $retentionDays): void
+    {
+        $cutoff = now()->subDays($retentionDays)->timestamp;
+        $deletedCount = 0;
+
+        foreach (File::files($backupDir) as $file) {
+            $name = $file->getFilename();
+            $isBackupArtifact = str_starts_with($name, self::FILENAME_PREFIX)
+                && (str_ends_with($name, '.sql.gz') || str_ends_with($name, '.sql.gz.sha256'));
+
+            if ($isBackupArtifact && $file->getMTime() < $cutoff) {
+                File::delete($file->getPathname());
+                $deletedCount++;
+            }
+        }
+
+        if ($deletedCount > 0) {
+            $this->info("✓ Đã dọn dẹp {$deletedCount} file backup cũ vượt quá thời hạn retention ({$retentionDays} ngày).");
+        }
+    }
+
+    /**
+     * Không log đường dẫn defaults-extra-file (gợi ý vị trí credential tạm) hay bất kỳ secret nào.
+     */
+    protected function sanitizeProcessMessage(string $message): string
+    {
+        return trim(preg_replace('/--defaults-extra-file=\S+/', '--defaults-extra-file=***', $message) ?? $message);
     }
 }
