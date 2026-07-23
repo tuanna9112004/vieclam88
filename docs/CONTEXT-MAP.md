@@ -37,5 +37,6 @@
 | Sửa finding đã duyệt | `/fix-review` |
 | Readiness gate | `/release-gate` |
 | Kết thúc phiên | `/handoff` |
+| `TASK x.y` trong `VIECLAM88_TASK_REGISTRY_V2.3.md` | `/task-cycle TASK x.y` (chạy trọn cycle) |
 
 Chi tiết và ví dụ: `docs/CLAUDE-SKILLS.md`.

@@ -22,6 +22,7 @@ EXPECTED = {
     "fix-review",
     "release-gate",
     "handoff",
+    "task-cycle",
 }
 MANUAL_SIDE_EFFECT = {
     "vibe-task",
@@ -30,6 +31,7 @@ MANUAL_SIDE_EFFECT = {
     "test-task",
     "fix-review",
     "handoff",
+    "task-cycle",
 }
 VALID_EFFORT = {"low", "medium", "high", "xhigh", "max"}
 

@@ -81,6 +81,7 @@ for path in sorted(rules_dir.glob("*.md")):
 expected_skills = [
     "vibe-task", "plan-next", "implement", "db-task", "test-task",
     "verify-task", "review-changes", "fix-review", "release-gate", "handoff",
+    "task-cycle",
 ]
 for skill in expected_skills:
     p = ROOT / f".claude/skills/{skill}/SKILL.md"
@@ -190,15 +191,25 @@ if "named lock" not in application_rule.lower():
 if "EnsureUserIsActive" not in auth_rule or "EnsureUserIsActive" not in route_map:
     error("Active-user middleware missing from authorization rule or Route Map")
 
-# Business table parity.
-dict_tables = set(re.findall(r"^## 9\.\d+\.\s*`(\w+)`", dictionary, re.M))
-erd_tables = set(re.findall(r"^\s{4}(\w+)\s*\{", erd, re.M))
-if dict_tables != erd_tables:
-    error(f"Dictionary/ERD table mismatch: only_dictionary={sorted(dict_tables-erd_tables)}, only_erd={sorted(erd_tables-dict_tables)}")
-if len(dict_tables) != 28:
-    warning(f"Expected 28 Phase 1 business tables, found {len(dict_tables)}")
+# Business table parity. Dictionary marks not-yet-migrated Phase 2 tables inline as
+# "(target ...)"; ERD isolates them under the "Sơ đồ mục tiêu Phase 2" heading. Both must be
+# excluded from the current-schema baseline so documenting the approved target architecture
+# ahead of migration (ADR-080) does not read as a false current-table count/mismatch.
+dict_headings = re.findall(r"^## 9\.\d+\.\s*`(\w+)`(.*)$", dictionary, re.M)
+dict_current = {name for name, tail in dict_headings if "target" not in tail.lower()}
+dict_target = {name for name, tail in dict_headings if "target" in tail.lower()}
+erd_target_marker = "## Sơ đồ mục tiêu Phase 2"
+erd_split = erd.split(erd_target_marker, 1)
+erd_current = set(re.findall(r"^\s{4}(\w+)\s*\{", erd_split[0], re.M))
+erd_target = set(re.findall(r"^\s{4}(\w+)\s*\{", erd_split[1], re.M)) if len(erd_split) > 1 else set()
+if dict_current != erd_current:
+    error(f"Dictionary/ERD current table mismatch: only_dictionary={sorted(dict_current-erd_current)}, only_erd={sorted(erd_current-dict_current)}")
+if dict_target != erd_target:
+    error(f"Dictionary/ERD target(Phase 2) table mismatch: only_dictionary={sorted(dict_target-erd_target)}, only_erd={sorted(erd_target-dict_target)}")
+if len(dict_current) != 28:
+    warning(f"Expected 28 Phase 1 current business tables, found {len(dict_current)}")
 for phase2_table in ["lead_requests", "favorites", "application_assignment_histories"]:
-    if phase2_table in dict_tables or phase2_table in erd_tables:
+    if phase2_table in dict_current or phase2_table in dict_target or phase2_table in erd_current or phase2_table in erd_target:
         error(f"Phase 2 table `{phase2_table}` appears in Phase 1 schema")
 
 # Required route names and route row clarity.

@@ -17,4 +17,4 @@ paths:
 - Soft delete/on-delete tuân thủ mục “Chính sách xóa”; history/attempt/log chỉ insert, không cascade mất lịch sử.
 - Factory không được tạo state/history trái domain; ưu tiên tạo lịch sử qua Action trong test.
 - Job-specific: `.claude/rules/job-domain.md`; Candidate/Application: `.claude/rules/application-domain.md`.
-- Bảng target Phase 2 (ADR-080, CHƯA có migration): `docs/DATABASE-DICTIONARY.md` mục 9.29–9.35, đánh dấu rõ "target" — chỉ viết migration/model đúng `TASK x.y` đang thực thi theo `docs/refactor/TASK-INDEX.md` (không theo thứ tự Batch cũ, xem `docs/refactor/BATCH-TASK-MAP.md`).
+- Bảng target Phase 2 (ADR-080, CHƯA có migration): `docs/DATABASE-DICTIONARY.md` mục 9.29–9.36, đánh dấu rõ "target" — chỉ viết migration/model đúng `TASK x.y` đang thực thi theo `docs/VIECLAM88_TASK_REGISTRY_V2.3.md` (không theo thứ tự Batch cũ, xem `docs/refactor/BATCH-TASK-MAP.md`).

@@ -24,4 +24,4 @@ Nguồn: `docs/CORE-FLOWS.md` mục 0–2, các bảng Company/Job trong Diction
 - Salary dùng hai mode loại trừ nhau; Shift cần ít nhất một `job_work_shifts`; đúng một primary job location.
 - `company_contact_id` nếu có phải cùng Company, active/chưa xóa; public chỉ khi `is_public=true`; CTA chính vẫn là Branch phone/Zalo.
 - Job paused/closed/expired không nhận Application; quy tắc URL/public nằm ở `.claude/rules/public-site.md`.
-- Target Phase 2 đã duyệt (ADR-080, CHƯA migrate): `work_ward_id`/`industry_id`/`employment_type_id` trên `jobs`, `company_id` nullable — xem `docs/DATABASE-DICTIONARY.md` mục 9.29+. Chỉ code khi đang đúng `TASK x.y` (Phần 6) theo `docs/refactor/TASK-INDEX.md`, không theo thứ tự Batch cũ.
+- Target Phase 2 đã duyệt (ADR-080, CHƯA migrate): `work_ward_id`/`industry_id`/`employment_type_id` trên `jobs`, `company_id` nullable — xem `docs/DATABASE-DICTIONARY.md` mục 9.29+. Chỉ code khi đang đúng `TASK x.y` (Phần 6) theo `docs/VIECLAM88_TASK_REGISTRY_V2.3.md`, không theo thứ tự Batch cũ.

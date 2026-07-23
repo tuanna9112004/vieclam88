@@ -58,7 +58,7 @@ triển khai, dùng `/vibe-task` hoặc `/db-task` bình thường như một fe
 
 > **Vai trò của bảng Batch dưới đây đã thu hẹp:** đây là tài liệu kiến trúc/gap-analysis (lý do
 > đổi, mức rủi ro), **không còn dùng để quyết định thứ tự thi công**. Thứ tự thi công chính thức
-> theo `TASK x.y` ở `docs/refactor/TASK-INDEX.md`; đối chiếu Batch ↔ Task và các chỗ lệch thứ tự
+> theo `TASK x.y` ở `docs/VIECLAM88_TASK_REGISTRY_V2.3.md`; đối chiếu Batch ↔ Task và các chỗ lệch thứ tự
 > đã biết xem `docs/refactor/BATCH-TASK-MAP.md` — đọc file đó trước khi bắt đầu bất kỳ batch nào.
 
 Mỗi batch là một `/db-task` + `/vibe-task` riêng, có test, chạy độc lập, **không gộp nhiều batch

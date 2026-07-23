@@ -4,13 +4,13 @@
 > Batch; `docs/refactor/PLAYBOOK.md` + `docs/VIECLAM88_15_KE_HOACH_SUA_SLASH_COMMANDS_V2.1_TOI_UU.pdf`
 > chia thành 43 Task (Phần 0–13). Hai tài liệu mô tả cùng một schema đích nhưng khác thứ tự và
 > khác độ chi tiết. File này là nguồn duy nhất đối chiếu hai bên — không lặp lại nội dung chi tiết
-> của từng bên (xem `PHASE-2-ARCHITECTURE-PROPOSAL.md` cho lý do kiến trúc, `TASK-INDEX.md`/
-> `tasks/` cho nội dung thi công).
+> của từng bên (xem `PHASE-2-ARCHITECTURE-PROPOSAL.md` cho lý do kiến trúc,
+> `docs/VIECLAM88_TASK_REGISTRY_V2.3.md` cho nội dung thi công).
 
 ## Quyết định về thứ tự thực thi
 
-**Thứ tự thi công chính thức = theo Task x.y** (`docs/refactor/TASK-INDEX.md`), vì đó là hệ đang
-được vận hành thật qua slash command (`CLAUDE.md`/`AGENTS.md` mục "Command chứa `TASK x.y`").
+**Thứ tự thi công chính thức = theo Task x.y** (`docs/VIECLAM88_TASK_REGISTRY_V2.3.md`), vì đó là
+hệ đang được vận hành thật qua slash command (`CLAUDE.md`/`AGENTS.md` mục "Command chứa `TASK x.y`").
 Bảng Batch trong `PHASE-2-ARCHITECTURE-PROPOSAL.md` **giữ nguyên vai trò tài liệu kiến trúc/gap
 analysis** (lý do đổi, ma trận đối chiếu PDF ↔ hiện trạng, mức độ rủi ro CRITICAL/HIGH) — **không
 còn dùng để quyết định thứ tự thi công**. Khi hai bên gợi ý thứ tự khác nhau (xem mục "Chỗ lệch"

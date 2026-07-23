@@ -19,7 +19,8 @@ Thực hiện database task: **$ARGUMENTS**
    - rollback và test integrity.
 4. Nếu Dictionary, ERD và flow mâu thuẫn, trả `BLOCKED`; không tự chọn schema.
 5. Migration phải nhỏ và thuận nghịch. Không sửa migration đã chạy staging/production; tạo migration mới khi repository đã có dữ liệu dùng thử.
-6. Đồng bộ Model/Enum/Factory/Seeder tối thiểu; history data phải được tạo qua domain action khi factory có thể phá invariant.
-7. Viết test cho constraint, relationship, rollback/error path và query/index quan trọng khi có contract.
-8. Không tự chạy `migrate:fresh`, migrate staging/production, xóa data hoặc commit/push.
-9. Kết thúc bằng `DONE`, `BLOCKED` hoặc `CHANGES REQUIRED` cùng command/kết quả.
+6. Command backfill/sync phải idempotent: chạy lại nhiều lần không tạo trùng/mất dữ liệu, hỗ trợ dry-run khi task yêu cầu, và không đoán dữ liệu khi nguồn không rõ ràng (báo report thay vì suy diễn).
+7. Đồng bộ Model/Enum/Factory/Seeder tối thiểu; history data phải được tạo qua domain action khi factory có thể phá invariant.
+8. Viết test cho constraint, relationship, rollback/error path và query/index quan trọng khi có contract.
+9. Không tự chạy `migrate:fresh`, migrate staging/production, xóa data hoặc commit/push.
+10. Kết thúc bằng `DONE`, `BLOCKED` hoặc `CHANGES REQUIRED` cùng command/kết quả.

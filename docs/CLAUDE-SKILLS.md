@@ -27,6 +27,7 @@ Skills dự án nằm tại `.claude/skills/<skill-name>/SKILL.md`. Dùng skill 
 | `/fix-review <finding>` | Sửa finding đã được xác nhận | Có |
 | `/release-gate <gate>` | Audit `baseline`, `staging` hoặc `production` | Không |
 | `/handoff <task>` | Cập nhật trạng thái phiên ngắn, có bằng chứng | Có status doc |
+| `/task-cycle TASK x.y [--resume\|--audit]` | Chạy trọn cycle cho một task trong `docs/VIECLAM88_TASK_REGISTRY_V2.3.md`: resolve→contract→implement→test→verify→review→fix→commit/push→handoff | Có (trừ `--audit`) |
 
 ## Chọn skill
 
@@ -39,6 +40,7 @@ Skills dự án nằm tại `.claude/skills/<skill-name>/SKILL.md`. Dùng skill 
 - Muốn tìm lỗi trong diff: `/review-changes`.
 - Chỉ sửa finding cụ thể: `/fix-review`.
 - Trước staging/production: `/release-gate`.
+- Task đã có mã `TASK x.y` trong registry tái cấu trúc: `/task-cycle TASK x.y`.
 
 ## Quy tắc
 

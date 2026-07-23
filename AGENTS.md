@@ -52,28 +52,14 @@ npm run build
 
 ## Skills
 
-`/vibe-task` là điểm vào mặc định; danh mục đầy đủ tại `docs/CLAUDE-SKILLS.md`. Skills nằm trong `.agents/skills/` (mirror của `.claude/skills/`).
+`/vibe-task` là điểm vào mặc định cho task ad-hoc; `/task-cycle TASK x.y` chạy trọn cycle cho task
+trong `docs/VIECLAM88_TASK_REGISTRY_V2.3.md`. Danh mục đầy đủ tại `docs/CLAUDE-SKILLS.md`. Skills
+nằm trong `.agents/skills/` (mirror của `.claude/skills/`).
 
 ## Command chứa `TASK x.y`
 
-Khi nhận command có `TASK x.y`: đọc `docs/refactor/PLAYBOOK.md`; tra mã task trong
-`docs/refactor/TASK-INDEX.md`; đọc đúng file task tương ứng trong thư mục `docs/refactor/tasks/`;
-đọc `docs/PROJECT-STATUS.md`; đối chiếu với source thực tế, không tin số liệu cố định trong PDF.
-Không đọc/triển khai task khác ngoài dependency trực tiếp ghi trong `TASK-INDEX.md`.
-
-## Lịch sử hoàn thành (rút gọn)
-
-- **GD 9-10 & Core Admin** (PASS 700/700): Transfer Application Branch, Candidate Duplicate Review/Merge/Anonymize, CSV Export (`export_logs`), Staff/Admin Dashboard (11 KPI), Database Baseline Audit.
-- **Remediation R01-R04** (PASS 708/708, commit `1faace1`/`6ce701d`/`4d3fc5a`): seeder production-safe, `db:restore-test` fail-closed, MariaDB backup/restore qua `mariadb-dump`/`mariadb` thật, fix Job JSON-LD XSS.
-- **Administrative Unit UI, Job duplicate/delete/restore, Pages/FAQ** (PASS 808/814, commit `b6bddf8` đã push): upsert ADR-070 chặn self/direct/deep cycle, Job duplicate không copy verification/history/Application, đóng gap Route Map (`pages`/`faqs` migration 027/028, `hr.settings` allowlist `PhaseOneSettingCatalog`).
-- **Redesign Public + HR sidebar** (commit `3802bc2` + `97e97ae`, **`97e97ae` chưa push** — bị chặn bởi permission classifier, cần user tự `git push origin main`): `layouts/public.blade.php`/`layouts/hr.blade.php` + `.public-shell`/`.hr-shell`, job card dùng chung, multi-select chip filter (Alpine.js, `components/multi-select.blade.php`), `Job::scopeIn*` nhận `int|array`. Toàn bộ 28 view HR đã chuyển sidebar mới. Tài khoản test dev-only: `admin.test@vieclam88.local`/`staff.test@vieclam88.local`, mật khẩu `Vieclam88Test2026`. `resources/banner.png` (ảnh đối thủ) vẫn để untracked, chưa quyết định giữ/xoá.
-- **Administrative Units: import từ provinces.open-api.vn** (ADR-079, resolve go-live blocker ADR-070): `php artisan administrative-units:import` (`ImportAdministrativeUnitsCommand`) tái sử dụng `UpsertAdministrativeUnitAction`, khớp `official_code` = mã GSO từ API v2 (2 cấp tỉnh/thành→phường/xã). Không đổi schema/FK/CRUD hiện có; website vẫn đọc DB nội bộ, không gọi API runtime. Test `Http::fake()`, không phụ thuộc mạng trong CI.
-
-## Compact
-
-Giữ mục tiêu, acceptance criteria, file đổi, lệnh/kết quả, blocker và tối đa 3 bước tiếp theo; bỏ output dài và kế hoạch cũ.
-
-**Bước tiếp theo:**
-1. User tự `git push origin main` (commit `97e97ae` đang chờ, bị chặn bởi permission classifier).
-2. Chạy `php artisan administrative-units:import` thật trên DB dev (verify integration ngoài `Http::fake()`), rồi redesign giao diện Dashboard HR (đã yêu cầu, chưa bắt đầu).
-3. Quyết định giữ hay xoá `resources/banner.png` (ảnh đối thủ chưa dùng).
+Khi nhận command có `TASK x.y`: đọc `docs/VIECLAM88_TASK_REGISTRY_V2.3.md` (nguồn KEY/GATE/DONE/NEXT
+chính thức của mọi task), `docs/refactor/PLAYBOOK.md` (nguyên tắc vận hành/migration an toàn) và
+`docs/PROJECT-STATUS.md`; đối chiếu với source thực tế, không tin số liệu snapshot. Chỉ làm đúng
+task được gọi và dependency `NEXT` liền trước theo registry. `docs/refactor/TASK-INDEX.md`/`tasks/`
+chỉ còn là hồ sơ lịch sử của TASK 0.1, không dùng để tra task mới.

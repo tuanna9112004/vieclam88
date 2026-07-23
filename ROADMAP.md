@@ -2,10 +2,10 @@
 
 > **Đóng băng, không cập nhật checklist bên dưới.** File này ghi kế hoạch Giai đoạn 0–4 từ trước
 > khi code Phase 1 tồn tại; checkbox `[ ]`/`[x]` bên dưới **không phản ánh hiện trạng thật** (Phase
-> 1 đã DONE — 28 bảng, 106 route, 6 luồng nghiệp vụ, 811/817 test, theo
+> 1 đã DONE — 28 bảng, 102 route, 6 luồng nghiệp vụ, 811/817 test, theo
 > `docs/refactor/00-CURRENT-BASELINE.md`). Trạng thái thật luôn ở `docs/PROJECT-STATUS.md`. Kế
 > hoạch cho giai đoạn tiếp theo (tái cấu trúc theo Baseline 1.1) nằm ở `docs/refactor/PLAYBOOK.md` +
-> `docs/refactor/TASK-INDEX.md` (tra theo `TASK x.y`), không phải file này.
+> `docs/VIECLAM88_TASK_REGISTRY_V2.3.md` (tra theo `TASK x.y`), không phải file này.
 
 Lộ trình theo Giai đoạn 0–4 (Phase 1) + backlog Phase 2. Trạng thái tiến độ chi tiết nhất luôn
 nằm ở `docs/PROJECT-STATUS.md` — file này chỉ giữ checklist theo giai đoạn, cập nhật `[x]` khi

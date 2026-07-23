@@ -2,12 +2,14 @@
 
 > Tài liệu này chỉ tóm tắt **cách vận hành** playbook tái cấu trúc theo
 > `docs/VIECLAM88_15_KE_HOACH_SUA_SLASH_COMMANDS_V2.1_TOI_UU.pdf` (43 task, Phần 0–13). Không chép
-> lại toàn bộ nội dung PDF — mỗi task cụ thể nằm ở `docs/refactor/tasks/TASK-x.y.md`, tra theo
-> `docs/refactor/TASK-INDEX.md`. Nghiệp vụ/schema hiện tại vẫn theo `docs/DATABASE-DICTIONARY.md`,
-> `docs/ERD.md`, `docs/ROUTE-MAP.md`, `docs/CORE-FLOWS.md` (theo `docs/INDEX.md`) — PDF chỉ là kế
-> hoạch, **chưa migrate**. `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md` (ADR-080) mô tả cùng kiến trúc
-> đích ở dạng 9 Batch — **thứ tự thi công chính thức là Task x.y ở đây**, không phải thứ tự Batch;
-> đối chiếu hai bên và các chỗ lệch đã biết ở [`BATCH-TASK-MAP.md`](BATCH-TASK-MAP.md).
+> lại toàn bộ nội dung PDF — mỗi task cụ thể (KEY/GATE/DONE/NEXT) nằm ở
+> `docs/VIECLAM88_TASK_REGISTRY_V2.3.md`, tra theo mã `TASK x.y` (đọc qua `/task-cycle TASK x.y`).
+> `docs/refactor/TASK-INDEX.md`/`tasks/` chỉ còn hồ sơ lịch sử của TASK 0.1. Nghiệp vụ/schema hiện
+> tại vẫn theo `docs/DATABASE-DICTIONARY.md`, `docs/ERD.md`, `docs/ROUTE-MAP.md`,
+> `docs/CORE-FLOWS.md` (theo `docs/INDEX.md`) — PDF chỉ là kế hoạch, **chưa migrate**.
+> `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md` (ADR-080) mô tả cùng kiến trúc đích ở dạng 9 Batch —
+> **thứ tự thi công chính thức là Task x.y ở registry**, không phải thứ tự Batch; đối chiếu hai bên
+> và các chỗ lệch đã biết ở [`BATCH-TASK-MAP.md`](BATCH-TASK-MAP.md).
 
 ## 1. Nguyên tắc thực hiện chung
 
@@ -26,9 +28,12 @@
 
 ## 2. Chuỗi slash command chuẩn
 
+`/task-cycle TASK x.y` chạy trọn chuỗi dưới đây tự động (gate tự sửa tối đa 2 vòng, chỉ commit khi
+PASS + APPROVE). Dùng chuỗi thủ công khi cần tách bước hoặc `--audit`/`--resume` chưa đủ:
+
 ```
 /plan-next <task>
-  -> /db-task hoặc /implement <task>       (theo Command chính ghi trong TASK-INDEX.md)
+  -> /db-task hoặc /implement <task>       (chọn theo MODE ghi trong VIECLAM88_TASK_REGISTRY_V2.3.md)
   -> /test-task <contract/regression>       (khi cần tách riêng)
   -> /verify-task <task>
   -> /review-changes <task>

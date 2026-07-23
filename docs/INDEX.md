@@ -22,7 +22,7 @@ Khi hai nguồn cùng cấp mâu thuẫn, dừng task liên quan và ghi blocker
 |---|---|---|
 | Phạm vi | `docs/PHASE-1-SCOPE.md`, `docs/PHASE-2-BACKLOG.md` | In scope/out of scope |
 | Đề xuất kiến trúc | `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md` | Kiến trúc/gap-analysis đích (PDF ngoài luồng) — **chưa áp dụng**; KHÔNG còn quyết định thứ tự thi công, xem `docs/refactor/BATCH-TASK-MAP.md` |
-| Refactor playbook | `docs/refactor/PLAYBOOK.md`, `docs/refactor/TASK-INDEX.md`, `docs/refactor/tasks/`, `docs/refactor/BATCH-TASK-MAP.md` | Cách vận hành + tra cứu từng `TASK x.y` (nguồn: `docs/VIECLAM88_15_KE_HOACH_SUA_SLASH_COMMANDS_V2.1_TOI_UU.pdf`); `BATCH-TASK-MAP.md` đối chiếu với Batch ADR-080, **thứ tự Task x.y là chính thức** |
+| Refactor playbook | `docs/refactor/PLAYBOOK.md` (cách vận hành), `docs/VIECLAM88_TASK_REGISTRY_V2.3.md` (KEY/GATE/DONE/NEXT từng `TASK x.y`, chạy qua `/task-cycle`), `docs/refactor/BATCH-TASK-MAP.md` | Nguồn: `docs/VIECLAM88_15_KE_HOACH_SUA_SLASH_COMMANDS_V2.1_TOI_UU.pdf`; `BATCH-TASK-MAP.md` đối chiếu với Batch ADR-080, **thứ tự Task x.y là chính thức**. `docs/refactor/TASK-INDEX.md`/`tasks/` chỉ còn hồ sơ lịch sử TASK 0.1 |
 | Refactor baseline | `docs/refactor/00-CURRENT-BASELINE.md`, `docs/refactor/01-ROLLBACK-PLAN.md` | Snapshot kỹ thuật + kế hoạch backup/rollback trước khi chạy batch migration Phase 2 (kết quả TASK 0.1) |
 | Nghiệp vụ | `docs/CORE-FLOWS.md` | 6 luồng cốt lõi, pipeline, verification, duplicate/merge |
 | Database | `docs/DATABASE-DICTIONARY.md`, `docs/ERD.md` | Schema chi tiết và quan hệ |

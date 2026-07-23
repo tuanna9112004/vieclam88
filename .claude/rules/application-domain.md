@@ -23,4 +23,4 @@ Nguồn: `docs/CORE-FLOWS.md` mục 3–7 và các bảng Candidate/Application 
 - Contact result, stage, appointment, note và history là dữ liệu riêng; đổi lịch = hủy bản cũ + tạo bản mới.
 - Reopen tăng cycle, cần reason; dữ liệu cycle cũ chỉ hiển thị, không mở khóa cycle mới.
 - Application lưu submission/job snapshot và consent; anonymize theo mục 7, không làm mất dữ liệu thống kê/audit được phép giữ.
-- Target Phase 2 đã duyệt (ADR-080, CHƯA migrate): `candidate_documents` (CV PDF/avatar) — xem `docs/DATABASE-DICTIONARY.md` mục 9.35, code đúng `TASK x.y` (Phần 9) theo `docs/refactor/TASK-INDEX.md`. PDF không đổi luồng chống trùng/workflow_cycle/duplicate review ở trên.
+- Target Phase 2 đã duyệt (ADR-080, CHƯA migrate): `candidate_documents` (CV PDF/avatar) — xem `docs/DATABASE-DICTIONARY.md` mục 9.35, code đúng `TASK x.y` (Phần 9) theo `docs/VIECLAM88_TASK_REGISTRY_V2.3.md`. PDF không đổi luồng chống trùng/workflow_cycle/duplicate review ở trên.

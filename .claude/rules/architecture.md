@@ -21,4 +21,4 @@ paths:
 - `users` chỉ `staff`/`admin`; không có Candidate Account. Không tạo bảng/cột dự phòng Phase 2.
 - Tiền VND dùng unsigned bigint; không dùng float. Không hard-delete dữ liệu tuyển dụng cốt lõi.
 - Nguồn: `docs/PHASE-1-SCOPE.md`, `docs/decisions/INDEX.md`, `docs/DATABASE-DICTIONARY.md`.
-- Kiến trúc mục tiêu Phase 2 đã duyệt (ADR-080, `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`) nhưng CHƯA migrate — thứ tự/nội dung thi công thật theo `TASK x.y` ở `docs/refactor/TASK-INDEX.md` (đối chiếu Batch↔Task: `docs/refactor/BATCH-TASK-MAP.md`), không tự suy diễn theo bảng Batch.
+- Kiến trúc mục tiêu Phase 2 đã duyệt (ADR-080, `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`) nhưng CHƯA migrate — thứ tự/nội dung thi công thật theo `TASK x.y` ở `docs/VIECLAM88_TASK_REGISTRY_V2.3.md` (đối chiếu Batch↔Task: `docs/refactor/BATCH-TASK-MAP.md`), không tự suy diễn theo bảng Batch.
