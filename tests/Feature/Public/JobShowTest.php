@@ -89,6 +89,34 @@ class JobShowTest extends TestCase
         $response->assertSee('application/ld+json', false);
     }
 
+    public function test_job_json_ld_escapes_script_closing_payload_and_stays_valid_json(): void
+    {
+        $xssPayload = '</script><script>alert(1)</script>';
+
+        $job = $this->createJob([
+            'title' => 'Cong nhan XSS '.$xssPayload,
+            'job_description' => 'Mo ta '.$xssPayload,
+        ]);
+
+        $response = $this->get(route('jobs.show', $job->slug))->assertOk();
+        $content = $response->getContent();
+
+        // Payload không được phép tạo ra thẻ <script> mới thực thi được trong response.
+        $this->assertStringNotContainsString('</script><script>alert(1)</script>', $content);
+
+        // Đúng một thẻ JSON-LD tồn tại, trích xuất và decode phải thành công.
+        $this->assertSame(
+            1,
+            preg_match('#<script type="application/ld\+json">(.*?)</script>#s', $content, $matches)
+        );
+
+        $jsonLd = json_decode($matches[1], true);
+
+        $this->assertNotNull($jsonLd, 'JSON-LD phải parse được, không bị gãy cú pháp do payload.');
+        $this->assertSame('Cong nhan XSS '.$xssPayload, $jsonLd['title']);
+        $this->assertSame('Mo ta '.$xssPayload, $jsonLd['description']);
+    }
+
     public function test_paused_job_keeps_url_with_status_banner_and_cta(): void
     {
         $job = $this->createJob(['status' => 'paused', 'title' => 'Cong nhan tam dung']);
