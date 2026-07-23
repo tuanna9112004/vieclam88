@@ -9,6 +9,7 @@ use App\Models\JobWorkShift;
 use App\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class DuplicateJobAction
 {
@@ -48,6 +49,7 @@ class DuplicateJobAction
     {
         return DB::transaction(function () use ($job, $actor) {
             $source = Job::query()->whereKey($job->getKey())->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('duplicate', $source);
 
             $this->guardReferences->handle($source);
 

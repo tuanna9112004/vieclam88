@@ -212,8 +212,8 @@ viết test cho các phần này.
 - [ ] Candidate có `status = merged` không tạo được `applications` mới, không sửa được thông
       tin, không làm nguồn/đích của một merge khác.
 - [ ] Candidate đích hiển thị được đầy đủ lịch sử Application từ candidate nguồn (truy vấn
-      "merged family" — `docs/CORE-FLOWS.md` mục 6.3), với Staff vẫn lọc theo cơ sở của mình,
-      Admin thấy toàn bộ.
+      "merged family" — `docs/CORE-FLOWS.md` mục 6.3), với Branch Admin/Staff vẫn lọc
+      Application và metadata Candidate nguồn theo cơ sở của mình, Super Admin thấy toàn bộ.
 - [ ] Merge nhiều tầng (A merge vào B, sau đó B merge vào C): candidate đích cuối (C) hiển thị
       được đầy đủ Application của cả A và B qua truy vấn family đệ quy.
 - [ ] Không tạo được vòng lặp merge (X merge vào Y khi Y đã nằm trong chuỗi dẫn tới X bị từ
@@ -387,11 +387,11 @@ schema):
       `owner_branch_id`; `company_contacts` dù `is_public=true` cũng không thay thế CTA của cơ
       sở.
 - [ ] Mọi thao tác trên Application ghi đúng người thực hiện trên bảng lịch sử tương ứng.
-- [ ] Staff truy cập `GET /hr/ung-vien/{candidate}` khi merged family của Candidate đó không có
-      Application nào thuộc cơ sở của Staff → 403 (`docs/CORE-FLOWS.md` mục 6.4).
-- [ ] Staff truy cập Candidate mà merged family có ít nhất 1 Application thuộc cơ sở mình → xem
-      được trang, nhưng chỉ thấy Application thuộc cơ sở mình trong family đó; Admin thấy toàn
-      bộ family không giới hạn cơ sở.
+- [ ] Branch Admin/Staff truy cập `GET /hr/ung-vien/{candidate}` khi merged family của Candidate
+      đó không có Application nào thuộc cơ sở mình → 403 (`docs/CORE-FLOWS.md` mục 6.4).
+- [ ] Branch Admin/Staff truy cập Candidate mà merged family có ít nhất 1 Application thuộc cơ
+      sở mình → xem được trang, nhưng chỉ thấy Application và metadata Candidate nguồn liên quan
+      cơ sở mình; Super Admin thấy toàn bộ family không giới hạn cơ sở.
 
 ### 4.1. Transfer Branch
 
@@ -431,6 +431,11 @@ schema):
       ADR-028).
 - [ ] `staff` không quản lý user/branch; `branch_admin` chỉ quản lý Staff và Branch đúng cơ sở;
       `super_admin` giữ quyền toàn hệ thống.
+- [ ] Request mutation Job/Application đã authorize ở cơ sở A nhưng ownership được chuyển sang
+      cơ sở B trước khi mutation lấy lock → Action tái authorize trên bản ghi đã khóa, trả `403`
+      và không tạo row/history hay sửa dữ liệu.
+- [ ] Super Admin vẫn thực hiện được mutation sau khi Job/Application chuyển cơ sở; guard sau
+      lock không scope nhầm quyền toàn hệ thống.
 - [ ] Guest (chưa đăng nhập) không truy cập được bất kỳ dữ liệu nội bộ nào (`application_notes`,
       danh sách `/hr/*`).
 - [ ] Xuất CSV chỉ chứa các cột được phép xuất; mỗi lần xuất tạo đúng 1 bản ghi `export_logs`.

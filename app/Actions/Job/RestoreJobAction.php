@@ -5,6 +5,7 @@ namespace App\Actions\Job;
 use App\Models\Job;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class RestoreJobAction
@@ -20,6 +21,7 @@ class RestoreJobAction
                 ->whereKey($job->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
+            Gate::forUser($actor)->authorize('restore', $lockedJob);
 
             if (! $lockedJob->trashed()) {
                 throw ValidationException::withMessages([

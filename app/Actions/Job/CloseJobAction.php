@@ -6,6 +6,7 @@ use App\Enums\JobCloseReason;
 use App\Models\Job;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class CloseJobAction
 {
@@ -19,6 +20,7 @@ class CloseJobAction
         return DB::transaction(function () use ($job, $actor, $closeReason) {
             /** @var Job $lockedJob */
             $lockedJob = Job::whereKey($job->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('close', $lockedJob);
 
             $lockedJob->close_reason = $closeReason;
 

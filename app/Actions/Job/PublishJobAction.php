@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -15,9 +16,8 @@ use Illuminate\Validation\ValidationException;
  * Điều kiện 1-2 (Job tồn tại, chưa `deleted_at`) do route model binding + SoftDeletes global
  * scope đảm nhiệm (Job trashed không bao giờ tới được Action này). Điều kiện 6 (`owner_branch_id`
  * khác null) luôn đúng vì cột NOT NULL từ lúc tạo (ADR-046) — không kiểm tra lại. Điều kiện 22
- * (authorization) do `JobPolicy::publish()`/`PublishJobRequest::authorize()` xử lý trước khi
- * Action này chạy — không lặp lại ở đây (403 khác bản chất với 21 điều kiện dữ liệu, vốn trả
- * 422).
+ * (authorization) được `PublishJobRequest` chặn sớm và Action tái xác nhận bằng
+ * `JobPolicy::publish()` sau khi khóa Job, trước 21 điều kiện dữ liệu (các lỗi dữ liệu trả 422).
  *
  * Salary Predicate (điều kiện 19) theo `docs/CORE-FLOWS.md` mục 1.2 + `docs/ACCEPTANCE-CRITERIA.md`
  * (2/3 nguồn đồng thuận — `docs/decisions/company-and-job-domain.md` ADR-060 ghi khác, tài liệu
@@ -39,6 +39,7 @@ class PublishJobAction
         return DB::transaction(function () use ($job, $actor, $overrideReason) {
             /** @var Job $lockedJob */
             $lockedJob = Job::whereKey($job->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('publish', $lockedJob);
 
             $usedOverride = $this->assertPredicate($lockedJob, $actor, $overrideReason);
 

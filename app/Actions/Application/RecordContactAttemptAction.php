@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Models\ApplicationContactAttempt;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * docs/CORE-FLOWS.md muc 4, 5.2, 5.4: ghi Contact Log — contacted_by/contacted_at/workflow_cycle
@@ -23,6 +24,7 @@ class RecordContactAttemptAction
         return DB::transaction(function () use ($application, $data, $actor) {
             /** @var Application $lockedApplication */
             $lockedApplication = Application::whereKey($application->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('recordContact', $lockedApplication);
 
             return ApplicationContactAttempt::create([
                 'application_id' => $lockedApplication->id,

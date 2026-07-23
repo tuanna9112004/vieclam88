@@ -8,6 +8,7 @@ use App\Models\ApplicationContactAttempt;
 use App\Models\ApplicationStatusHistory;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -36,8 +37,7 @@ class ChangeApplicationStageAction
     public function __construct(
         private readonly CloseApplicationAction $closeAction,
         private readonly ReopenApplicationAction $reopenAction,
-    ) {
-    }
+    ) {}
 
     /**
      * Nguon duy nhat cho UI (hr.applications.show) biet option "tien" hop le tu 1 stage — cung
@@ -77,6 +77,7 @@ class ChangeApplicationStageAction
         return DB::transaction(function () use ($application, $data, $toStage, $actor) {
             /** @var Application $locked */
             $locked = Application::whereKey($application->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('changeStage', $locked);
 
             $fromStage = $locked->stage;
 

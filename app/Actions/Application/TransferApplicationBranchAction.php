@@ -7,6 +7,7 @@ use App\Models\ApplicationBranchHistory;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -19,6 +20,13 @@ class TransferApplicationBranchAction
         return DB::transaction(function () use ($application, $toBranch, $actor, $reason) {
             /** @var Application $lockedApp */
             $lockedApp = Application::whereKey($application->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('transferBranch', $lockedApp);
+
+            /** @var Branch $lockedToBranch */
+            $lockedToBranch = Branch::withTrashed()
+                ->whereKey($toBranch->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
             if (trim($reason) === '') {
                 throw ValidationException::withMessages([
@@ -26,7 +34,7 @@ class TransferApplicationBranchAction
                 ]);
             }
 
-            if ($toBranch->trashed() || $toBranch->status !== 'active') {
+            if ($lockedToBranch->trashed() || $lockedToBranch->status !== 'active') {
                 throw ValidationException::withMessages([
                     'to_branch_id' => 'Cơ sở đích phải đang hoạt động.',
                 ]);
@@ -34,19 +42,19 @@ class TransferApplicationBranchAction
 
             $fromBranchId = $lockedApp->owner_branch_id;
 
-            if ((int) $fromBranchId === (int) $toBranch->id) {
+            if ((int) $fromBranchId === (int) $lockedToBranch->id) {
                 throw ValidationException::withMessages([
                     'to_branch_id' => 'Cơ sở đích phải khác cơ sở hiện tại của hồ sơ.',
                 ]);
             }
 
-            $lockedApp->owner_branch_id = $toBranch->id;
+            $lockedApp->owner_branch_id = $lockedToBranch->id;
             $lockedApp->save();
 
             ApplicationBranchHistory::create([
                 'application_id' => $lockedApp->id,
                 'from_branch_id' => $fromBranchId,
-                'to_branch_id' => $toBranch->id,
+                'to_branch_id' => $lockedToBranch->id,
                 'transferred_by' => $actor->id,
                 'reason' => $reason,
             ]);

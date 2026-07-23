@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Models\ApplicationStatusHistory;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -25,6 +26,7 @@ class CloseApplicationAction
         return DB::transaction(function () use ($application, $closeReason, $actor) {
             /** @var Application $locked */
             $locked = Application::whereKey($application->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('changeStage', $locked);
 
             if (! in_array($locked->stage, self::CLOSABLE_STAGES, true)) {
                 throw ValidationException::withMessages([

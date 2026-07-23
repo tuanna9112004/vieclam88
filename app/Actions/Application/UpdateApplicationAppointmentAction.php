@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Models\ApplicationAppointment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -23,9 +24,16 @@ class UpdateApplicationAppointmentAction
      */
     public function handle(Application $application, ApplicationAppointment $appointment, array $data, User $actor): ApplicationAppointment
     {
-        return DB::transaction(function () use ($appointment, $data, $actor) {
+        return DB::transaction(function () use ($application, $appointment, $data, $actor) {
+            /** @var Application $lockedApplication */
+            $lockedApplication = Application::whereKey($application->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('updateAppointment', $lockedApplication);
+
             /** @var ApplicationAppointment $locked */
-            $locked = ApplicationAppointment::whereKey($appointment->id)->lockForUpdate()->firstOrFail();
+            $locked = ApplicationAppointment::whereKey($appointment->id)
+                ->where('application_id', $lockedApplication->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
             if ($locked->status !== 'scheduled') {
                 throw ValidationException::withMessages([

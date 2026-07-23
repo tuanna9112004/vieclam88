@@ -8,6 +8,8 @@ use App\Models\CompanyLocation;
 use App\Models\Job;
 use App\Models\JobLocation;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -24,33 +26,40 @@ class SaveJobDraftAction
      */
     public function handle(array $data, User $actor, ?Job $job = null): Job
     {
-        $companyLocationId = $data['company_location_id'] ?? null;
-        unset($data['company_location_id']);
+        return DB::transaction(function () use ($data, $actor, $job) {
+            $companyLocationId = $data['company_location_id'] ?? null;
+            unset($data['company_location_id']);
 
-        $this->guardContactBelongsToCompany($data['company_contact_id'] ?? null, $data['company_id']);
+            if ($job !== null) {
+                $job = Job::whereKey($job->id)->lockForUpdate()->firstOrFail();
+                Gate::forUser($actor)->authorize('update', $job);
+            }
 
-        $data['slug'] = $this->uniqueSlug($data['title'], $job?->id);
+            $this->guardContactBelongsToCompany($data['company_contact_id'] ?? null, $data['company_id']);
 
-        if ($job) {
-            // hr.jobs.update không được sửa owner_branch_id (docs/CORE-FLOWS.md mục 1.1) — bỏ
-            // qua dù client có gửi, không tin field này từ input.
-            unset($data['owner_branch_id']);
-            $data['updated_by'] = $actor->id;
-            $job->update($data);
-        } else {
-            // Staff tự động gán owner_branch_id = branch của mình, không đọc từ input; Admin
-            // bắt buộc chọn tường minh (đã ép ở StoreJobRequest).
-            $data['owner_branch_id'] = $actor->isSuperAdmin() ? $data['owner_branch_id'] : $actor->branch_id;
-            $data['status'] = 'draft';
-            $data['created_by'] = $actor->id;
-            $data['public_id'] = (string) Str::ulid();
-            $data['code'] = $this->uniqueCode();
-            $job = Job::create($data);
-        }
+            $data['slug'] = $this->uniqueSlug($data['title'], $job?->id);
 
-        $this->syncPrimaryLocation($job, $companyLocationId, $data['company_id']);
+            if ($job) {
+                // hr.jobs.update không được sửa owner_branch_id (docs/CORE-FLOWS.md mục 1.1) — bỏ
+                // qua dù client có gửi, không tin field này từ input.
+                unset($data['owner_branch_id']);
+                $data['updated_by'] = $actor->id;
+                $job->update($data);
+            } else {
+                // Staff tự động gán owner_branch_id = branch của mình, không đọc từ input; Admin
+                // bắt buộc chọn tường minh (đã ép ở StoreJobRequest).
+                $data['owner_branch_id'] = $actor->isSuperAdmin() ? $data['owner_branch_id'] : $actor->branch_id;
+                $data['status'] = 'draft';
+                $data['created_by'] = $actor->id;
+                $data['public_id'] = (string) Str::ulid();
+                $data['code'] = $this->uniqueCode();
+                $job = Job::create($data);
+            }
 
-        return $job;
+            $this->syncPrimaryLocation($job, $companyLocationId, $data['company_id']);
+
+            return $job;
+        });
     }
 
     protected function syncPrimaryLocation(Job $job, ?int $companyLocationId, int $companyId): void

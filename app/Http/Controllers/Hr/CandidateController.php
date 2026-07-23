@@ -37,6 +37,14 @@ class CandidateController extends Controller
 
         $mergedSources = Candidate::whereIn('id', $familyIds)
             ->where('id', '!=', $root->id)
+            ->when(
+                ! $user->isSuperAdmin(),
+                fn ($q) => $q->whereHas(
+                    'applications',
+                    fn ($applicationQuery) => $applicationQuery
+                        ->where('owner_branch_id', $user->branch_id)
+                )
+            )
             ->with('mergedBy')
             ->get();
 

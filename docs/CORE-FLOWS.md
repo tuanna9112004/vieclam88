@@ -258,6 +258,11 @@ dụng cho mọi thay đổi quan trọng khác (`application_branch_histories`,
 Phải có test truy cập trực tiếp URL, không chỉ ẩn nút giao diện — ví dụ: Staff cơ sở A gửi
 `PUT`/`POST` cho Job thuộc cơ sở B → `403`.
 
+Mọi mutation Job theo cơ sở phải mở transaction, `lockForUpdate` Job rồi tái chạy Policy trên
+`owner_branch_id` mới nhất trước khi đọc dữ liệu nguồn hoặc ghi. FormRequest chỉ là chặn sớm;
+không được tin kết quả authorize cũ nếu Super Admin chuyển Job sang cơ sở khác trong lúc request
+đang chờ lock.
+
 ### 1.2. Job Publish Predicate chính thức — 22 điều kiện (Service kiểm tra, không chỉ ẩn nút ở view) (ADR-047, ADR-060)
 
 Publish (`draft→published` hoặc `paused→published`) chỉ được thực hiện khi **toàn bộ 22 điều
@@ -646,9 +651,12 @@ lần mở lại gần nhất) không được dùng làm bằng chứng mở kh
 Quy tắc chung:
 
 - Mọi transition đi qua `ChangeApplicationStageAction` (không sửa cột `stage` trực tiếp từ
-  controller). Action xử lý: authorization, validate transition theo bảng trên (kèm điều kiện
-  chu kỳ, mục 5.4), kiểm tra dữ liệu bắt buộc, khóa row (`lockForUpdate`) chống concurrent
-  update, ghi `application_status_histories`, cập nhật `applications`, trong 1 transaction.
+  controller). Action xử lý trong 1 transaction: khóa row (`lockForUpdate`), tái authorize trên
+  `owner_branch_id` mới nhất, validate transition theo bảng trên (kèm điều kiện chu kỳ, mục 5.4),
+  kiểm tra dữ liệu bắt buộc, ghi `application_status_histories` và cập nhật `applications`.
+- Contact/Appointment/Note cũng phải khóa parent Application trước, tái authorize rồi mới khóa/
+  ghi child record. Kết quả authorize ở FormRequest không được sống sót qua một transfer branch
+  đã commit trong lúc request chờ lock.
 - Appointment bị `cancelled`/`no_show` **không** tự động lùi hoặc đổi stage. Stage giữ nguyên
   cho tới khi staff chủ động tạo appointment mới hoặc chuyển `closed`.
 - Contact result và Application stage là 2 khái niệm khác nhau (ADR-009): ghi nhận
@@ -797,6 +805,9 @@ lockForUpdate Application → kiểm tra 7 điều kiện trên
 
 Không tạo Application mới khi chuyển cơ sở. Không có route/action nào khác được phép sửa
 `applications.owner_branch_id` ngoài Action này.
+Mọi Action ghi Contact/Stage/Appointment/Note phải khóa Application và tái authorize sau lock;
+vì vậy request của cơ sở cũ đã qua FormRequest nhưng đang chờ sẽ bị `403` nếu transfer commit
+trước khi request đó lấy được lock.
 
 ### 6.2. Duplicate Candidate Contract chính thức (4 trường hợp, ADR-040)
 
@@ -922,9 +933,10 @@ chuỗi), nhưng vẫn kiểm tra tường minh làm lớp bảo vệ cuối.
 3. Trang chi tiết Candidate luôn hiển thị theo **root** — `applications` hiển thị = UNION của
    `applications.candidate_id IN (family)`, sắp xếp theo thời gian, đánh dấu rõ bản ghi nào
    `candidate_id != root.id` kèm tên candidate nguồn tương ứng. **Không phải ngoại lệ của scope
-   theo cơ sở**: Staff xem trang này vẫn chỉ thấy các Application trong family có
-   `owner_branch_id = users.branch_id` của mình — Application thuộc cơ sở khác trong cùng
-   family vẫn ẩn với Staff, chỉ Admin thấy toàn bộ family không giới hạn cơ sở.
+   theo cơ sở**: Branch Admin/Staff xem trang này vẫn chỉ thấy các Application trong family có
+   `owner_branch_id = users.branch_id` của mình. Metadata của Candidate nguồn (tên, lý do gộp)
+   cũng chỉ hiển thị khi Candidate nguồn có Application thuộc cơ sở đó; nguồn chỉ liên quan cơ
+   sở khác phải ẩn. Chỉ Super Admin thấy toàn bộ family không giới hạn cơ sở.
 4. Không dùng trực tiếp `WHERE applications.candidate_id = X` ở bất kỳ báo cáo/danh sách nào
    liên quan tới "toàn bộ hồ sơ của 1 người" — luôn phải qua truy vấn family ở trên, vì candidate
    nguồn không bị đổi `candidate_id` trên các Application trùng job (xem bên dưới).
@@ -971,16 +983,16 @@ thể có nhiều Application ở nhiều cơ sở khác nhau qua thời gian). 
 Candidate (`hr.candidates.show`, mục truy vấn "merged family" — mục 6.3) tính theo dữ liệu
 Application, không theo một cột cố định trên Candidate:
 
-- **Staff** chỉ mở được trang chi tiết Candidate khi **merged family** của Candidate đó (mục
-  6.3) có **ít nhất một** Application với `owner_branch_id = users.branch_id` của Staff. Nếu
-  không có Application nào trong family thuộc cơ sở của Staff → `GET
+- **Branch Admin/Staff** chỉ mở được trang chi tiết Candidate khi **merged family** của Candidate
+  đó (mục 6.3) có **ít nhất một** Application với `owner_branch_id = users.branch_id` của mình. Nếu
+  không có Application nào trong family thuộc cơ sở của người dùng → `GET
   /hr/ung-vien/{candidate}` trả **403** (không hiển thị trang rỗng, không redirect lộ thông tin
   Candidate tồn tại hay không).
-- Sau khi mở được trang (đủ điều kiện trên), Staff **chỉ thấy** các Application trong family
-  thuộc cơ sở của mình — Application của family thuộc cơ sở khác vẫn ẩn (đã mô tả ở mục 6.3,
-  bước 3).
-- **Admin** không bị giới hạn — mở được mọi Candidate, thấy toàn bộ merged family không phân
-  biệt cơ sở.
+- Sau khi mở được trang (đủ điều kiện trên), Branch Admin/Staff **chỉ thấy** các Application và
+  metadata Candidate nguồn trong family thuộc cơ sở của mình; dữ liệu của cơ sở khác vẫn ẩn
+  (đã mô tả ở mục 6.3, bước 3).
+- **Super Admin** không bị giới hạn — mở được mọi Candidate, thấy toàn bộ merged family không
+  phân biệt cơ sở.
 - Kiểm tra quyền này bắt buộc thực hiện ở **backend** (Policy/Action), không chỉ ẩn nút hoặc
   route ở tầng view — truy cập trực tiếp URL phải bị chặn đúng như trên.
 

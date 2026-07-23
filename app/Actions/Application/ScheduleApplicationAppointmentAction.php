@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Models\ApplicationAppointment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * docs/CORE-FLOWS.md muc 5.3, 5.4: tao lich goi lai/phong van. Neu Application dang co 1 ban ghi
@@ -24,6 +25,7 @@ class ScheduleApplicationAppointmentAction
         return DB::transaction(function () use ($application, $data, $actor) {
             /** @var Application $lockedApplication */
             $lockedApplication = Application::whereKey($application->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('scheduleAppointment', $lockedApplication);
 
             ApplicationAppointment::where('application_id', $lockedApplication->id)
                 ->where('type', $data['type'])

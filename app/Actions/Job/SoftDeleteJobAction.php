@@ -5,6 +5,7 @@ namespace App\Actions\Job;
 use App\Models\Job;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class SoftDeleteJobAction
@@ -13,6 +14,7 @@ class SoftDeleteJobAction
     {
         DB::transaction(function () use ($job, $actor) {
             $lockedJob = Job::query()->whereKey($job->getKey())->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('delete', $lockedJob);
 
             if ($lockedJob->applications()->exists()) {
                 throw ValidationException::withMessages([

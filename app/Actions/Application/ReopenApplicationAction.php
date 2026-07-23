@@ -8,14 +8,15 @@ use App\Models\Candidate;
 use App\Models\Job;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Reopen Application contract chinh thuc (docs/CORE-FLOWS.md muc 5.5, `closed -> new`). 8 dieu
  * kien bat buoc, tat ca kiem tra trong 1 transaction voi lockForUpdate tren Application truoc
- * khi kiem tra. Nguoi thuc hien (Staff dung co so/Admin) da duoc ApplicationPolicy::changeStage
- * xac nhan o tang Request — Action nay chi xu ly them dieu kien "Job khong con mo thi chi Admin"
- * (dieu kien 6), vi day la predicate phu thuoc du lieu, khong phai phan quyen tinh.
+ * khi kiem tra. Action tai xac nhan ApplicationPolicy::changeStage tren ban ghi da khoa de
+ * quyen cu khong song sot neu Application vua bi chuyen co so; dieu kien "Job khong con mo thi
+ * chi Admin" (dieu kien 6) la predicate phu thuoc du lieu.
  */
 class ReopenApplicationAction
 {
@@ -24,6 +25,7 @@ class ReopenApplicationAction
         return DB::transaction(function () use ($application, $reason, $actor) {
             /** @var Application $locked */
             $locked = Application::whereKey($application->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('changeStage', $locked);
 
             if ($locked->stage !== 'closed') {
                 throw ValidationException::withMessages([

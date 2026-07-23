@@ -132,6 +132,52 @@ class CandidateShowTest extends TestCase
         $response->assertSee('Cung so dien thoai');
     }
 
+    public function test_branch_user_only_sees_merged_sources_linked_to_own_branch(): void
+    {
+        fake()->unique(true);
+
+        $ownBranch = Branch::factory()->create(['status' => 'active']);
+        $otherBranch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $ownBranch->id]);
+        $mergingAdmin = User::factory()->admin()->create();
+        $root = Candidate::factory()->create(['full_name' => 'Ung Vien Goc']);
+        $ownSource = Candidate::factory()->create([
+            'full_name' => 'Nguon Cua Co So Minh',
+            'status' => 'merged',
+            'merged_into_candidate_id' => $root->id,
+            'merged_at' => now(),
+            'merged_by' => $mergingAdmin->id,
+            'merge_reason' => 'Ly do noi bo co so minh',
+        ]);
+        $otherSource = Candidate::factory()->create([
+            'full_name' => 'Nguon Cua Co So Khac',
+            'status' => 'merged',
+            'merged_into_candidate_id' => $root->id,
+            'merged_at' => now(),
+            'merged_by' => $mergingAdmin->id,
+            'merge_reason' => 'Ly do bi mat co so khac',
+        ]);
+
+        Application::factory()->create([
+            'candidate_id' => $ownSource->id,
+            'job_id' => Job::factory()->create(['owner_branch_id' => $ownBranch->id]),
+            'owner_branch_id' => $ownBranch->id,
+        ]);
+        Application::factory()->create([
+            'candidate_id' => $otherSource->id,
+            'job_id' => Job::factory()->create(['owner_branch_id' => $otherBranch->id]),
+            'owner_branch_id' => $otherBranch->id,
+        ]);
+
+        $response = $this->actingAs($branchAdmin)->get(route('hr.candidates.show', $root));
+
+        $response->assertOk();
+        $this->assertSame([$ownSource->id], $response->viewData('mergedSources')->pluck('id')->all());
+        $response->assertSee('Nguon Cua Co So Minh');
+        $response->assertDontSee('Nguon Cua Co So Khac');
+        $response->assertDontSee('Ly do bi mat co so khac');
+    }
+
     public function test_admin_sees_pending_duplicate_reviews_for_the_family_but_staff_does_not(): void
     {
         $staff = User::factory()->create();
