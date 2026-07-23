@@ -52,57 +52,48 @@
                 </div>
 
                 <form method="GET" action="{{ route('jobs.index') }}" class="d-flex flex-column gap-3">
+                    {{-- Tu khoa khong con o dang truong nhap rieng trong bo loc — van giu lai
+                         (an) de khong mat tim kiem dang den tu trang chu khi ap dung bo loc khac. --}}
+                    <input type="hidden" name="q" value="{{ $filters['q'] ?? '' }}">
+
                     <div>
-                        <label for="q" class="form-label fw-semibold">Từ khóa</label>
-                        <input type="search" id="q" name="q" class="form-control" placeholder="Tên việc làm..." value="{{ $filters['q'] ?? '' }}">
+                        <label class="form-label fw-semibold">Khu công nghiệp</label>
+                        <x-multi-select
+                            name="industrial_park_id"
+                            :options="$industrialParks->pluck('name', 'id')->all()"
+                            :selected="$filters['industrial_park_id'] ?? []"
+                            placeholder="Tất cả"
+                        />
                     </div>
 
                     <div>
-                        <label for="industrial_park_id" class="form-label fw-semibold">Khu công nghiệp</label>
-                        <select id="industrial_park_id" name="industrial_park_id" class="form-select">
-                            <option value="">Tất cả</option>
-                            @foreach ($industrialParks as $park)
-                                <option value="{{ $park->id }}" @selected((string) ($filters['industrial_park_id'] ?? '') === (string) $park->id)>
-                                    {{ $park->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <label class="form-label fw-semibold">Đơn vị hành chính</label>
+                        <x-multi-select
+                            name="administrative_unit_id"
+                            :options="$administrativeUnits->pluck('name', 'id')->all()"
+                            :selected="$filters['administrative_unit_id'] ?? []"
+                            placeholder="Tất cả"
+                        />
                     </div>
 
                     <div>
-                        <label for="administrative_unit_id" class="form-label fw-semibold">Đơn vị hành chính</label>
-                        <select id="administrative_unit_id" name="administrative_unit_id" class="form-select">
-                            <option value="">Tất cả</option>
-                            @foreach ($administrativeUnits as $unit)
-                                <option value="{{ $unit->id }}" @selected((string) ($filters['administrative_unit_id'] ?? '') === (string) $unit->id)>
-                                    {{ $unit->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <label class="form-label fw-semibold">Mức lương</label>
+                        <x-multi-select
+                            name="salary"
+                            :options="$salaryBuckets"
+                            :selected="$filters['salary'] ?? []"
+                            placeholder="Tất cả"
+                        />
                     </div>
 
                     <div>
-                        <label for="work_shift_id" class="form-label fw-semibold">Ca làm việc</label>
-                        <select id="work_shift_id" name="work_shift_id" class="form-select">
-                            <option value="">Tất cả</option>
-                            @foreach ($workShifts as $shift)
-                                <option value="{{ $shift->id }}" @selected((string) ($filters['work_shift_id'] ?? '') === (string) $shift->id)>
-                                    {{ $shift->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="salary" class="form-label fw-semibold">Mức lương</label>
-                        <select id="salary" name="salary" class="form-select">
-                            <option value="">Tất cả</option>
-                            @foreach ($salaryBuckets as $value => $label)
-                                <option value="{{ $value }}" @selected(($filters['salary'] ?? '') === $value)>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <label class="form-label fw-semibold">Ca làm việc</label>
+                        <x-multi-select
+                            name="work_shift_id"
+                            :options="$workShifts->pluck('name', 'id')->all()"
+                            :selected="$filters['work_shift_id'] ?? []"
+                            placeholder="Tất cả"
+                        />
                     </div>
 
                     <div class="form-check" style="min-height:48px">
@@ -131,10 +122,15 @@
 
         <div class="col-lg-9">
             <form method="GET" action="{{ route('jobs.index') }}" class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                @foreach (['q', 'industrial_park_id', 'administrative_unit_id', 'work_shift_id', 'salary', 'shuttle_bus', 'accommodation'] as $preserved)
+                @foreach (['q', 'shuttle_bus', 'accommodation'] as $preserved)
                     @if (! empty($filters[$preserved]))
                         <input type="hidden" name="{{ $preserved }}" value="{{ $filters[$preserved] }}">
                     @endif
+                @endforeach
+                @foreach (['industrial_park_id', 'administrative_unit_id', 'work_shift_id', 'salary'] as $multiPreserved)
+                    @foreach ((array) ($filters[$multiPreserved] ?? []) as $value)
+                        <input type="hidden" name="{{ $multiPreserved }}[]" value="{{ $value }}">
+                    @endforeach
                 @endforeach
 
                 <span class="text-secondary fw-semibold">{{ $jobs->total() }} việc làm</span>

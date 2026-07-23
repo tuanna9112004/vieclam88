@@ -4,35 +4,82 @@
 @section('meta_description', 'Tìm việc làm khu công nghiệp, công nhân, kỹ thuật đang tuyển — cập nhật liên tục, ứng tuyển nhanh.')
 @section('canonical', route('home'))
 
+@php
+    $heroSalaryBuckets = [
+        'thoa-thuan' => 'Thỏa thuận',
+        'duoi-10' => 'Dưới 10 triệu',
+        '10-15' => '10 - 15 triệu',
+        '15-20' => '15 - 20 triệu',
+        '20-30' => '20 - 30 triệu',
+        '30-50' => '30 - 50 triệu',
+        'tren-50' => 'Trên 50 triệu',
+    ];
+@endphp
+
 @section('content')
 <section class="pub-hero py-5">
     <div class="container">
-        <h1 class="h2 fw-bold mb-2">Công việc mơ ước của bạn</h1>
-        <p class="fs-5 mb-4" style="max-width: 640px;">
-            Việc làm khu công nghiệp, công nhân, kỹ thuật đang tuyển tại nhiều tỉnh — cập nhật liên tục, ứng tuyển nhanh không cần tài khoản.
-        </p>
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <p class="pub-hero__eyebrow mb-1">Cùng tìm kiếm</p>
+                <h1 class="h2 fw-bold mb-4">Công việc mơ ước của bạn</h1>
 
-        <form method="GET" action="{{ route('jobs.index') }}" class="pub-hero__search d-flex flex-column flex-md-row gap-2">
-            <label for="hero-search-q" class="visually-hidden">Tìm việc làm theo tên</label>
-            <input
-                type="search"
-                id="hero-search-q"
-                name="q"
-                class="form-control text-dark"
-                style="min-height:48px"
-                placeholder="Tìm việc làm theo tên..."
-            >
-            <label for="hero-search-unit" class="visually-hidden">Khu vực</label>
-            <select id="hero-search-unit" name="administrative_unit_id" class="form-select text-dark" style="min-height:48px; max-width: 260px;">
-                <option value="">Tất cả khu vực</option>
-                @foreach ($administrativeUnits as $unit)
-                    <option value="{{ $unit->id }}">{{ $unit->name }}</option>
-                @endforeach
-            </select>
-            <button type="submit" class="btn btn-warning fw-semibold text-nowrap" style="min-height:48px">
-                Tìm việc ngay
-            </button>
-        </form>
+                <form method="GET" action="{{ route('jobs.index') }}" class="pub-hero__search">
+                    <div class="pub-hero__search-main">
+                        <span class="pub-hero__search-icon" aria-hidden="true">&#128269;</span>
+                        <label for="hero-search-q" class="visually-hidden">Tìm việc làm theo tên</label>
+                        <input
+                            type="search"
+                            id="hero-search-q"
+                            name="q"
+                            class="pub-hero__search-input"
+                            placeholder="Tìm kiếm việc làm"
+                        >
+                        <button type="submit" class="btn btn-primary fw-semibold pub-hero__search-submit">
+                            Tìm kiếm
+                        </button>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <div class="col-6">
+                            <x-multi-select
+                                name="administrative_unit_id"
+                                :options="$administrativeUnits->pluck('name', 'id')->all()"
+                                placeholder="Tất cả tỉnh thành"
+                            />
+                        </div>
+                        <div class="col-6">
+                            <x-multi-select
+                                name="salary"
+                                :options="$heroSalaryBuckets"
+                                placeholder="Tất cả mức lương"
+                            />
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="col-lg-5 d-none d-lg-block">
+                <div class="pub-hero__art">
+                    <div class="pub-hero__art-blob pub-hero__art-blob--1" aria-hidden="true"></div>
+                    <div class="pub-hero__art-blob pub-hero__art-blob--2" aria-hidden="true"></div>
+                    <div class="pub-hero__art-icon" aria-hidden="true">&#127981;</div>
+
+                    @if ($regions->isNotEmpty())
+                        <div class="pub-hero__tags">
+                            @foreach ($regions->take(6) as $region)
+                                <a
+                                    href="{{ route('jobs.index', ['administrative_unit_id' => $region->id]) }}"
+                                    class="pub-hero__tag text-decoration-none"
+                                >
+                                    {{ $region->name }} <span class="opacity-75">· {{ $region->jobs_count }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 

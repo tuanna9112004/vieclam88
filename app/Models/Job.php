@@ -214,27 +214,42 @@ class Job extends Model
     /**
      * Chỉ khớp qua company_location đang active và (nếu áp dụng) KCN/ca đang active — "quan hệ
      * active hợp lệ" trong contract danh sách public.
+     *
+     * @param  int|array<int, int>  $industrialParkId  Nhiều KCN được ghép OR.
      */
-    public function scopeInIndustrialPark(Builder $query, int $industrialParkId): Builder
+    public function scopeInIndustrialPark(Builder $query, int|array $industrialParkId): Builder
     {
-        return $query->whereHas('jobLocations.companyLocation', function (Builder $q) use ($industrialParkId) {
+        $ids = is_array($industrialParkId) ? $industrialParkId : [$industrialParkId];
+
+        return $query->whereHas('jobLocations.companyLocation', function (Builder $q) use ($ids) {
             $q->where('status', 'active')
-                ->where('industrial_park_id', $industrialParkId)
+                ->whereIn('industrial_park_id', $ids)
                 ->whereHas('industrialPark', fn (Builder $ip) => $ip->where('is_active', true));
         });
     }
 
-    public function scopeInAdministrativeUnit(Builder $query, int $administrativeUnitId): Builder
+    /**
+     * @param  int|array<int, int>  $administrativeUnitId  Nhiều tỉnh/thành được ghép OR (khớp
+     *     bất kỳ đơn vị nào trong danh sách), không phải AND — 1 Job chỉ cần 1 địa điểm hợp lệ.
+     */
+    public function scopeInAdministrativeUnit(Builder $query, int|array $administrativeUnitId): Builder
     {
-        return $query->whereHas('jobLocations.companyLocation', function (Builder $q) use ($administrativeUnitId) {
-            $q->where('status', 'active')->where('administrative_unit_id', $administrativeUnitId);
+        $ids = is_array($administrativeUnitId) ? $administrativeUnitId : [$administrativeUnitId];
+
+        return $query->whereHas('jobLocations.companyLocation', function (Builder $q) use ($ids) {
+            $q->where('status', 'active')->whereIn('administrative_unit_id', $ids);
         });
     }
 
-    public function scopeWithWorkShift(Builder $query, int $workShiftId): Builder
+    /**
+     * @param  int|array<int, int>  $workShiftId  Nhiều ca làm được ghép OR.
+     */
+    public function scopeWithWorkShift(Builder $query, int|array $workShiftId): Builder
     {
-        return $query->whereHas('jobWorkShifts', function (Builder $q) use ($workShiftId) {
-            $q->where('work_shift_id', $workShiftId)
+        $ids = is_array($workShiftId) ? $workShiftId : [$workShiftId];
+
+        return $query->whereHas('jobWorkShifts', function (Builder $q) use ($ids) {
+            $q->whereIn('work_shift_id', $ids)
                 ->whereHas('workShift', fn (Builder $ws) => $ws->where('is_active', true));
         });
     }
@@ -254,8 +269,22 @@ class Job extends Model
      * so khớp theo giao khoảng [min,max] trên salary_min/salary_max — NULL ở một đầu coi như
      * không giới hạn đầu đó, nhưng Job không có cả 2 (thực chất "thỏa thuận") không khớp bucket
      * số cụ thể nào.
+     *
+     * @param  string|array<int, string>  $bucket  Nhiều bucket được ghép OR (khớp bất kỳ khoảng
+     *     lương nào trong danh sách).
      */
-    public function scopeSalaryBucket(Builder $query, string $bucket): Builder
+    public function scopeSalaryBucket(Builder $query, string|array $bucket): Builder
+    {
+        $buckets = is_array($bucket) ? $bucket : [$bucket];
+
+        return $query->where(function (Builder $outer) use ($buckets) {
+            foreach ($buckets as $singleBucket) {
+                $outer->orWhere(fn (Builder $inner) => $this->applySalaryBucket($inner, $singleBucket));
+            }
+        });
+    }
+
+    protected function applySalaryBucket(Builder $query, string $bucket): Builder
     {
         if ($bucket === 'thoa-thuan') {
             return $query->where('salary_period', 'negotiable');

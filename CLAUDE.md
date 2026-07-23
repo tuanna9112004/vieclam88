@@ -53,24 +53,27 @@ npm run build
 
 `/vibe-task` là điểm vào mặc định; danh mục đầy đủ tại `docs/CLAUDE-SKILLS.md`. Skills nằm trong `.claude/skills/`.
 
-## Tiến độ hoàn thành Giai đoạn 9 - 10 & Core Admin Operations (PASS 700/700 tests)
+## Lịch sử hoàn thành (rút gọn)
 
-- **Transfer Application Branch (Luồng 6.1):** `TransferApplicationBranchAction` (Admin-only, lockForUpdate, Branch history, chuyển quyền tức thì).
-- **Candidate Duplicate Review (Luồng 6.2.2):** `ResolveCandidateDuplicateReviewAction` & `hr.duplicate-reviews` (Admin-only, nguồn sự thật server-side, không tự merge, đồng bộ `needs_duplicate_review`).
-- **Candidate Merge (Luồng 6.3):** `MergeCandidateAction` (Admin-only, root resolution, chống self/cycle merge, khóa source candidate, giữ lịch sử, close duplicate application).
-- **Candidate Anonymization (ADR-056):** `AnonymizeCandidateAction` (Admin-only, PII contract: mask candidates, contacts, 6 cột application PII, khóa merge/edit/reopen, giữ audit metadata).
-- **CSV Export & Audit Log (Mục 9):** `ExportApplicationsCsvAction` & `hr.applications.export` (Stream CSV dòng theo dòng, `CsvSanitizer` chống Formula Injection, Staff Branch isolation, ghi `export_logs`).
-- **Staff & Admin Dashboard Phase 1 (Mục 9.1 / ADR-058):** `GetDashboardStatsAction` & `GetAdminDashboardStatsAction` & `hr.dashboard` (11 thẻ KPI cards có link filter, Tỷ lệ chuyển đổi % Application->Started, bộ lọc Khoảng ngày/Cơ sở/Công ty/Job, Top Jobs & Companies breakdown, đếm chuẩn sau transfer/merge/duplicate).
-- **Database Baseline Audit (Mục DB):** `DatabaseIntegrityTest` (Audit 26 bảng schema, FK `restrictOnDelete`, unique `(candidate_id, job_id)`, append-only history models, rollback & migrate lifecycle, production seed `DemoSeeder`).
+- **GD 9-10 & Core Admin** (PASS 700/700): Transfer Application Branch, Candidate Duplicate Review/Merge/Anonymize, CSV Export (`export_logs`), Staff/Admin Dashboard (11 KPI), Database Baseline Audit.
+- **Remediation R01-R04** (PASS 708/708, commit `1faace1`/`6ce701d`/`4d3fc5a`): seeder production-safe, `db:restore-test` fail-closed, MariaDB backup/restore qua `mariadb-dump`/`mariadb` thật, fix Job JSON-LD XSS.
+- **Administrative Unit UI, Job duplicate/delete/restore, Pages/FAQ** (PASS 808/814, commit `b6bddf8` đã push): upsert ADR-070 chặn self/direct/deep cycle, Job duplicate không copy verification/history/Application, đóng gap Route Map (`pages`/`faqs` migration 027/028, `hr.settings` allowlist `PhaseOneSettingCatalog`).
 
-## Remediation Playbook GD 0-11 — R01/R02/R03/R04 DONE (PASS 708/708 tests)
+## Redesign giao diện Public + HR sidebar (commit `3802bc2` đã push; phần sau đây **CHƯA COMMIT**)
 
-- **R01 — Production-safe DatabaseSeeder:** `DatabaseSeeder` mặc định chỉ seed danh mục (WorkShift/RecruitmentSource/Setting), không còn `User::factory()` tạo `test@example.com`. `DemoSeeder` fail-closed ngoài `local`/`testing`. Admin production vẫn tạo qua `php artisan app:create-admin`.
-- **R02 — db:restore-test fail-closed:** `DatabaseRestoreTestCommand` validate `--target-db` bằng regex identifier an toàn, bắt buộc suffix/prefix `_restore_test`, so khớp mọi CSDL đã cấu hình (chặn trùng nguồn/dev/test/staging/production), fail-closed tuyệt đối khi `APP_ENV=production`, cleanup qua try/finally chỉ đụng đúng DB target đã xác minh.
-- **R03 — MariaDB backup/restore production-safe:** `DatabaseBackupCommand`/`DatabaseRestoreTestCommand` đổi engine sang `mariadb-dump`/`mariadb` client thật qua `proc_open` (không còn tự ghép SQL bằng `DB::table()->get()`), stream/nén gzip theo chunk 256KB (bộ nhớ không phụ thuộc kích thước DB), credential qua `defaults-extra-file` tạm (chmod 0600, không log), filename `vieclam88_backup_*.sql.gz` (chmod 0600/0700), retention chỉ xóa đúng file khớp pattern. Runbook `MARIADB-BACKUP-RESTORE.md` đã đồng bộ.
-- **R04 — Public Job JSON-LD XSS:** thêm `JSON_HEX_TAG/AMP/APOS/QUOT` vào `json_encode` structured data trang `jobs.show`, chặn payload `</script>` trong title/description/company đóng sớm thẻ script; giữ Unicode/dấu tiếng Việt đúng.
-- Commit: `1faace1` (R01), `6ce701d` (R02+R03), `4d3fc5a` (R04).
+- Public: `layouts/public.blade.php` (header sticky/offcanvas/footer), `.public-shell` design system, job card dùng chung (`public/jobs/_card.blade.php`), hero pill-search + minh họa CSS-only (không ảnh đối thủ).
+- Multi-select chip filter (`administrative_unit_id`/`salary`/`industrial_park_id`/`work_shift_id`, Alpine.js, component `components/multi-select.blade.php`); `Job::scopeIn*`/`scopeSalaryBucket`/`scopeWithWorkShift` nhận `int|array`; `JobIndexRequest::prepareForValidation()` chuẩn hoá scalar→array, tương thích ngược.
+- HR sidebar: `layouts/hr.blade.php` + `.hr-shell` — đã chuyển toàn bộ 28 view HR (trừ `auth/login`, `auth/password-change` vì chưa qua `EnsurePasswordChanged`).
+- Fix: `.job-card` thiếu `position:relative` khiến `stretched-link` phủ toàn trang; DB dev thiếu migrate `pages`/`faqs` (đã `php artisan migrate`, không phải `migrate:fresh`).
+- Blocker đã xử lý: `resources/banner.png` là banner quảng cáo thật của đối thủ (viec3mien, có logo/copy của họ) — không dùng trực tiếp theo `ui-guidelines.md`, đã tự vẽ minh họa CSS thay thế; file gốc chưa xoá.
+- Tài khoản test (dev only, không phải production): `admin.test@vieclam88.local` / `staff.test@vieclam88.local`, mật khẩu `Vieclam88Test2026`, bắt buộc đổi mật khẩu lần đầu (ADR-067).
+- Test: 430/430 HR, 91/91 Public, full suite 808/814 (6 lỗi env `DatabaseBackup*`/`DatabaseRestoreTest*` do thiếu binary `mariadb-dump`/`mariadb`, không phải regression).
 
 ## Compact
 
 Giữ mục tiêu, acceptance criteria, file đổi, lệnh/kết quả, blocker và tối đa 3 bước tiếp theo; bỏ output dài và kế hoạch cũ.
+
+**Bước tiếp theo:**
+1. Redesign giao diện Dashboard HR (đã yêu cầu, chưa bắt đầu).
+2. Review + commit phần HR sidebar/job card/hero/multi-select đang uncommitted (`git status`).
+3. Quyết định giữ hay xoá `resources/banner.png` (ảnh đối thủ chưa dùng).

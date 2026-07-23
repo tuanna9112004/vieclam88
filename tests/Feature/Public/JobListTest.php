@@ -121,6 +121,34 @@ class JobListTest extends TestCase
         $response->assertDontSee($other->title);
     }
 
+    public function test_filters_by_multiple_industrial_parks_matches_any_of_them(): void
+    {
+        $parkA = IndustrialPark::factory()->create(['administrative_unit_id' => $this->unit->id]);
+        $parkB = IndustrialPark::factory()->create(['administrative_unit_id' => $this->unit->id]);
+        $parkC = IndustrialPark::factory()->create(['administrative_unit_id' => $this->unit->id]);
+
+        $matchA = $this->createListedJob(
+            ['title' => 'Job KCN A'],
+            companyLocation: CompanyLocation::factory()->create(['industrial_park_id' => $parkA->id, 'administrative_unit_id' => null, 'status' => 'active'])
+        );
+        $matchB = $this->createListedJob(
+            ['title' => 'Job KCN B'],
+            companyLocation: CompanyLocation::factory()->create(['industrial_park_id' => $parkB->id, 'administrative_unit_id' => null, 'status' => 'active'])
+        );
+        $other = $this->createListedJob(
+            ['title' => 'Job KCN C khong chon'],
+            companyLocation: CompanyLocation::factory()->create(['industrial_park_id' => $parkC->id, 'administrative_unit_id' => null, 'status' => 'active'])
+        );
+
+        $response = $this->get(route('jobs.index', [
+            'industrial_park_id' => [$parkA->id, $parkB->id],
+        ]))->assertOk();
+
+        $response->assertSee($matchA->title);
+        $response->assertSee($matchB->title);
+        $response->assertDontSee($other->title);
+    }
+
     public function test_filter_excludes_job_when_related_industrial_park_is_inactive(): void
     {
         $park = IndustrialPark::factory()->inactive()->create(['administrative_unit_id' => $this->unit->id]);
@@ -156,6 +184,34 @@ class JobListTest extends TestCase
         $response->assertDontSee($other->title);
     }
 
+    public function test_filters_by_multiple_administrative_units_matches_any_of_them(): void
+    {
+        $unitA = AdministrativeUnit::factory()->create();
+        $unitB = AdministrativeUnit::factory()->create();
+        $unitC = AdministrativeUnit::factory()->create();
+
+        $matchA = $this->createListedJob(
+            ['title' => 'Job tinh A'],
+            companyLocation: CompanyLocation::factory()->create(['administrative_unit_id' => $unitA->id, 'status' => 'active'])
+        );
+        $matchB = $this->createListedJob(
+            ['title' => 'Job tinh B'],
+            companyLocation: CompanyLocation::factory()->create(['administrative_unit_id' => $unitB->id, 'status' => 'active'])
+        );
+        $other = $this->createListedJob(
+            ['title' => 'Job tinh C khong chon'],
+            companyLocation: CompanyLocation::factory()->create(['administrative_unit_id' => $unitC->id, 'status' => 'active'])
+        );
+
+        $response = $this->get(route('jobs.index', [
+            'administrative_unit_id' => [$unitA->id, $unitB->id],
+        ]))->assertOk();
+
+        $response->assertSee($matchA->title);
+        $response->assertSee($matchB->title);
+        $response->assertDontSee($other->title);
+    }
+
     public function test_filters_by_company(): void
     {
         $company = Company::factory()->create();
@@ -177,6 +233,25 @@ class JobListTest extends TestCase
         $response = $this->get(route('jobs.index', ['work_shift_id' => $shift->id]))->assertOk();
 
         $response->assertSee($match->title);
+        $response->assertDontSee($other->title);
+    }
+
+    public function test_filters_by_multiple_work_shifts_matches_any_of_them(): void
+    {
+        $shiftA = WorkShift::factory()->create();
+        $shiftB = WorkShift::factory()->create();
+        $shiftC = WorkShift::factory()->create();
+
+        $matchA = $this->createListedJob(['title' => 'Job ca A'], workShift: $shiftA);
+        $matchB = $this->createListedJob(['title' => 'Job ca B'], workShift: $shiftB);
+        $other = $this->createListedJob(['title' => 'Job ca C khong chon'], workShift: $shiftC);
+
+        $response = $this->get(route('jobs.index', [
+            'work_shift_id' => [$shiftA->id, $shiftB->id],
+        ]))->assertOk();
+
+        $response->assertSee($matchA->title);
+        $response->assertSee($matchB->title);
         $response->assertDontSee($other->title);
     }
 
@@ -209,6 +284,34 @@ class JobListTest extends TestCase
         $response = $this->get(route('jobs.index', ['salary' => 'thoa-thuan']))->assertOk();
         $response->assertSee($negotiable->title);
         $response->assertDontSee($inBucket->title);
+    }
+
+    public function test_filters_by_multiple_salary_buckets_matches_any_of_them(): void
+    {
+        $inFirstBucket = $this->createListedJob([
+            'title' => 'Job luong 10-15 nhieu bucket',
+            'salary_min' => 11_000_000,
+            'salary_max' => 14_000_000,
+            'salary_period' => 'month',
+        ]);
+        $inSecondBucket = $this->createListedJob([
+            'title' => 'Job luong 30-50 nhieu bucket',
+            'salary_min' => 35_000_000,
+            'salary_max' => 40_000_000,
+            'salary_period' => 'month',
+        ]);
+        $outOfBothBuckets = $this->createListedJob([
+            'title' => 'Job luong 20-30 khong chon',
+            'salary_min' => 22_000_000,
+            'salary_max' => 25_000_000,
+            'salary_period' => 'month',
+        ]);
+
+        $response = $this->get(route('jobs.index', ['salary' => ['10-15', '30-50']]))->assertOk();
+
+        $response->assertSee($inFirstBucket->title);
+        $response->assertSee($inSecondBucket->title);
+        $response->assertDontSee($outOfBothBuckets->title);
     }
 
     public function test_filters_by_shuttle_bus_and_accommodation(): void
