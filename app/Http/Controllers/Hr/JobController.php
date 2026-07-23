@@ -22,13 +22,15 @@ class JobController extends Controller
     public function index(): View
     {
         $this->authorize('viewAny', Job::class);
+        $actor = auth()->user();
 
         $jobs = Job::query()
+            ->when(! $actor->isSuperAdmin(), fn ($query) => $query->where('owner_branch_id', $actor->branch_id))
             ->with(['company', 'ownerBranch'])
             ->withCount('applications')
             ->latest()
             ->paginate(20);
-        $trashedJobs = auth()->user()->isAdmin()
+        $trashedJobs = $actor->isSuperAdmin()
             ? Job::onlyTrashed()
                 ->with(['company', 'ownerBranch'])
                 ->withCount('applications')
@@ -52,7 +54,7 @@ class JobController extends Controller
         $this->authorize('create', Job::class);
 
         $companies = Company::orderBy('name')->get();
-        $branches = auth()->user()->isAdmin()
+        $branches = auth()->user()->isSuperAdmin()
             ? Branch::where('status', 'active')->orderBy('name')->get()
             : collect();
 

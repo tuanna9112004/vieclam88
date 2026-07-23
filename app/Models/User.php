@@ -36,9 +36,22 @@ class User extends Authenticatable
         return $this->belongsTo(Branch::class);
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    public function isBranchAdmin(): bool
+    {
+        return $this->role === 'branch_admin';
+    }
+
+    /**
+     * @deprecated Dùng isSuperAdmin() cho code mới; giữ một release để tương thích.
+     */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->isSuperAdmin();
     }
 
     public function isStaff(): bool
@@ -49,5 +62,35 @@ class User extends Authenticatable
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    public function hasValidBranchAssignment(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return $this->branch_id === null;
+        }
+
+        if ((! $this->isBranchAdmin() && ! $this->isStaff()) || $this->branch_id === null) {
+            return false;
+        }
+
+        $branch = $this->relationLoaded('branch')
+            ? $this->branch
+            : $this->branch()->first();
+
+        return $branch?->status === 'active';
+    }
+
+    public function canManageBranch(Branch|int $branch): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return $this->branch_id === null;
+        }
+
+        $branchId = $branch instanceof Branch ? $branch->getKey() : $branch;
+
+        return $this->isBranchAdmin()
+            && $this->hasValidBranchAssignment()
+            && $this->branch_id === $branchId;
     }
 }

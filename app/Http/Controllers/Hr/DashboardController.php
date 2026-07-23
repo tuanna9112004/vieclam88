@@ -26,9 +26,9 @@ class DashboardController extends Controller
 
         $stats = $adminStatsAction->handle($user, $filters);
 
-        $branches = $user->isAdmin() ? Branch::orderBy('name')->get(['id', 'name']) : collect();
-        $companies = $user->isAdmin() ? Company::orderBy('name')->get(['id', 'name']) : collect();
-        $jobs = $user->isAdmin() ? Job::orderBy('title')->get(['id', 'title']) : collect();
+        $branches = $user->isSuperAdmin() ? Branch::orderBy('name')->get(['id', 'name']) : collect();
+        $companies = $user->isSuperAdmin() ? Company::orderBy('name')->get(['id', 'name']) : collect();
+        $jobs = $user->isSuperAdmin() ? Job::orderBy('title')->get(['id', 'title']) : collect();
 
         return view('hr.dashboard', compact('stats', 'branches', 'companies', 'jobs', 'filters'));
     }

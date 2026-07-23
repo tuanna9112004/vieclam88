@@ -9,21 +9,21 @@ class FaqPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     public function update(User $user, Faq $faq): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     public function delete(User $user, Faq $faq): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 }

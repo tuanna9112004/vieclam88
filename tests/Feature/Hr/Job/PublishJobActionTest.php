@@ -172,7 +172,7 @@ class PublishJobActionTest extends TestCase
         $job = $this->makePublishableJob();
         $job->ownerBranch()->update(['status' => 'inactive']);
 
-        $response = $this->publish($job);
+        $response = $this->publish($job, User::factory()->superAdmin()->create());
 
         $response->assertSessionHasErrors('owner_branch_id');
     }
@@ -182,7 +182,7 @@ class PublishJobActionTest extends TestCase
         $job = $this->makePublishableJob();
         $job->ownerBranch->delete();
 
-        $response = $this->publish($job);
+        $response = $this->publish($job, User::factory()->superAdmin()->create());
 
         $response->assertSessionHasErrors('owner_branch_id');
     }

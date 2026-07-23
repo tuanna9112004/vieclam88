@@ -12,16 +12,16 @@ class IndustrialParkPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     public function update(User $user, IndustrialPark $industrialPark): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 }

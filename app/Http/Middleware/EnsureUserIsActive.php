@@ -17,7 +17,7 @@ class EnsureUserIsActive
     {
         $user = $request->user();
 
-        if ($user && ! $user->isActive()) {
+        if ($user && (! $user->isActive() || ! $user->hasValidBranchAssignment())) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

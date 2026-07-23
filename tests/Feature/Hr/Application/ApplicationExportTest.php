@@ -17,12 +17,12 @@ class ApplicationExportTest extends TestCase
 
     public function test_csv_sanitizer_escapes_potential_formula_injection_characters(): void
     {
-        $this->assertSame("'=1+2", CsvSanitizer::escape("=1+2"));
-        $this->assertSame("'+CMD", CsvSanitizer::escape("+CMD"));
-        $this->assertSame("'-calc", CsvSanitizer::escape("-calc"));
-        $this->assertSame("'@SUM(A1)", CsvSanitizer::escape("@SUM(A1)"));
-        $this->assertSame("Nguyễn Văn A", CsvSanitizer::escape("Nguyễn Văn A"));
-        $this->assertSame("", CsvSanitizer::escape(null));
+        $this->assertSame("'=1+2", CsvSanitizer::escape('=1+2'));
+        $this->assertSame("'+CMD", CsvSanitizer::escape('+CMD'));
+        $this->assertSame("'-calc", CsvSanitizer::escape('-calc'));
+        $this->assertSame("'@SUM(A1)", CsvSanitizer::escape('@SUM(A1)'));
+        $this->assertSame('Nguyễn Văn A', CsvSanitizer::escape('Nguyễn Văn A'));
+        $this->assertSame('', CsvSanitizer::escape(null));
     }
 
     public function test_staff_export_is_strictly_scoped_to_their_own_branch(): void
@@ -62,6 +62,42 @@ class ApplicationExportTest extends TestCase
         $this->assertDatabaseHas('export_logs', [
             'exported_by' => $staff->id,
             'export_type' => 'applications_csv',
+            'row_count' => 1,
+        ]);
+    }
+
+    public function test_branch_admin_export_is_scoped_to_own_branch_and_ignores_cross_branch_filter(): void
+    {
+        fake()->unique(true);
+
+        $ownBranch = Branch::factory()->create(['status' => 'active']);
+        $otherBranch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $ownBranch->id]);
+        $ownJob = Job::factory()->create(['owner_branch_id' => $ownBranch->id]);
+        $otherJob = Job::factory()->create(['owner_branch_id' => $otherBranch->id]);
+
+        Application::factory()->create([
+            'job_id' => $ownJob->id,
+            'owner_branch_id' => $ownBranch->id,
+            'submitted_full_name' => 'Ứng Viên Cơ Sở Mình',
+        ]);
+        Application::factory()->create([
+            'job_id' => $otherJob->id,
+            'owner_branch_id' => $otherBranch->id,
+            'submitted_full_name' => 'Ứng Viên Cơ Sở Khác',
+        ]);
+
+        $response = $this->actingAs($branchAdmin)->get(route('hr.applications.export', [
+            'owner_branch_id' => $otherBranch->id,
+        ]));
+
+        $response->assertOk();
+        $content = $response->streamedContent();
+
+        $this->assertStringContainsString('Ứng Viên Cơ Sở Mình', $content);
+        $this->assertStringNotContainsString('Ứng Viên Cơ Sở Khác', $content);
+        $this->assertDatabaseHas('export_logs', [
+            'exported_by' => $branchAdmin->id,
             'row_count' => 1,
         ]);
     }

@@ -27,6 +27,66 @@ class BranchManagementTest extends TestCase
         $this->actingAs($staff)->get(route('hr.branches.index'))->assertForbidden();
     }
 
+    public function test_branch_admin_views_and_updates_only_own_branch(): void
+    {
+        $ownBranch = Branch::factory()->create([
+            'status' => 'active',
+            'ward_id' => Ward::factory(),
+            'name' => 'Cơ sở của quản trị viên',
+        ]);
+        $otherBranch = Branch::factory()->create([
+            'status' => 'active',
+            'ward_id' => Ward::factory(),
+            'name' => 'Cơ sở khác',
+        ]);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $ownBranch->id]);
+
+        $this->actingAs($branchAdmin)
+            ->get(route('hr.branches.index'))
+            ->assertOk()
+            ->assertSee($ownBranch->name)
+            ->assertDontSee($otherBranch->name);
+
+        $this->actingAs($branchAdmin)
+            ->put(route('hr.branches.update', $ownBranch), [
+                'code' => $ownBranch->code,
+                'name' => 'Tên cơ sở đã cập nhật',
+                'ward_id' => $ownBranch->ward_id,
+                'status' => 'active',
+            ])
+            ->assertRedirect(route('hr.branches.index'));
+
+        $this->assertSame('Tên cơ sở đã cập nhật', $ownBranch->fresh()->name);
+
+        $this->actingAs($branchAdmin)
+            ->put(route('hr.branches.update', $otherBranch), [
+                'code' => $otherBranch->code,
+                'name' => 'Không được cập nhật',
+                'ward_id' => $otherBranch->ward_id,
+                'status' => 'active',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_branch_admin_cannot_create_or_delete_branches(): void
+    {
+        $branch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $branch->id]);
+        $ward = Ward::factory()->create(['is_active' => true]);
+
+        $this->actingAs($branchAdmin)
+            ->post(route('hr.branches.store'), [
+                'code' => 'NEW-01',
+                'name' => 'Cơ sở mới',
+                'ward_id' => $ward->id,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($branchAdmin)
+            ->delete(route('hr.branches.destroy', $branch))
+            ->assertForbidden();
+    }
+
     public function test_guest_is_redirected_from_branch_index(): void
     {
         $this->get(route('hr.branches.index'))->assertRedirect(route('hr.login'));

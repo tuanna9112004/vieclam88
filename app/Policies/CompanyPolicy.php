@@ -8,8 +8,7 @@ use App\Models\User;
 class CompanyPolicy
 {
     /**
-     * hr.companies.* (docs/ROUTE-MAP.md mục "HR công ty"): Staff và Admin đều tạo/sửa/xem được
-     * — chỉ soft delete/restore dành riêng cho Admin (CORE-FLOWS.md mục 0.2, ADR-045).
+     * Ba role HR đều tạo/sửa/xem được; chỉ soft delete/restore dành riêng cho Super Admin.
      */
     public function viewAny(User $user): bool
     {
@@ -28,11 +27,11 @@ class CompanyPolicy
 
     public function delete(User $user, Company $company): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     public function restore(User $user, Company $company): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 }

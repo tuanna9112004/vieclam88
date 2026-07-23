@@ -18,6 +18,32 @@ class AdminDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_branch_admin_dashboard_is_scoped_to_own_branch_and_ignores_cross_branch_filter(): void
+    {
+        fake()->unique(true);
+
+        $ownBranch = Branch::factory()->create(['status' => 'active']);
+        $otherBranch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $ownBranch->id]);
+        $ownJob = Job::factory()->create(['owner_branch_id' => $ownBranch->id]);
+        $otherJob = Job::factory()->create(['owner_branch_id' => $otherBranch->id]);
+
+        Application::factory()->create([
+            'job_id' => $ownJob->id,
+            'owner_branch_id' => $ownBranch->id,
+        ]);
+        Application::factory()->count(3)->create([
+            'job_id' => $otherJob->id,
+            'owner_branch_id' => $otherBranch->id,
+        ]);
+
+        $stats = (new GetAdminDashboardStatsAction)->handle($branchAdmin, [
+            'owner_branch_id' => $otherBranch->id,
+        ]);
+
+        $this->assertSame(1, $stats['total_applications']);
+    }
+
     public function test_admin_dashboard_conversion_rate_is_calculated_correctly(): void
     {
         $admin = User::factory()->admin()->create();
@@ -30,7 +56,7 @@ class AdminDashboardTest extends TestCase
         Application::factory()->create(['job_id' => $job->id, 'owner_branch_id' => $branch->id, 'stage' => 'contacting']);
         Application::factory()->create(['job_id' => $job->id, 'owner_branch_id' => $branch->id, 'stage' => 'closed']);
 
-        $action = new GetAdminDashboardStatsAction();
+        $action = new GetAdminDashboardStatsAction;
         $stats = $action->handle($admin, []);
 
         $this->assertSame(4, $stats['total_applications']);
@@ -71,7 +97,7 @@ class AdminDashboardTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $action = new GetAdminDashboardStatsAction();
+        $action = new GetAdminDashboardStatsAction;
 
         // 1. Filter by Company A
         $statsCompanyA = $action->handle($admin, ['company_id' => $companyA->id]);
@@ -102,7 +128,7 @@ class AdminDashboardTest extends TestCase
         $jobB = Job::factory()->create(['company_id' => $companyB->id, 'owner_branch_id' => $branch->id]);
         Application::factory()->count(4)->create(['job_id' => $jobB->id, 'owner_branch_id' => $branch->id]);
 
-        $stats = (new GetAdminDashboardStatsAction())->handle($admin, []);
+        $stats = (new GetAdminDashboardStatsAction)->handle($admin, []);
 
         $companyStats = collect($stats['companies_stats'])->keyBy('id');
         $statsA = $companyStats->get($companyA->id);
@@ -138,7 +164,7 @@ class AdminDashboardTest extends TestCase
         ]);
 
         $today = now()->toDateString();
-        $stats = (new GetAdminDashboardStatsAction())->handle($admin, ['date_from' => $today, 'date_to' => $today]);
+        $stats = (new GetAdminDashboardStatsAction)->handle($admin, ['date_from' => $today, 'date_to' => $today]);
 
         $this->assertSame(1, $stats['total_applications']);
 
@@ -165,9 +191,9 @@ class AdminDashboardTest extends TestCase
 
         $application = Application::factory()->create(['job_id' => $job->id, 'owner_branch_id' => $branch1->id]);
 
-        (new TransferApplicationBranchAction())->handle($application, $branch2, $admin, 'Test transfer');
+        (new TransferApplicationBranchAction)->handle($application, $branch2, $admin, 'Test transfer');
 
-        $statsBranch1 = (new GetAdminDashboardStatsAction())->handle($admin, ['owner_branch_id' => $branch1->id]);
+        $statsBranch1 = (new GetAdminDashboardStatsAction)->handle($admin, ['owner_branch_id' => $branch1->id]);
 
         // Job van thuoc branch1 (Transfer khong doi owner_branch_id cua Job) nen van len Top Jobs,
         // nhung Application da chuyen sang branch2 nen khong con duoc dem trong bo loc branch1.
@@ -179,7 +205,7 @@ class AdminDashboardTest extends TestCase
         $this->assertNotNull($companyStat);
         $this->assertSame(0, $companyStat->applications_count);
 
-        $statsBranch2 = (new GetAdminDashboardStatsAction())->handle($admin, ['owner_branch_id' => $branch2->id]);
+        $statsBranch2 = (new GetAdminDashboardStatsAction)->handle($admin, ['owner_branch_id' => $branch2->id]);
         $companyStatBranch2 = collect($statsBranch2['companies_stats'])->firstWhere('id', $company->id);
         $this->assertNotNull($companyStatBranch2);
         $this->assertSame(1, $companyStatBranch2->applications_count);
@@ -214,14 +240,14 @@ class AdminDashboardTest extends TestCase
         ]);
 
         // 1. Perform Branch Transfer on App1 (from Branch 1 to Branch 2)
-        $transferAction = new TransferApplicationBranchAction();
+        $transferAction = new TransferApplicationBranchAction;
         $transferAction->handle($app1, $branch2, $admin, 'Chuyển cơ sở thử nghiệm');
 
         // 2. Perform Candidate Merge (Source -> Target)
-        $mergeAction = new MergeCandidateAction();
+        $mergeAction = new MergeCandidateAction;
         $mergeAction->handle($sourceCand, $targetCand, $admin, 'Gộp thử nghiệm', $app2->id);
 
-        $statsAction = new GetAdminDashboardStatsAction();
+        $statsAction = new GetAdminDashboardStatsAction;
 
         // System-wide total applications is still 2
         $statsTotal = $statsAction->handle($admin, []);

@@ -5,7 +5,9 @@
 @section('content')
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h4 mb-0">Cơ sở</h1>
-        <a href="{{ route('hr.branches.create') }}" class="btn btn-primary">Thêm cơ sở</a>
+        @can('create', \App\Models\Branch::class)
+            <a href="{{ route('hr.branches.create') }}" class="btn btn-primary">Thêm cơ sở</a>
+        @endcan
     </div>
 
     @if ($errors->any())
@@ -41,11 +43,13 @@
                         <td class="text-end">
                             <a href="{{ route('hr.branches.edit', $branch) }}" class="btn btn-sm btn-outline-secondary">Sửa</a>
 
-                            <form method="POST" action="{{ route('hr.branches.destroy', $branch) }}" class="d-inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
-                            </form>
+                            @can('delete', $branch)
+                                <form method="POST" action="{{ route('hr.branches.destroy', $branch) }}" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+                                </form>
+                            @endcan
                         </td>
                     </tr>
                 @endforeach

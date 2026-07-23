@@ -6,11 +6,22 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1">Dashboard HR</h1>
-            <p class="text-muted mb-0">Xin chào, {{ auth()->user()->name }} ({{ auth()->user()->isAdmin() ? 'Admin toàn hệ thống' : 'Staff — ' . (auth()->user()->branch?->name ?? 'Cơ sở') }})</p>
+            <p class="text-muted mb-0">
+                Xin chào, {{ auth()->user()->name }}
+                (
+                    @if (auth()->user()->isSuperAdmin())
+                        Super Admin
+                    @elseif (auth()->user()->isBranchAdmin())
+                        Quản trị cơ sở — {{ auth()->user()->branch?->name ?? 'Cơ sở' }}
+                    @else
+                        Staff — {{ auth()->user()->branch?->name ?? 'Cơ sở' }}
+                    @endif
+                )
+            </p>
         </div>
     </div>
 
-    @if (auth()->user()->isAdmin())
+    @if (auth()->user()->isSuperAdmin())
         <div class="card mb-4 shadow-sm">
             <div class="card-header bg-white fw-bold">
                 Bộ lọc Dashboard toàn hệ thống
@@ -190,7 +201,7 @@
         </div>
     </div>
 
-    @if (auth()->user()->isAdmin() && !empty($stats['top_jobs']))
+    @if (auth()->user()->isSuperAdmin() && !empty($stats['top_jobs']))
         <div class="row g-4 mb-4">
             <!-- Top Jobs Breakdown -->
             <div class="col-md-7">

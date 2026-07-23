@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 #[Signature('app:create-admin {--name=} {--email=} {--password=} {--force}')]
-#[Description('Tạo tài khoản Admin đầu tiên trên production (ADR-050) — không phải seeder.')]
+#[Description('Tạo tài khoản Super Admin đầu tiên trên production (ADR-050) — không phải seeder.')]
 class CreateAdminCommand extends Command
 {
     /**
@@ -19,8 +19,8 @@ class CreateAdminCommand extends Command
      */
     public function handle(): int
     {
-        if (User::query()->where('role', 'admin')->exists() && ! $this->option('force')) {
-            $this->error('Đã tồn tại tài khoản Admin. Dùng --force nếu chắc chắn muốn tạo thêm.');
+        if (User::query()->where('role', 'super_admin')->exists() && ! $this->option('force')) {
+            $this->error('Đã tồn tại tài khoản Super Admin. Dùng --force nếu chắc chắn muốn tạo thêm.');
 
             return self::FAILURE;
         }
@@ -48,7 +48,7 @@ class CreateAdminCommand extends Command
 
         DB::transaction(function () use ($name, $email, $password): void {
             User::create([
-                'role' => 'admin',
+                'role' => 'super_admin',
                 'branch_id' => null,
                 'name' => $name,
                 'email' => $email,
@@ -58,7 +58,7 @@ class CreateAdminCommand extends Command
             ]);
         });
 
-        $this->info("Đã tạo Admin: {$email}. Bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên.");
+        $this->info("Đã tạo Super Admin: {$email}. Bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên.");
 
         return self::SUCCESS;
     }

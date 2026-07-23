@@ -27,7 +27,7 @@ phải ngay khi ADR được duyệt.
 
 | Miền | PDF đề xuất | Hiện trạng thật | Loại khoảng cách | Mức độ |
 |---|---|---|---|---|
-| Role | `users.role`: `super_admin`/`branch_admin`/`staff` (3 cấp) | `role`: `admin`/`staff` (2 cấp) — [`app/Models/User.php`](../app/Models/User.php) | Thiếu 1 role, đổi ý nghĩa "admin" | CRITICAL |
+| Role | `users.role`: `super_admin`/`branch_admin`/`staff` (3 cấp) | **TASK 2.1 đã áp dụng:** enum 3 cấp, backfill `admin→super_admin`, Policy Staff/Branch cơ bản | Đã đóng ở TASK 2.1; hardening toàn hệ thống ở TASK 2.3 | CLOSED/PARTIAL HARDENING |
 | Địa chỉ hành chính | 2 bảng cứng `provinces`+`wards`, bỏ cấp huyện | `administrative_units` tự tham chiếu (N cấp qua `parent_id`) | Khác cấu trúc bảng. **Data đã tương đương** (tỉnh→xã, mã GSO) — xem ADR-079 | HIGH (schema), data đã đóng |
 | KCN ↔ địa chỉ | N-N qua `industrial_park_wards`, KCN có `branch_id` | `industrial_parks.administrative_unit_id` (1-N), không có `branch_id` | Đổi quan hệ + thêm cột | HIGH |
 | Seed KCN | 10 KCN cụ thể theo 4 chi nhánh (Vĩnh Phúc/Phú Thọ/Hòa Bình/Bắc Giang-Bắc Ninh) | `DemoSeeder` seed KCN demo khác hoàn toàn (Hà Nội/Bắc Ninh/Bắc Giang/Thái Nguyên) | Dữ liệu vận hành thật khác dữ liệu demo | HIGH (data) |
@@ -70,7 +70,7 @@ vào một lần sửa**. Không batch nào được xóa bảng/cột cũ (Cont
 |---|---|---|---|
 | 1 | `provinces`, `wards` (bảng mới, song song `administrative_units`); command backfill từ `administrative_units` (đã có dữ liệu chuẩn GSO nhờ ADR-079) | `provinces`, `wards` | Không xóa `administrative_units` ở batch này |
 | 2 | `industrial_park_wards` (N-N mới); backfill từ `industrial_parks.administrative_unit_id` hiện có; thêm `industrial_parks.branch_id` nullable trước, backfill, rồi NOT NULL | `industrial_parks`, `industrial_park_wards` | Giữ `administrative_unit_id` cũ cho tới Contract |
-| 3 | `users.role` mở rộng thêm `branch_admin` (vẫn giữ `admin`/`staff` cũ hoạt động); Policy mới cho `branch_admin` | `users` | Backward-compatible: `admin` hiện tại tương đương `super_admin` |
+| 3 | `users.role` ba cấp; backfill `admin→super_admin`; Policy mới cho `branch_admin` | `users` | TASK 2.1 đã áp dụng; TASK 2.3 tiếp tục hardening |
 | 4 | `industries`, `employment_types` (bảng mới, độc lập, không xung đột) — **có thể làm trước, không phụ thuộc batch khác** | `industries`, `employment_types` | Xem "Phần không xung đột" bên dưới |
 | 5 | `jobs.work_ward_id`/`industry_id`/`employment_type_id` nullable trước; backfill từ `job_locations`/`company_locations`/`employment_type` enum; sau đó mới xét NOT NULL | `jobs`, `job_locations`, `company_locations` | Batch rủi ro cao nhất — cần kế hoạch rollback riêng |
 | 6 | `job_images`, `candidate_documents`, `activity_logs` (bảng mới, độc lập); thêm cột `candidates.marital_status`/`foreign_language`/`ethnicity`/`citizen_id_*`/`personal_introduction` (nullable) | — | Có thể làm sớm, song song batch khác |

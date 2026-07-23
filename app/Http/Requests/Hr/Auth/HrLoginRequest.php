@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Hr\Auth;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -27,7 +28,8 @@ class HrLoginRequest extends FormRequest
     }
 
     /**
-     * Xác thực Staff/Admin. Chỉ users.status=active mới login được (ADR-050/Dictionary 9.1);
+     * Xác thực ba role HR. Ngoài status=active, role theo branch phải có branch active,
+     * super_admin phải có branch_id=null.
      * gộp chung thông báo sai email/mật khẩu và tài khoản bị khóa để không lộ trạng thái
      * tài khoản cho kẻ tấn công dò email.
      */
@@ -38,6 +40,17 @@ class HrLoginRequest extends FormRequest
         $credentials = $this->only('email', 'password') + ['status' => 'active'];
 
         if (! Auth::attempt($credentials)) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Email hoặc mật khẩu không đúng.',
+            ]);
+        }
+
+        $user = Auth::user();
+
+        if (! $user instanceof User || ! $user->hasValidBranchAssignment()) {
+            Auth::logout();
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

@@ -27,6 +27,33 @@ class JobManagementTest extends TestCase
         $this->actingAs($staff)->get(route('hr.jobs.index'))->assertOk();
     }
 
+    public function test_branch_admin_job_index_is_strictly_scoped_to_own_branch(): void
+    {
+        fake()->unique(true);
+
+        $ownBranch = Branch::factory()->create(['status' => 'active']);
+        $otherBranch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $ownBranch->id]);
+        $company = Company::factory()->create();
+
+        Job::factory()->create([
+            'company_id' => $company->id,
+            'owner_branch_id' => $ownBranch->id,
+            'title' => 'Job cơ sở mình',
+        ]);
+        Job::factory()->create([
+            'company_id' => $company->id,
+            'owner_branch_id' => $otherBranch->id,
+            'title' => 'Job cơ sở khác',
+        ]);
+
+        $response = $this->actingAs($branchAdmin)->get(route('hr.jobs.index'));
+
+        $response->assertOk();
+        $response->assertSee('Job cơ sở mình');
+        $response->assertDontSee('Job cơ sở khác');
+    }
+
     public function test_guest_is_redirected_from_job_index(): void
     {
         $this->get(route('hr.jobs.index'))->assertRedirect(route('hr.login'));

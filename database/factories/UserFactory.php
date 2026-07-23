@@ -37,11 +37,26 @@ class UserFactory extends Factory
         ];
     }
 
-    public function admin(): static
+    public function superAdmin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => 'admin',
+            'role' => 'super_admin',
             'branch_id' => null,
+        ]);
+    }
+
+    /**
+     * @deprecated Dùng superAdmin() cho test mới.
+     */
+    public function admin(): static
+    {
+        return $this->superAdmin();
+    }
+
+    public function branchAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'branch_admin',
         ]);
     }
 

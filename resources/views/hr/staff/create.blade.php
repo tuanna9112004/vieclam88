@@ -33,6 +33,18 @@
             <input type="password" class="form-control" id="password" name="password" required>
         </div>
 
+        @if (auth()->user()->isSuperAdmin())
+            <div class="mb-3">
+                <label for="role" class="form-label">Vai trò</label>
+                <select class="form-select" id="role" name="role" required>
+                    <option value="staff" @selected(old('role', 'staff') === 'staff')>Staff</option>
+                    <option value="branch_admin" @selected(old('role') === 'branch_admin')>Quản trị cơ sở</option>
+                </select>
+            </div>
+        @else
+            <input type="hidden" name="role" value="staff">
+        @endif
+
         <div class="mb-3">
             <label for="branch_id" class="form-label">Cơ sở</label>
             <select class="form-select" id="branch_id" name="branch_id" required>

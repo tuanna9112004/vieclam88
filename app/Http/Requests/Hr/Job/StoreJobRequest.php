@@ -33,7 +33,7 @@ class StoreJobRequest extends FormRequest
 
         // Staff tự động gán owner_branch_id = branch của mình (docs/CORE-FLOWS.md mục 1.1) —
         // không đọc từ input, form không hiển thị field này cho Staff. Chỉ Admin bắt buộc chọn.
-        if ($this->user()->isAdmin()) {
+        if ($this->user()->isSuperAdmin()) {
             $rules['owner_branch_id'] = [
                 'required',
                 Rule::exists(Branch::class, 'id')->where('status', 'active')->withoutTrashed(),

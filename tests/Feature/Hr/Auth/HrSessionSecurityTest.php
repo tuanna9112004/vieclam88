@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Hr\Auth;
 
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -62,6 +63,30 @@ class HrSessionSecurityTest extends TestCase
         $response = $this->post(route('hr.logout'));
 
         $response->assertRedirect(route('hr.login'));
+        $this->assertGuest();
+    }
+
+    public function test_branch_role_loses_access_when_branch_becomes_inactive(): void
+    {
+        $branch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $branch->id]);
+        $this->actingAs($branchAdmin);
+
+        $branch->update(['status' => 'inactive']);
+
+        $this->get(route('hr.dashboard'))->assertRedirect(route('hr.login'));
+        $this->assertGuest();
+    }
+
+    public function test_branch_role_loses_access_when_branch_is_soft_deleted(): void
+    {
+        $branch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $branch->id]);
+        $this->actingAs($branchAdmin);
+
+        $branch->delete();
+
+        $this->get(route('hr.dashboard'))->assertRedirect(route('hr.login'));
         $this->assertGuest();
     }
 }

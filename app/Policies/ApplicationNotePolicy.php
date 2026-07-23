@@ -15,7 +15,7 @@ class ApplicationNotePolicy
      */
     public function create(User $user, Application $application): bool
     {
-        return $user->isAdmin() || $application->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $application->owner_branch_id === $user->branch_id;
     }
 
     /**
@@ -38,11 +38,11 @@ class ApplicationNotePolicy
 
     private function isOwnerOrAdmin(User $user, ApplicationNote $note): bool
     {
-        return $user->isAdmin() || $user->id === $note->user_id;
+        return $user->isSuperAdmin() || $user->id === $note->user_id;
     }
 
     private function belongsToBranch(User $user, ApplicationNote $note): bool
     {
-        return $user->isAdmin() || $note->application->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $note->application->owner_branch_id === $user->branch_id;
     }
 }

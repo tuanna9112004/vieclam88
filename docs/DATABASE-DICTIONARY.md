@@ -16,9 +16,9 @@ constraint, recursive CTE, JSON, row locking) đều được hỗ trợ đầy 
 
 `lead_requests`, `favorites`, `application_assignment_histories` **không** nằm trong database
 Phase 1 (ADR-021). `applications.assigned_to`, `applications.referral_code`,
-`candidates.user_id` **không** tồn tại trong schema Phase 1 (ADR-028, ADR-029) — `users.role`
-Phase 1 chỉ nhận `staff`/`admin` (không có `candidate`). Không tạo các cột/bảng này khi viết
-migration Phase 1; thêm bằng migration riêng khi Phase 2 thực sự triển khai.
+`candidates.user_id` **không** tồn tại trong schema Phase 1 (ADR-028, ADR-029) — sau TASK 2.1,
+`users.role` nhận `super_admin`/`branch_admin`/`staff` (không có `candidate`). Không tạo
+Candidate Account hoặc các cột/bảng Phase 2 ngoài batch đang thực thi.
 
 ## Quy ước chung
 
@@ -87,16 +87,16 @@ migration Phase 1; thêm bằng migration riêng khi Phase 2 thực sự triển
 
 ## 9.1. `users`
 
-Phase 1 chỉ phục vụ **staff/admin** — không có Candidate Account (ADR-028). Mọi user Phase 1
+Hệ thống chỉ phục vụ **staff/branch_admin/super_admin** — không có Candidate Account (ADR-028). Mọi user
 đều cần đăng nhập `/hr/dang-nhap`, nên `email` bắt buộc.
 
 | Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
 |---|---|---|---|---|---|---|---|---|---|
 | id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | Khóa chính |
-| role | enum(staff,admin) | — | không | — | ✓ | — | — | — | Phase 1 không có `candidate` (ADR-028); `guest` không phải giá trị hợp lệ |
-| branch_id | bigint | ✓ | có | null | ✓ | — | branches.id | SET NULL | Cơ sở nội bộ phụ trách; **bắt buộc khi `role=staff`** (chốt ở Form Request/Service, không ép NOT NULL ở DB vì `admin` không cần) |
+| role | enum(staff,branch_admin,super_admin) | — | không | — | ✓ | — | — | — | TASK 2.1; `admin` cũ được backfill thành `super_admin`; không có `candidate` |
+| branch_id | bigint | ✓ | có | null | ✓ | — | branches.id | SET NULL | Bắt buộc và phải active khi role=`staff`/`branch_admin`; phải null khi `super_admin`; kiểm ở validation/service/login vì FK dùng SET NULL |
 | name | string(150) | — | không | — | — | — | — | — | Tên hiển thị |
-| email | string(191) | — | **không** | — | — | ✓ | — | — | Bắt buộc — định danh đăng nhập duy nhất cho staff/admin trong Phase 1 |
+| email | string(191) | — | **không** | — | — | ✓ | — | — | Bắt buộc — định danh đăng nhập duy nhất cho ba role HR |
 | password | string(255) | — | không | — | — | — | — | — | Hash bcrypt/argon2 |
 | status | enum(active,locked) | — | không | active | ✓ | — | — | — | Khóa tài khoản thay vì xóa |
 | last_login_at | timestamp | — | có | null | — | — | — | — | |
@@ -110,11 +110,9 @@ Candidate Account, nay không còn áp dụng (ADR-028); thêm lại nếu Phase
 
 **Chính sách xóa:** không hard delete. Ngừng sử dụng → `status = locked`.
 
-**Thay đổi mục tiêu Phase 2 (ADR-080, chưa migrate):** `role` mở rộng thành
-`enum(staff,branch_admin,super_admin)` — `admin` hiện tại tương đương `super_admin` (không giới
-hạn cơ sở); `branch_admin` là vai trò mới, `branch_id` bắt buộc (giống `staff` nhưng thêm quyền
-quản lý user/job/report trong phạm vi cơ sở mình, chưa có Policy nào xử lý hôm nay). Batch 3 ở
-`docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`.
+**TASK 2.1 (đã migrate):** `super_admin` không giới hạn cơ sở; `branch_admin` quản lý Staff và
+Branch trong đúng cơ sở mình, đồng thời dùng scope Job/Application theo cơ sở như `staff`.
+Hardening toàn bộ query/export/dashboard tiếp tục ở TASK 2.3.
 
 ---
 

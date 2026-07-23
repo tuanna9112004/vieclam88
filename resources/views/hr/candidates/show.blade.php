@@ -148,7 +148,7 @@
         </div>
     </div>
 
-    @if (auth()->user()->isAdmin() && $duplicateReviews->isNotEmpty())
+    @if (auth()->user()->isSuperAdmin() && $duplicateReviews->isNotEmpty())
         <div class="card shadow-sm mb-4 border-warning">
             <div class="card-header bg-warning bg-opacity-25 fw-bold">Nghi ngờ trùng đang chờ xử lý ({{ $duplicateReviews->count() }})</div>
             <div class="card-body">

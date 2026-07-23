@@ -31,7 +31,7 @@ class CandidateController extends Controller
         // gioi han (docs/CORE-FLOWS.md muc 6.3 buoc 3, muc 6.4).
         $applications = Application::whereIn('candidate_id', $familyIds)
             ->with(['job.company', 'ownerBranch', 'candidate'])
-            ->when(! $user->isAdmin(), fn ($q) => $q->where('owner_branch_id', $user->branch_id))
+            ->when(! $user->isSuperAdmin(), fn ($q) => $q->where('owner_branch_id', $user->branch_id))
             ->latest()
             ->get();
 
@@ -42,7 +42,7 @@ class CandidateController extends Controller
 
         // Duplicate review chi Admin duoc xem (docs/CORE-FLOWS.md muc 6.2.2: "Chi Admin truy
         // cap; Staff bi 403" ap dung cho toan bo du lieu review, ke ca hien thi tom tat o day).
-        $duplicateReviews = $user->isAdmin()
+        $duplicateReviews = $user->isSuperAdmin()
             ? CandidateDuplicateReview::query()
                 ->where(function ($q) use ($familyIds) {
                     $q->whereIn('candidate_id', $familyIds)->orWhereIn('suspected_candidate_id', $familyIds);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Hr\Auth;
 
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
@@ -35,6 +36,66 @@ class HrLoginTest extends TestCase
 
         $response->assertRedirect(route('hr.dashboard'));
         $this->assertAuthenticatedAs($admin);
+    }
+
+    public function test_branch_admin_can_login_with_active_branch(): void
+    {
+        $branchAdmin = User::factory()->branchAdmin()->create(['password' => 'correct-password']);
+
+        $this->post(route('hr.login.store'), [
+            'email' => $branchAdmin->email,
+            'password' => 'correct-password',
+        ])->assertRedirect(route('hr.dashboard'));
+
+        $this->assertAuthenticatedAs($branchAdmin);
+    }
+
+    public function test_branch_role_cannot_login_with_inactive_branch(): void
+    {
+        $branch = Branch::factory()->create(['status' => 'inactive']);
+        $branchAdmin = User::factory()->branchAdmin()->create([
+            'branch_id' => $branch->id,
+            'password' => 'correct-password',
+        ]);
+
+        $this->post(route('hr.login.store'), [
+            'email' => $branchAdmin->email,
+            'password' => 'correct-password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_branch_role_cannot_login_with_soft_deleted_branch(): void
+    {
+        $branch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create([
+            'branch_id' => $branch->id,
+            'password' => 'correct-password',
+        ]);
+        $branch->delete();
+
+        $this->post(route('hr.login.store'), [
+            'email' => $branchAdmin->email,
+            'password' => 'correct-password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_super_admin_cannot_login_when_assigned_to_branch(): void
+    {
+        $superAdmin = User::factory()->superAdmin()->create([
+            'branch_id' => Branch::factory(),
+            'password' => 'correct-password',
+        ]);
+
+        $this->post(route('hr.login.store'), [
+            'email' => $superAdmin->email,
+            'password' => 'correct-password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
     }
 
     public function test_login_regenerates_session_id(): void

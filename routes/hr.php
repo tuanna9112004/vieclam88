@@ -38,7 +38,7 @@ Route::prefix('hr')->name('hr.')->group(function () {
         Route::post('dang-nhap', [HrAuthController::class, 'store'])->name('login.store');
     });
 
-    Route::middleware(['auth', 'role:staff,admin', EnsureUserIsActive::class])->group(function () {
+    Route::middleware(['auth', 'role:staff,branch_admin,super_admin', EnsureUserIsActive::class])->group(function () {
         Route::post('dang-xuat', [HrAuthController::class, 'destroy'])->name('logout');
 
         Route::get('doi-mat-khau', [PasswordChangeController::class, 'edit'])->name('password.change');

@@ -12,7 +12,9 @@
 </head>
 <body class="hr-shell">
     @php
-        $isAdmin = auth()->user()?->isAdmin();
+        $isSuperAdmin = auth()->user()?->isSuperAdmin();
+        $isBranchAdmin = auth()->user()?->isBranchAdmin();
+        $isManager = $isSuperAdmin || $isBranchAdmin;
 
         $hrNavGroups = [
             [
@@ -28,8 +30,8 @@
                 'heading' => 'Quản trị',
                 'admin_only' => true,
                 'items' => [
-                    ['route' => 'hr.staff.index', 'pattern' => 'hr.staff.*', 'label' => 'Nhân viên', 'icon' => '👥', 'admin_only' => true],
-                    ['route' => 'hr.branches.index', 'pattern' => 'hr.branches.*', 'label' => 'Cơ sở', 'icon' => '🏬', 'admin_only' => true],
+                    ['route' => 'hr.staff.index', 'pattern' => 'hr.staff.*', 'label' => 'Nhân viên', 'icon' => '👥', 'admin_only' => false],
+                    ['route' => 'hr.branches.index', 'pattern' => 'hr.branches.*', 'label' => 'Cơ sở', 'icon' => '🏬', 'admin_only' => false],
                     ['route' => 'hr.industrial-parks.index', 'pattern' => 'hr.industrial-parks.*', 'label' => 'Khu công nghiệp', 'icon' => '🏭', 'admin_only' => true],
                     ['route' => 'hr.administrative-units.index', 'pattern' => 'hr.administrative-units.*', 'label' => 'Đơn vị hành chính', 'icon' => '🗺️', 'admin_only' => true],
                     ['route' => 'hr.pages.index', 'pattern' => 'hr.pages.*', 'label' => 'Trang tĩnh', 'icon' => '📄', 'admin_only' => true],
@@ -50,12 +52,12 @@
 
         <nav class="hr-sidebar__nav" aria-label="Điều hướng HR">
             @foreach ($hrNavGroups as $group)
-                @if (empty($group['admin_only']) || $isAdmin)
+                @if (empty($group['admin_only']) || $isManager)
                     @if (! empty($group['heading']))
                         <p class="hr-sidebar__heading">{{ $group['heading'] }}</p>
                     @endif
                     @foreach ($group['items'] as $item)
-                        @if (! $item['admin_only'] || $isAdmin)
+                        @if (! $item['admin_only'] || $isSuperAdmin)
                             <a
                                 href="{{ route($item['route']) }}"
                                 class="hr-sidebar__link @if (request()->routeIs($item['pattern'])) is-active @endif"
@@ -92,7 +94,15 @@
                 <span class="d-none d-sm-inline">
                     {{ auth()->user()->name }}
                     <span class="text-secondary">
-                        ({{ $isAdmin ? 'Admin' : 'Staff — '.(auth()->user()->branch?->name ?? 'Cơ sở') }})
+                        (
+                            @if ($isSuperAdmin)
+                                Super Admin
+                            @elseif ($isBranchAdmin)
+                                Quản trị cơ sở — {{ auth()->user()->branch?->name ?? 'Cơ sở' }}
+                            @else
+                                Staff — {{ auth()->user()->branch?->name ?? 'Cơ sở' }}
+                            @endif
+                        )
                     </span>
                 </span>
                 <a href="{{ route('hr.password.change') }}" class="btn btn-sm btn-outline-secondary">Đổi mật khẩu</a>

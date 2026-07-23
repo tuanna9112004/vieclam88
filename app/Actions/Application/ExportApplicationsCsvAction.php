@@ -10,7 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * docs/CORE-FLOWS.md mục 9, ADR-019, ADR-053 — Xuất CSV danh sách Application theo quyền & filter.
- * Staff chỉ được xuất dữ liệu thuộc cơ sở mình; Admin xuất theo filter hoặc toàn bộ.
+ * Branch Admin/Staff chỉ được xuất dữ liệu thuộc cơ sở mình;
+ * Super Admin xuất theo filter hoặc toàn bộ.
  * Tự động phòng chống CSV Formula Injection và ghi nhật ký export_logs.
  */
 class ExportApplicationsCsvAction
@@ -21,9 +22,9 @@ class ExportApplicationsCsvAction
             ->with(['job.company', 'ownerBranch']);
 
         // 1. Phân quyền & Branch Isolation
-        if ($actor->isStaff()) {
+        if (! $actor->isSuperAdmin()) {
             $query->where('owner_branch_id', $actor->branch_id);
-        } else if (! empty($filters['owner_branch_id'])) {
+        } elseif (! empty($filters['owner_branch_id'])) {
             $branchIds = (array) $filters['owner_branch_id'];
             $query->whereIn('owner_branch_id', $branchIds);
         }
@@ -33,7 +34,7 @@ class ExportApplicationsCsvAction
             $kw = trim($filters['q']);
             $query->where(function ($q) use ($kw) {
                 $q->where('submitted_full_name', 'like', "%{$kw}%")
-                  ->orWhere('submitted_phone', 'like', "%{$kw}%");
+                    ->orWhere('submitted_phone', 'like', "%{$kw}%");
             });
         }
 
@@ -60,7 +61,7 @@ class ExportApplicationsCsvAction
         $query->orderByDesc('id');
 
         // 3. Ghi log khởi tạo export_logs
-        $fileName = 'applications_export_' . now()->format('Ymd_His') . '.csv';
+        $fileName = 'applications_export_'.now()->format('Ymd_His').'.csv';
 
         $exportLog = ExportLog::query()->create([
             'exported_by' => $actor->id,
@@ -75,7 +76,7 @@ class ExportApplicationsCsvAction
             $handle = fopen('php://output', 'w');
 
             // UTF-8 BOM
-            fputs($handle, "\xEF\xBB\xBF");
+            fwrite($handle, "\xEF\xBB\xBF");
 
             // Header (chỉ gồm các cột nghiệp vụ cần thiết, không lộ PII thừa)
             fputcsv($handle, [
@@ -118,7 +119,7 @@ class ExportApplicationsCsvAction
             $exportLog->update(['row_count' => $rowCount]);
         }, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0',

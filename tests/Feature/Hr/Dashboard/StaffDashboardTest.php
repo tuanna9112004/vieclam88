@@ -33,7 +33,7 @@ class StaffDashboardTest extends TestCase
         // Branch B: 5 applications
         Application::factory()->count(5)->create(['job_id' => $jobB->id, 'owner_branch_id' => $branchB->id, 'stage' => 'new']);
 
-        $action = new GetDashboardStatsAction();
+        $action = new GetDashboardStatsAction;
         $statsA = $action->handle($staffA);
 
         // Staff A sees only Branch A's 2 applications
@@ -55,7 +55,7 @@ class StaffDashboardTest extends TestCase
         Application::factory()->create(['job_id' => $jobA->id, 'owner_branch_id' => $branchA->id, 'stage' => 'new']);
         Application::factory()->create(['job_id' => $jobB->id, 'owner_branch_id' => $branchB->id, 'stage' => 'new']);
 
-        $action = new GetDashboardStatsAction();
+        $action = new GetDashboardStatsAction;
 
         // All branches
         $statsAll = $action->handle($admin, null);
@@ -64,6 +64,30 @@ class StaffDashboardTest extends TestCase
         // Filtered Branch A
         $statsA = $action->handle($admin, $branchA->id);
         $this->assertSame(1, $statsA['new_today']);
+    }
+
+    public function test_branch_admin_legacy_dashboard_action_is_scoped_to_own_branch(): void
+    {
+        fake()->unique(true);
+
+        $ownBranch = Branch::factory()->create(['status' => 'active']);
+        $otherBranch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $ownBranch->id]);
+        $ownJob = Job::factory()->create(['owner_branch_id' => $ownBranch->id]);
+        $otherJob = Job::factory()->create(['owner_branch_id' => $otherBranch->id]);
+
+        Application::factory()->create([
+            'job_id' => $ownJob->id,
+            'owner_branch_id' => $ownBranch->id,
+        ]);
+        Application::factory()->count(2)->create([
+            'job_id' => $otherJob->id,
+            'owner_branch_id' => $otherBranch->id,
+        ]);
+
+        $stats = (new GetDashboardStatsAction)->handle($branchAdmin, $otherBranch->id);
+
+        $this->assertSame(1, $stats['new_today']);
     }
 
     public function test_dashboard_kpi_cards_count_accurately(): void
@@ -137,7 +161,7 @@ class StaffDashboardTest extends TestCase
             'close_reason' => 'unreachable',
         ]);
 
-        $action = new GetDashboardStatsAction();
+        $action = new GetDashboardStatsAction;
         $stats = $action->handle($staff);
 
         $this->assertSame(7, $stats['new_today']);

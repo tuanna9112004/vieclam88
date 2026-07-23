@@ -22,7 +22,7 @@ class CreateAdminCommandTest extends TestCase
         $admin = User::where('email', 'admin@vieclam88.test')->first();
 
         $this->assertNotNull($admin);
-        $this->assertSame('admin', $admin->role);
+        $this->assertSame('super_admin', $admin->role);
         $this->assertNull($admin->branch_id);
         $this->assertNull($admin->password_changed_at);
         $this->assertTrue(Hash::check('admin-password-123', $admin->password));
@@ -52,7 +52,7 @@ class CreateAdminCommandTest extends TestCase
             '--force' => true,
         ])->assertExitCode(0);
 
-        $this->assertDatabaseHas('users', ['email' => 'admin2@vieclam88.test', 'role' => 'admin']);
+        $this->assertDatabaseHas('users', ['email' => 'admin2@vieclam88.test', 'role' => 'super_admin']);
     }
 
     public function test_rejects_duplicate_email(): void

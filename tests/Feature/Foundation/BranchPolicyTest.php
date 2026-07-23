@@ -35,6 +35,22 @@ class BranchPolicyTest extends TestCase
         $this->assertFalse($staff->can('restore', $branch));
     }
 
+    public function test_branch_admin_can_view_and_update_only_own_branch(): void
+    {
+        $branch = Branch::factory()->create(['status' => 'active']);
+        $otherBranch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $branch->id]);
+
+        $this->assertTrue($branchAdmin->can('viewAny', Branch::class));
+        $this->assertTrue($branchAdmin->can('view', $branch));
+        $this->assertTrue($branchAdmin->can('update', $branch));
+        $this->assertFalse($branchAdmin->can('view', $otherBranch));
+        $this->assertFalse($branchAdmin->can('update', $otherBranch));
+        $this->assertFalse($branchAdmin->can('create', Branch::class));
+        $this->assertFalse($branchAdmin->can('delete', $branch));
+        $this->assertFalse($branchAdmin->can('restore', $branch));
+    }
+
     public function test_force_delete_is_always_denied_even_for_admin(): void
     {
         $admin = User::factory()->admin()->create();

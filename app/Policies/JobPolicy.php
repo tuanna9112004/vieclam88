@@ -24,7 +24,7 @@ class JobPolicy
 
     public function update(User $user, Job $job): bool
     {
-        return $user->isAdmin() || $job->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $job->owner_branch_id === $user->branch_id;
     }
 
     /**
@@ -34,7 +34,7 @@ class JobPolicy
      */
     public function publish(User $user, Job $job): bool
     {
-        return $user->isAdmin() || $job->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $job->owner_branch_id === $user->branch_id;
     }
 
     /**
@@ -48,7 +48,7 @@ class JobPolicy
             return false;
         }
 
-        return $user->isAdmin() || $job->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $job->owner_branch_id === $user->branch_id;
     }
 
     /**
@@ -59,27 +59,27 @@ class JobPolicy
      */
     public function pause(User $user, Job $job): bool
     {
-        return $user->isAdmin() || $job->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $job->owner_branch_id === $user->branch_id;
     }
 
     public function close(User $user, Job $job): bool
     {
-        return $user->isAdmin() || $job->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $job->owner_branch_id === $user->branch_id;
     }
 
     public function duplicate(User $user, Job $job): bool
     {
-        return $user->isAdmin() || $job->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $job->owner_branch_id === $user->branch_id;
     }
 
     public function delete(User $user, Job $job): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     public function restore(User $user, Job $job): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     public function forceDelete(User $user, Job $job): bool
@@ -93,6 +93,6 @@ class JobPolicy
      */
     public function transferBranch(User $user, Job $job): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 }

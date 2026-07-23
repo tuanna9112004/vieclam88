@@ -23,7 +23,7 @@ class ApplicationPolicy
      */
     public function view(User $user, Application $application): bool
     {
-        return $user->isAdmin() || $application->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $application->owner_branch_id === $user->branch_id;
     }
 
     /**
@@ -33,7 +33,7 @@ class ApplicationPolicy
      */
     public function recordContact(User $user, Application $application): bool
     {
-        return $user->isAdmin() || $application->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $application->owner_branch_id === $user->branch_id;
     }
 
     /**
@@ -42,7 +42,7 @@ class ApplicationPolicy
      */
     public function scheduleAppointment(User $user, Application $application): bool
     {
-        return $user->isAdmin() || $application->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $application->owner_branch_id === $user->branch_id;
     }
 
     /**
@@ -51,7 +51,7 @@ class ApplicationPolicy
      */
     public function updateAppointment(User $user, Application $application): bool
     {
-        return $user->isAdmin() || $application->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $application->owner_branch_id === $user->branch_id;
     }
 
     /**
@@ -61,7 +61,7 @@ class ApplicationPolicy
      */
     public function changeStage(User $user, Application $application): bool
     {
-        return $user->isAdmin() || $application->owner_branch_id === $user->branch_id;
+        return $user->isSuperAdmin() || $application->owner_branch_id === $user->branch_id;
     }
 
     /**
@@ -69,7 +69,7 @@ class ApplicationPolicy
      */
     public function transferBranch(User $user, Application $application): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     /**

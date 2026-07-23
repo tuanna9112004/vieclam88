@@ -10,7 +10,8 @@ use App\Support\JobVerificationWarning;
 use Illuminate\Support\Facades\DB;
 
 /**
- * docs/CORE-FLOWS.md mục 9.1 — Dashboard Admin toàn hệ thống.
+ * docs/CORE-FLOWS.md mục 9.1 — Dashboard Super Admin toàn hệ thống,
+ * Branch Admin/Staff chỉ trong cơ sở được gán.
  * Hỗ trợ bộ lọc khoảng ngày (date_from, date_to), cơ sở (owner_branch_id), công ty (company_id) và việc làm (job_id).
  * Tính toán tỷ lệ chuyển đổi (Application -> started), thống kê số lượng theo Job & Company.
  * Không bị sai đếm khi chuyển cơ sở (Transfer), gộp ứng viên (Merge) hay đóng trùng (Duplicate).
@@ -18,16 +19,16 @@ use Illuminate\Support\Facades\DB;
 class GetAdminDashboardStatsAction
 {
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
     public function handle(User $actor, array $filters = []): array
     {
         $today = now()->toDateString();
 
-        // 1. Branch Isolation / Admin Selected Branches
+        // 1. Branch Isolation / Super Admin Selected Branches
         $branchIds = null;
-        if ($actor->isStaff()) {
+        if (! $actor->isSuperAdmin()) {
             $branchIds = [$actor->branch_id];
         } elseif (! empty($filters['owner_branch_id'])) {
             $branchIds = (array) $filters['owner_branch_id'];
@@ -159,7 +160,7 @@ class GetAdminDashboardStatsAction
         $jobsNeedingVerification = (clone $jobQuery)
             ->where(function ($q) use ($warningDays) {
                 $q->where('status', 'draft')
-                  ->orWhere(fn ($q2) => $q2->publishedStale($warningDays));
+                    ->orWhere(fn ($q2) => $q2->publishedStale($warningDays));
             })->count();
 
         return [

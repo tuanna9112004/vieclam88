@@ -14,6 +14,7 @@
                 <tr>
                     <th>Tên</th>
                     <th>Email</th>
+                    <th>Vai trò</th>
                     <th>Cơ sở</th>
                     <th>Trạng thái</th>
                     <th></th>
@@ -24,6 +25,7 @@
                     <tr>
                         <td>{{ $member->name }}</td>
                         <td>{{ $member->email }}</td>
+                        <td>{{ $member->isBranchAdmin() ? 'Quản trị cơ sở' : 'Staff' }}</td>
                         <td>{{ $member->branch?->name }}</td>
                         <td>{{ $member->status }}</td>
                         <td class="text-end">

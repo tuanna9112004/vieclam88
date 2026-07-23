@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * docs/CORE-FLOWS.md mục 9.1, ACCEPTANCE-CRITERIA.md mục 12 — Thống kê KPI Dashboard Phase 1.
- * Đảm bảo Branch Isolation: Staff chỉ xem cơ sở mình; Admin chọn cơ sở tùy chọn hoặc xem tất cả.
+ * Đảm bảo Branch Isolation: Branch Admin/Staff chỉ xem cơ sở mình;
+ * Super Admin chọn cơ sở tùy chọn hoặc xem tất cả.
  * Thực hiện thống kê bằng các câu lệnh SQL Aggregate tập trung (tránh N+1).
  */
 class GetDashboardStatsAction
@@ -20,7 +21,7 @@ class GetDashboardStatsAction
      */
     public function handle(User $user, ?int $branchId = null): array
     {
-        $targetBranchId = $user->isStaff() ? $user->branch_id : $branchId;
+        $targetBranchId = $user->isSuperAdmin() ? $branchId : $user->branch_id;
         $today = now()->toDateString();
 
         $appQuery = Application::query();
@@ -81,7 +82,7 @@ class GetDashboardStatsAction
         $warningDays = JobVerificationWarning::thresholds()['warning'];
         $jobsNeedingVerification = $jobQuery->where(function ($q) use ($warningDays) {
             $q->where('status', 'draft')
-              ->orWhere(fn ($q2) => $q2->publishedStale($warningDays));
+                ->orWhere(fn ($q2) => $q2->publishedStale($warningDays));
         })->count();
 
         return [

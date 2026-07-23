@@ -10,6 +10,7 @@ use App\Models\Province;
 use App\Models\Ward;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -18,9 +19,16 @@ class BranchController extends Controller
     public function index(): View
     {
         $this->authorize('viewAny', Branch::class);
+        $actor = auth()->user();
 
-        $branches = Branch::query()->with(['ward.province', 'administrativeUnit'])->orderBy('name')->paginate(20);
-        $trashedBranches = Branch::onlyTrashed()->orderBy('name')->get();
+        $branches = Branch::query()
+            ->when($actor->isBranchAdmin(), fn ($query) => $query->whereKey($actor->branch_id))
+            ->with(['ward.province', 'administrativeUnit'])
+            ->orderBy('name')
+            ->paginate(20);
+        $trashedBranches = $actor->isSuperAdmin()
+            ? Branch::onlyTrashed()->orderBy('name')->get()
+            : collect();
 
         return view('hr.branches.index', compact('branches', 'trashedBranches'));
     }
@@ -54,9 +62,15 @@ class BranchController extends Controller
     {
         $data = $request->validated();
 
-        $this->guardAgainstLeavingStaffOrphaned($branch, $data['status'] === 'inactive');
+        DB::transaction(function () use ($branch, $data): void {
+            $lockedBranch = Branch::query()
+                ->whereKey($branch->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $branch->update($data);
+            $this->guardAgainstLeavingStaffOrphaned($lockedBranch, $data['status'] === 'inactive');
+            $lockedBranch->update($data);
+        });
 
         return redirect()->route('hr.branches.index')->with('status', 'Đã cập nhật cơ sở.');
     }
@@ -65,9 +79,15 @@ class BranchController extends Controller
     {
         $this->authorize('delete', $branch);
 
-        $this->guardAgainstLeavingStaffOrphaned($branch, true);
+        DB::transaction(function () use ($branch): void {
+            $lockedBranch = Branch::query()
+                ->whereKey($branch->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $branch->delete();
+            $this->guardAgainstLeavingStaffOrphaned($lockedBranch, true);
+            $lockedBranch->delete();
+        });
 
         return redirect()->route('hr.branches.index')->with('status', 'Đã xóa cơ sở.');
     }

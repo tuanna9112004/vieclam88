@@ -417,17 +417,17 @@ schema):
 
 ## 5. Authorization
 
-- [ ] Bất kỳ route `/hr/*` nào cũng yêu cầu `role ∈ {staff, admin}` — không có route `/hr/*`
+- [ ] Bất kỳ route `/hr/*` nào cũng yêu cầu `role ∈ {staff, branch_admin, super_admin}` — không có route `/hr/*`
       cho khách vãng lai hoặc bất kỳ vai trò nào khác (Phase 1 không có `role = candidate`,
       ADR-028).
-- [ ] `staff` không quản lý được tài khoản `admin` (không tạo/sửa/xóa được user có role admin).
-- [ ] `staff` không xem được các trường/API dành riêng cho `admin` (vd export CSV — chỉ admin).
+- [ ] `staff` không quản lý user/branch; `branch_admin` chỉ quản lý Staff và Branch đúng cơ sở;
+      `super_admin` giữ quyền toàn hệ thống.
 - [ ] Guest (chưa đăng nhập) không truy cập được bất kỳ dữ liệu nội bộ nào (`application_notes`,
       danh sách `/hr/*`).
 - [ ] Xuất CSV chỉ chứa các cột được phép xuất; mỗi lần xuất tạo đúng 1 bản ghi `export_logs`.
 - [ ] `hr.candidates.anonymize` chỉ `admin` thực hiện được — Staff bị từ chối (`403`).
 - [ ] Staff không truy cập được `hr.duplicate-reviews.*` (`403`) — chỉ Admin.
-- [ ] Staff/Admin có `password_changed_at = null` chỉ truy cập được `hr.password.change/update`
+- [ ] Mọi role HR có `password_changed_at = null` chỉ truy cập được `hr.password.change/update`
       và `hr.logout` — mọi route HR khác redirect về `hr.password.change`.
 - [ ] `hr.staff.reset-password` (Admin reset mật khẩu Staff) đặt lại `password_changed_at = null`
       — Staff đó bắt buộc đổi mật khẩu lại ở lần đăng nhập kế tiếp.
@@ -449,7 +449,7 @@ schema):
 - [ ] Không xảy ra cascade xóa nhầm dữ liệu nghiệp vụ ở các quan hệ bị cấm cascade.
 - [ ] Không tồn tại bảng `lead_requests`, `favorites`, `application_assignment_histories` hoặc
       cột `applications.assigned_to`, `applications.referral_code`, `candidates.user_id` trong
-      schema Phase 1; `users.role` chỉ nhận `staff`/`admin`.
+      schema Phase 1; `users.role` chỉ nhận `staff`/`branch_admin`/`super_admin`.
 - [ ] `application_status_histories.actor_type` chỉ nhận `user`/`system` (không có `import`).
 - [ ] `php artisan migrate:fresh` chạy đúng thứ tự 28 bảng business theo Migration order
       (`docs/DATABASE-DICTIONARY.md`) không vi phạm foreign key (không cần tắt kiểm tra FK tạm
@@ -489,7 +489,7 @@ là hoàn thành.
 - [ ] Secret, note nội bộ và dữ liệu private không xuất hiện trong log/response public.
 - [ ] `php artisan app:create-admin` từ chối khi `email` đã tồn tại trong `users`; mật khẩu được
       hash, không bao giờ log/echo plaintext (ADR-050).
-- [ ] `php artisan app:create-admin` chạy lần 2 khi đã có ≥1 `role=admin` bị từ chối trừ khi
+- [ ] `php artisan app:create-admin` chạy lần 2 khi đã có ≥1 `role=super_admin` bị từ chối trừ khi
       truyền `--force` (ADR-050).
 - [ ] Seeder demo (Branch/Staff/Company/Job/Candidate mẫu) không chạy khi
       `app()->environment('production')` (ADR-051).

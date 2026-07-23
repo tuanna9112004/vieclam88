@@ -93,8 +93,8 @@ erDiagram
 
     users {
         bigint id PK
-        enum role "staff, admin (không có candidate — ADR-028)"
-        bigint branch_id FK "nullable; bắt buộc khi role=staff"
+        enum role "staff, branch_admin, super_admin (TASK 2.1)"
+        bigint branch_id FK "nullable; bắt buộc cho staff/branch_admin, null cho super_admin"
         string email UK "NOT NULL — định danh đăng nhập duy nhất"
         enum status "active, locked"
     }
@@ -491,7 +491,7 @@ TASK 12.4 sau khi FK ward (TASK 1.3) đã switch ổn định.
 - **`jobs.last_checked_at`/`last_verified_at`**: 2 cột tách biệt (ADR-048) — `last_checked_at`
   cập nhật ở mọi lần xác nhận, `last_verified_at` chỉ khi `result=still_open`. Scheduler cảnh
   báo và điều kiện publish đều dùng `last_verified_at` (`docs/CORE-FLOWS.md` mục 1.2, 1.3).
-- **`users` Phase 1 chỉ staff/admin**: không có giá trị `candidate` trong `users.role`, không
+- **`users` chỉ staff/branch_admin/super_admin (TASK 2.1)**: không có giá trị `candidate` trong `users.role`, không
   có `candidates.user_id`, không có `users.phone_normalized` (mục đích cũ chỉ để đăng nhập
   candidate) — Candidate Account là Phase 2 (ADR-028). `users.email` bắt buộc (NOT NULL).
 - **`applications.owner_branch_id`** copy từ `jobs.owner_branch_id` tại thời điểm tạo

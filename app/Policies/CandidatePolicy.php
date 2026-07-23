@@ -14,7 +14,7 @@ class CandidatePolicy
      */
     public function view(User $user, Candidate $candidate): bool
     {
-        if ($user->isAdmin()) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
@@ -42,7 +42,7 @@ class CandidatePolicy
      */
     public function merge(User $user, Candidate $candidate): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     /**
@@ -50,6 +50,6 @@ class CandidatePolicy
      */
     public function anonymize(User $user, Candidate $candidate): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 }

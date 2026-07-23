@@ -23,7 +23,7 @@ class ApplicationController extends Controller
             // Staff luon bi khoa theo co so minh, khong doc owner_branch_id tu request du co
             // gui kem (docs/CORE-FLOWS.md muc 9.2, ACCEPTANCE-CRITERIA.md muc 4).
             ->when(
-                ! $user->isAdmin(),
+                ! $user->isSuperAdmin(),
                 fn ($q) => $q->where('owner_branch_id', $user->branch_id),
                 fn ($q) => $q->when(
                     ! empty($filters['owner_branch_id']),
@@ -47,7 +47,7 @@ class ApplicationController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $branches = $user->isAdmin() ? Branch::orderBy('name')->get(['id', 'name']) : collect();
+        $branches = $user->isSuperAdmin() ? Branch::orderBy('name')->get(['id', 'name']) : collect();
 
         return view('hr.applications.index', compact('applications', 'filters', 'branches'));
     }
@@ -61,7 +61,7 @@ class ApplicationController extends Controller
 
         // Chi Admin thao tac Transfer Branch (ApplicationPolicy::transferBranch) — danh sach co
         // so dich khong bao gom co so hien tai cua Application.
-        $branches = auth()->user()->isAdmin()
+        $branches = auth()->user()->isSuperAdmin()
             ? Branch::where('status', 'active')->where('id', '!=', $application->owner_branch_id)->orderBy('name')->get()
             : collect();
 

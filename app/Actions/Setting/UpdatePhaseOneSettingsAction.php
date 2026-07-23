@@ -14,7 +14,7 @@ class UpdatePhaseOneSettingsAction
      */
     public function handle(array $submittedSettings, User $actor): void
     {
-        abort_unless($actor->isAdmin(), 403);
+        abort_unless($actor->isSuperAdmin(), 403);
 
         DB::transaction(function () use ($submittedSettings): void {
             foreach (PhaseOneSettingCatalog::DEFINITIONS as $key => $definition) {

@@ -209,11 +209,11 @@ class PublishJobAction
             return false;
         }
 
-        if ($actor->isAdmin() && trim((string) $overrideReason) !== '') {
+        if ($actor->isSuperAdmin() && trim((string) $overrideReason) !== '') {
             return true;
         }
 
-        $errors['verification'] = [$actor->isAdmin()
+        $errors['verification'] = [$actor->isSuperAdmin()
             ? 'Cần nhập lý do bỏ qua điều kiện xác minh còn tuyển.'
             : 'Job cần có xác nhận còn tuyển (still_open) gần nhất trước khi xuất bản.'];
 

@@ -25,10 +25,24 @@ class UpdateStaffRequest extends FormRequest
         /** @var User $staff */
         $staff = $this->route('staff');
 
+        $branchRules = [
+            'required',
+            Rule::exists(Branch::class, 'id')->where('status', 'active')->withoutTrashed(),
+        ];
+
+        if ($this->user()->isBranchAdmin()) {
+            $branchRules[] = Rule::in([$this->user()->branch_id]);
+        }
+
+        $allowedRoles = $this->user()->isSuperAdmin()
+            ? ['staff', 'branch_admin']
+            : ['staff'];
+
         return [
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:191', Rule::unique('users', 'email')->ignore($staff->id)],
-            'branch_id' => ['required', Rule::exists(Branch::class, 'id')->where('status', 'active')->withoutTrashed()],
+            'role' => ['sometimes', 'string', Rule::in($allowedRoles)],
+            'branch_id' => $branchRules,
         ];
     }
 }

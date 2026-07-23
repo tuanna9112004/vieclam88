@@ -25,6 +25,27 @@ class StaffManagementTest extends TestCase
         $this->actingAs($staff)->get(route('hr.staff.index'))->assertForbidden();
     }
 
+    public function test_branch_admin_sees_only_staff_from_own_branch(): void
+    {
+        $ownBranch = Branch::factory()->create();
+        $otherBranch = Branch::factory()->create();
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $ownBranch->id]);
+        $ownStaff = User::factory()->create([
+            'branch_id' => $ownBranch->id,
+            'name' => 'Nhân viên cùng cơ sở',
+        ]);
+        $otherStaff = User::factory()->create([
+            'branch_id' => $otherBranch->id,
+            'name' => 'Nhân viên khác cơ sở',
+        ]);
+
+        $response = $this->actingAs($branchAdmin)->get(route('hr.staff.index'));
+
+        $response->assertOk()
+            ->assertSee($ownStaff->name)
+            ->assertDontSee($otherStaff->name);
+    }
+
     public function test_guest_is_redirected_from_staff_index(): void
     {
         $this->get(route('hr.staff.index'))->assertRedirect(route('hr.login'));
@@ -71,26 +92,43 @@ class StaffManagementTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'staff-a@vieclam88.test']);
     }
 
-    public function test_creating_staff_ignores_client_supplied_role_and_forces_staff(): void
+    public function test_staff_route_rejects_super_admin_role_from_client(): void
     {
         $admin = User::factory()->admin()->create();
         $branch = Branch::factory()->create(['status' => 'active']);
 
-        $this->actingAs($admin)->post(route('hr.staff.store'), [
+        $response = $this->actingAs($admin)->post(route('hr.staff.store'), [
             'name' => 'Nguyễn Văn A',
             'email' => 'staff-a@vieclam88.test',
             'password' => 'temp-password-123',
             'branch_id' => $branch->id,
-            'role' => 'admin',
+            'role' => 'super_admin',
             'status' => 'locked',
             'password_changed_at' => now()->toDateTimeString(),
         ]);
 
-        $created = User::where('email', 'staff-a@vieclam88.test')->first();
+        $response->assertSessionHasErrors('role');
+        $this->assertDatabaseMissing('users', ['email' => 'staff-a@vieclam88.test']);
+    }
 
-        $this->assertSame('staff', $created->role);
-        $this->assertSame('active', $created->status);
-        $this->assertNull($created->password_changed_at);
+    public function test_super_admin_can_create_branch_admin(): void
+    {
+        $superAdmin = User::factory()->superAdmin()->create();
+        $branch = Branch::factory()->create(['status' => 'active']);
+
+        $this->actingAs($superAdmin)->post(route('hr.staff.store'), [
+            'name' => 'Quản trị cơ sở',
+            'email' => 'branch-admin@vieclam88.test',
+            'password' => 'temp-password-123',
+            'role' => 'branch_admin',
+            'branch_id' => $branch->id,
+        ])->assertRedirect(route('hr.staff.index'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'branch-admin@vieclam88.test',
+            'role' => 'branch_admin',
+            'branch_id' => $branch->id,
+        ]);
     }
 
     public function test_staff_cannot_create_staff(): void
@@ -107,6 +145,54 @@ class StaffManagementTest extends TestCase
 
         $response->assertForbidden();
         $this->assertDatabaseMissing('users', ['email' => 'staff-a@vieclam88.test']);
+    }
+
+    public function test_branch_admin_creates_staff_only_in_own_branch(): void
+    {
+        $ownBranch = Branch::factory()->create(['status' => 'active']);
+        $otherBranch = Branch::factory()->create(['status' => 'active']);
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $ownBranch->id]);
+
+        $response = $this->actingAs($branchAdmin)->post(route('hr.staff.store'), [
+            'name' => 'Nhân viên cơ sở',
+            'email' => 'branch-staff@vieclam88.test',
+            'password' => 'temp-password-123',
+            'branch_id' => $otherBranch->id,
+        ]);
+
+        $response->assertSessionHasErrors('branch_id');
+        $this->assertDatabaseMissing('users', ['email' => 'branch-staff@vieclam88.test']);
+
+        $this->actingAs($branchAdmin)->post(route('hr.staff.store'), [
+            'name' => 'Nhân viên cơ sở',
+            'email' => 'branch-staff@vieclam88.test',
+            'password' => 'temp-password-123',
+            'branch_id' => $ownBranch->id,
+        ])->assertRedirect(route('hr.staff.index'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'branch-staff@vieclam88.test',
+            'role' => 'staff',
+            'branch_id' => $ownBranch->id,
+        ]);
+    }
+
+    public function test_branch_admin_cannot_manage_staff_from_another_branch(): void
+    {
+        $ownBranch = Branch::factory()->create();
+        $otherBranch = Branch::factory()->create();
+        $branchAdmin = User::factory()->branchAdmin()->create(['branch_id' => $ownBranch->id]);
+        $otherStaff = User::factory()->create(['branch_id' => $otherBranch->id]);
+
+        $this->actingAs($branchAdmin)
+            ->get(route('hr.staff.edit', $otherStaff))
+            ->assertForbidden();
+
+        $this->actingAs($branchAdmin)
+            ->post(route('hr.staff.lock', $otherStaff))
+            ->assertForbidden();
+
+        $this->assertSame('active', $otherStaff->fresh()->status);
     }
 
     public function test_admin_can_update_staff_branch(): void

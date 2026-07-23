@@ -60,7 +60,7 @@ class ReopenApplicationAction
                 ]);
             }
 
-            if (! $job->isOpenForApplication() && ! $actor->isAdmin()) {
+            if (! $job->isOpenForApplication() && ! $actor->isSuperAdmin()) {
                 throw ValidationException::withMessages([
                     'to_stage' => 'Job không còn nhận hồ sơ — chỉ Admin mới mở lại được.',
                 ]);

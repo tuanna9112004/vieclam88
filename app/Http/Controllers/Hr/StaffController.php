@@ -10,7 +10,10 @@ use App\Http\Requests\Hr\Staff\StoreStaffRequest;
 use App\Http\Requests\Hr\Staff\UpdateStaffRequest;
 use App\Models\Branch;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class StaffController extends Controller
@@ -18,9 +21,14 @@ class StaffController extends Controller
     public function index(): View
     {
         $this->authorize('viewAny', User::class);
+        $actor = auth()->user();
+        $managedRoles = $actor->isSuperAdmin()
+            ? ['staff', 'branch_admin']
+            : ['staff'];
 
         $staff = User::query()
-            ->where('role', 'staff')
+            ->whereIn('role', $managedRoles)
+            ->when($actor->isBranchAdmin(), fn ($query) => $query->where('branch_id', $actor->branch_id))
             ->with('branch')
             ->orderBy('name')
             ->paginate(20);
@@ -32,14 +40,14 @@ class StaffController extends Controller
     {
         $this->authorize('create', User::class);
 
-        $branches = Branch::where('status', 'active')->orderBy('name')->get();
+        $branches = $this->manageableBranches();
 
         return view('hr.staff.create', compact('branches'));
     }
 
     public function store(StoreStaffRequest $request): RedirectResponse
     {
-        (new CreateStaffAction)->handle($request->validated());
+        (new CreateStaffAction)->handle($request->validated(), $request->user());
 
         return redirect()->route('hr.staff.index')->with('status', 'Đã tạo nhân viên.');
     }
@@ -48,18 +56,34 @@ class StaffController extends Controller
     {
         $this->authorize('update', $staff);
 
-        $branches = Branch::where('status', 'active')->orderBy('name')->get();
+        $branches = $this->manageableBranches();
 
         return view('hr.staff.edit', compact('staff', 'branches'));
     }
 
     public function update(UpdateStaffRequest $request, User $staff): RedirectResponse
     {
-        $staff->update([
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-            'branch_id' => $request->validated('branch_id'),
-        ]);
+        $data = $request->validated();
+
+        DB::transaction(function () use ($data, $staff): void {
+            $branch = Branch::query()
+                ->whereKey($data['branch_id'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($branch?->status !== 'active') {
+                throw ValidationException::withMessages([
+                    'branch_id' => 'Nhân viên bắt buộc thuộc một cơ sở đang hoạt động.',
+                ]);
+            }
+
+            $staff->update([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'role' => $data['role'] ?? $staff->role,
+                'branch_id' => $branch->getKey(),
+            ]);
+        });
 
         return redirect()->route('hr.staff.index')->with('status', 'Đã cập nhật nhân viên.');
     }
@@ -88,5 +112,16 @@ class StaffController extends Controller
 
         return redirect()->route('hr.dashboard')
             ->with('status', 'Đã đặt lại mật khẩu tạm cho nhân viên.');
+    }
+
+    protected function manageableBranches(): Collection
+    {
+        $actor = auth()->user();
+
+        return Branch::query()
+            ->where('status', 'active')
+            ->when($actor->isBranchAdmin(), fn ($query) => $query->whereKey($actor->branch_id))
+            ->orderBy('name')
+            ->get();
     }
 }

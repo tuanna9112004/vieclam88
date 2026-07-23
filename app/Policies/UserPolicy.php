@@ -6,37 +6,46 @@ use App\Models\User;
 
 class UserPolicy
 {
-    /**
-     * hr.staff.* (docs/ROUTE-MAP.md) chỉ Admin quản lý được — và chỉ quản lý Staff, không
-     * áp dụng giữa Admin với nhau (khớp phạm vi resetPassword, ADR-067 điểm 5).
-     */
     public function viewAny(User $actor): bool
     {
-        return $actor->isAdmin();
+        return $actor->isSuperAdmin()
+            || ($actor->isBranchAdmin() && $actor->hasValidBranchAssignment());
     }
 
     public function create(User $actor): bool
     {
-        return $actor->isAdmin();
+        return $this->viewAny($actor);
     }
 
     public function update(User $actor, User $staff): bool
     {
-        return $actor->isAdmin() && $staff->role === 'staff';
+        return $this->canManageStaff($actor, $staff);
     }
 
     public function lock(User $actor, User $staff): bool
     {
-        return $actor->isAdmin() && $staff->role === 'staff';
+        return $this->canManageStaff($actor, $staff);
     }
 
     public function unlock(User $actor, User $staff): bool
     {
-        return $actor->isAdmin() && $staff->role === 'staff';
+        return $this->canManageStaff($actor, $staff);
     }
 
     public function resetPassword(User $actor, User $staff): bool
     {
-        return $actor->isAdmin() && $staff->role === 'staff';
+        return $this->canManageStaff($actor, $staff);
+    }
+
+    private function canManageStaff(User $actor, User $staff): bool
+    {
+        if ($actor->isSuperAdmin()) {
+            return $staff->isStaff() || $staff->isBranchAdmin();
+        }
+
+        return $staff->isStaff()
+            && ($actor->isBranchAdmin()
+                && $actor->hasValidBranchAssignment()
+                && $actor->branch_id === $staff->branch_id);
     }
 }

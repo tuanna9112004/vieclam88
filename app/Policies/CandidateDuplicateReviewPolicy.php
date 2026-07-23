@@ -12,7 +12,7 @@ class CandidateDuplicateReviewPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     /**
@@ -20,7 +20,7 @@ class CandidateDuplicateReviewPolicy
      */
     public function view(User $user, CandidateDuplicateReview $review): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     /**
@@ -28,6 +28,6 @@ class CandidateDuplicateReviewPolicy
      */
     public function resolve(User $user, CandidateDuplicateReview $review): bool
     {
-        return $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 }

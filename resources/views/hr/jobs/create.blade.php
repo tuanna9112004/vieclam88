@@ -66,7 +66,7 @@
             </select>
         </div>
 
-        @if (auth()->user()->isAdmin())
+        @if (auth()->user()->isSuperAdmin())
             <div class="mb-3">
                 <label for="owner_branch_id" class="form-label">Cơ sở phụ trách</label>
                 <select class="form-select" id="owner_branch_id" name="owner_branch_id" required>

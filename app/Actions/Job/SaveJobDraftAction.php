@@ -40,7 +40,7 @@ class SaveJobDraftAction
         } else {
             // Staff tự động gán owner_branch_id = branch của mình, không đọc từ input; Admin
             // bắt buộc chọn tường minh (đã ép ở StoreJobRequest).
-            $data['owner_branch_id'] = $actor->isAdmin() ? $data['owner_branch_id'] : $actor->branch_id;
+            $data['owner_branch_id'] = $actor->isSuperAdmin() ? $data['owner_branch_id'] : $actor->branch_id;
             $data['status'] = 'draft';
             $data['created_by'] = $actor->id;
             $data['public_id'] = (string) Str::ulid();
