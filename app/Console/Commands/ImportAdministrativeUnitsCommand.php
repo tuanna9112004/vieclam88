@@ -3,9 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Actions\AdministrativeUnit\UpsertAdministrativeUnitAction;
+use App\Services\ProvincesOpenApi\ProvincesOpenApiClient;
 use Illuminate\Console\Command;
-use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class ImportAdministrativeUnitsCommand extends Command
@@ -13,20 +12,6 @@ class ImportAdministrativeUnitsCommand extends Command
     protected $signature = 'administrative-units:import';
 
     protected $description = 'Nhập/đồng bộ tỉnh/thành và phường/xã từ provinces.open-api.vn (API v2) vào administrative_units nội bộ';
-
-    private const API_BASE_URL = 'https://provinces.open-api.vn/api/v2';
-
-    /**
-     * ADR-079: prefix hành chính gắn trong field "name" của API, cắt bỏ để khớp convention tên
-     * hiện có trong administrative_units (vd "Hà Nội", không phải "Thành phố Hà Nội").
-     */
-    private const NAME_PREFIXES = [
-        'Thành phố ',
-        'Tỉnh ',
-        'Phường ',
-        'Xã ',
-        'Đặc khu ',
-    ];
 
     private const PROVINCE_TYPE_MAP = [
         'tỉnh' => 'province',
@@ -39,14 +24,12 @@ class ImportAdministrativeUnitsCommand extends Command
         'đặc khu' => 'special_zone',
     ];
 
-    public function handle(UpsertAdministrativeUnitAction $action): int
+    public function handle(ProvincesOpenApiClient $client, UpsertAdministrativeUnitAction $action): int
     {
         $this->info('--- BẮT ĐẦU IMPORT ADMINISTRATIVE UNITS TỪ provinces.open-api.vn ---');
 
-        $http = Http::timeout(15)->retry(2, 500);
-
         try {
-            $provinces = $this->fetch($http, self::API_BASE_URL.'/p/');
+            $provinces = $client->provinces();
         } catch (\Throwable $e) {
             $this->error('Không lấy được danh sách tỉnh/thành: '.$e->getMessage());
 
@@ -59,20 +42,20 @@ class ImportAdministrativeUnitsCommand extends Command
         foreach ($provinces as $province) {
             try {
                 $provinceUnit = $action->handle(
-                    $this->unitPayload($province, null, self::PROVINCE_TYPE_MAP)
+                    $this->unitPayload($client, $province, null, self::PROVINCE_TYPE_MAP)
                 );
                 $provinceCount++;
 
-                $detail = $this->fetch($http, self::API_BASE_URL."/p/{$province['code']}?depth=2");
+                $detail = $client->provinceWithWards((string) $province['code']);
 
                 foreach ($detail['wards'] ?? [] as $ward) {
                     $action->handle(
-                        $this->unitPayload($ward, $provinceUnit->id, self::WARD_TYPE_MAP)
+                        $this->unitPayload($client, $ward, $provinceUnit->id, self::WARD_TYPE_MAP)
                     );
                     $wardCount++;
                 }
 
-                $this->info("✓ {$provinceUnit->name}: ".count($detail['wards'] ?? [])." phường/xã");
+                $this->info("✓ {$provinceUnit->name}: ".count($detail['wards'] ?? []).' phường/xã');
             } catch (\Throwable $e) {
                 $this->error("Lỗi khi nhập tỉnh/thành [{$province['code']}] {$province['name']}: ".$e->getMessage());
 
@@ -86,21 +69,13 @@ class ImportAdministrativeUnitsCommand extends Command
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    private function fetch(PendingRequest $http, string $url): array
-    {
-        return $http->get($url)->throw()->json();
-    }
-
-    /**
      * @param  array<string, mixed>  $item  Bản ghi tỉnh hoặc phường/xã thô từ API
      * @param  array<string, string>  $typeMap
      * @return array{official_code: string, parent_id: ?int, name: string, slug: string, type: string, is_active: bool}
      */
-    private function unitPayload(array $item, ?int $parentId, array $typeMap): array
+    private function unitPayload(ProvincesOpenApiClient $client, array $item, ?int $parentId, array $typeMap): array
     {
-        $name = $this->stripPrefix($item['name']);
+        $name = $client->stripNamePrefix($item['name']);
 
         return [
             'official_code' => (string) $item['code'],
@@ -110,17 +85,6 @@ class ImportAdministrativeUnitsCommand extends Command
             'type' => $this->mapType($typeMap, $item['division_type']),
             'is_active' => true,
         ];
-    }
-
-    private function stripPrefix(string $name): string
-    {
-        foreach (self::NAME_PREFIXES as $prefix) {
-            if (str_starts_with($name, $prefix)) {
-                return substr($name, strlen($prefix));
-            }
-        }
-
-        return $name;
     }
 
     /**

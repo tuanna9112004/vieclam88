@@ -349,11 +349,13 @@ erDiagram
     }
 ```
 
-## Sơ đồ mục tiêu Phase 2 (ADR-080, CHƯA migrate)
+## Sơ đồ mục tiêu Phase 2 (ADR-080)
 
 > Sơ đồ trên (28 bảng) là **hiện trạng thật đang chạy** — không đổi. Khối dưới đây chỉ thể hiện
 > quan hệ/bảng **mục tiêu** theo `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md` (ADR-080), chi tiết cột ở
-> `docs/DATABASE-DICTIONARY.md` mục 9.29–9.35. Chưa có migration nào tạo ra các bảng này.
+> `docs/DATABASE-DICTIONARY.md` mục 9.29–9.36 — không thuộc 28 bảng Phase 1 dù đã migrate hay chưa.
+> `provinces`/`wards` **đã migrate ở TASK 1.1** (chưa được luồng nghiệp vụ Phase 1 đọc/ghi); 6 bảng
+> còn lại (9.31–9.36) chưa có migration nào tạo ra.
 
 ```mermaid
 erDiagram

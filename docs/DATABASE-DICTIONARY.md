@@ -870,39 +870,45 @@ thuần, xem ghi chú `updated_at` ở trên).
 
 ---
 
-## Mục 9.29–9.36 — Bảng target Phase 2 (ADR-080, CHƯA tồn tại trong database thật)
+## Mục 9.29–9.36 — Bảng target Phase 2 (ADR-080, không thuộc 28 bảng nghiệp vụ Phase 1)
 
-> Toàn bộ 7 bảng dưới đây **chưa có migration nào tạo ra**, chỉ là thiết kế mục tiêu theo PDF
-> "cấu trúc lại". Không viết code tham chiếu các bảng/cột này trừ khi đang thực thi đúng batch
-> tương ứng ở `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`. Format cột giữ đúng quy ước các mục 9.1–9.28
-> ở trên để khi migrate thật có thể chuyển thẳng thành migration.
+> 8 bảng dưới đây thuộc kiến trúc mục tiêu Phase 2 theo PDF "cấu trúc lại", **không phải** một
+> trong 28 bảng nghiệp vụ Phase 1 dù đã migrate hay chưa. `provinces`/`wards` (9.29–9.30) **đã
+> migrate ở TASK 1.1** nhưng chưa được bất kỳ luồng nghiệp vụ Phase 1 nào đọc/ghi (chỉ
+> `locations:sync` ghi, chưa có UI/route dùng) — xem `docs/refactor/tasks/` và
+> `docs/VIECLAM88_TASK_REGISTRY_V2.3.md` TASK 1.2/1.3 cho lộ trình nối vào nghiệp vụ. Các bảng
+> 9.31–9.36 **chưa có migration nào tạo ra**. Không viết code tham chiếu các bảng/cột 9.31–9.36 trừ
+> khi đang thực thi đúng `TASK x.y` tương ứng. Format cột giữ đúng quy ước các mục 9.1–9.28 ở trên.
 
-## 9.29. `provinces` (target — batch 1)
+## 9.29. `provinces` (Phase 2 target, batch 1 — đã migrate TASK 1.1)
 
 | Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
 |---|---|---|---|---|---|---|---|---|---|
 | id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
-| code | string(20) | — | không | — | — | ✓ | — | — | Mã GSO — backfill từ `administrative_units.official_code` cấp root |
+| code | string(20) | — | không | — | — | ✓ | — | — | Mã GSO từ `provinces.open-api.vn` — cùng nguồn `administrative_units.official_code` cấp root |
 | name | string(150) | — | không | — | — | — | — | — | |
 | is_active | boolean | — | không | true | ✓ | — | — | — | Ẩn khỏi form mới khi không còn hoạt động |
 | created_at | timestamp | — | có | now | — | — | — | — | |
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 
-**Chính sách xóa:** không hard delete — `is_active=false`.
+**Chính sách xóa:** không hard delete — `is_active=false`. Ghi qua `locations:sync`
+(`App\Console\Commands\LocationsSyncCommand`, `App\Actions\Location\UpsertProvinceAction`); không
+có CRUD tay từ UI.
 
-## 9.30. `wards` (target — batch 1)
+## 9.30. `wards` (Phase 2 target, batch 1 — đã migrate TASK 1.1)
 
 | Column | Type | Unsigned | Nullable | Default | Index | Unique | Foreign key | On delete | Description |
 |---|---|---|---|---|---|---|---|---|---|
 | id | bigint | ✓ | không | auto_increment | PK | ✓ | — | — | |
 | province_id | bigint | ✓ | không | — | ✓ | — | provinces.id | RESTRICT | |
-| code | string(20) | — | không | — | — | ✓ | — | — | Mã GSO — backfill từ `administrative_units.official_code` cấp lá |
+| code | string(20) | — | không | — | — | ✓ | — | — | Mã GSO từ `provinces.open-api.vn` — cùng nguồn `administrative_units.official_code` cấp lá |
 | name | string(150) | — | không | — | — | — | — | — | |
 | is_active | boolean | — | không | true | ✓ | — | — | — | |
 | created_at | timestamp | — | có | now | — | — | — | — | |
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 
-**Chính sách xóa:** không hard delete — `is_active=false`. Index `(province_id, is_active)`.
+**Chính sách xóa:** không hard delete — `is_active=false`. Index `(province_id, is_active)`. Ghi
+qua `locations:sync` (`App\Actions\Location\UpsertWardAction`); không có CRUD tay từ UI.
 
 ## 9.31. `industrial_park_wards` (target — batch 2)
 
