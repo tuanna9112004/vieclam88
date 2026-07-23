@@ -135,7 +135,7 @@ class ReopenApplicationTest extends TestCase
         $this->assertSame('closed', $applicationForStaff->fresh()->stage);
 
         $applicationForAdmin = $this->closedApplicationForBranch(Branch::factory()->create()->id, ['status' => 'closed']);
-        $this->reopen($admin, $applicationForAdmin)->assertRedirect(route('hr.applications.index'));
+        $this->reopen($admin, $applicationForAdmin)->assertRedirect(route('hr.applications.show', $applicationForAdmin));
         $this->assertSame('new', $applicationForAdmin->fresh()->stage);
     }
 
@@ -144,7 +144,7 @@ class ReopenApplicationTest extends TestCase
         $staff = User::factory()->create();
         $application = $this->closedApplicationForBranch($staff->branch_id, ['status' => 'published', 'expires_at' => null]);
 
-        $this->reopen($staff, $application)->assertRedirect(route('hr.applications.index'));
+        $this->reopen($staff, $application)->assertRedirect(route('hr.applications.show', $application));
         $this->assertSame('new', $application->fresh()->stage);
     }
 
@@ -170,7 +170,7 @@ class ReopenApplicationTest extends TestCase
         );
 
         $this->reopen($staff, $application, ['note' => 'Ứng viên xin xem xét lại.'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
 
         $fresh = $application->fresh();
         $this->assertSame('new', $fresh->stage);

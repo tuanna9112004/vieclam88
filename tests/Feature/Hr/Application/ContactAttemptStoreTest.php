@@ -51,7 +51,7 @@ class ContactAttemptStoreTest extends TestCase
             $this->validPayload()
         );
 
-        $response->assertRedirect(route('hr.applications.index'));
+        $response->assertRedirect(route('hr.applications.show', $application));
         $this->assertDatabaseHas('application_contact_attempts', [
             'application_id' => $application->id,
             'contacted_by' => $staff->id,
@@ -81,7 +81,7 @@ class ContactAttemptStoreTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('hr.applications.contacts.store', $application), $this->validPayload())
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
 
         $this->assertSame(1, ApplicationContactAttempt::count());
     }

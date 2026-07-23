@@ -52,7 +52,7 @@ class AppointmentStoreTest extends TestCase
             $this->validPayload(['scheduled_at' => $scheduledAt])
         );
 
-        $response->assertRedirect(route('hr.applications.index'));
+        $response->assertRedirect(route('hr.applications.show', $application));
         $this->assertDatabaseHas('application_appointments', [
             'application_id' => $application->id,
             'type' => 'callback',
@@ -82,7 +82,7 @@ class AppointmentStoreTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('hr.applications.appointments.store', $application), $this->validPayload(['type' => 'interview']))
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
 
         $this->assertSame(1, ApplicationAppointment::count());
     }

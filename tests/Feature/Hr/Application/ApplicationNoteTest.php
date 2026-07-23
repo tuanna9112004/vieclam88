@@ -43,7 +43,7 @@ class ApplicationNoteTest extends TestCase
             ['content' => 'Ứng viên hẹn gọi lại chiều mai.']
         );
 
-        $response->assertRedirect(route('hr.applications.index'));
+        $response->assertRedirect(route('hr.applications.show', $application));
         $this->assertDatabaseHas('application_notes', [
             'application_id' => $application->id,
             'user_id' => $staff->id,
@@ -71,7 +71,7 @@ class ApplicationNoteTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('hr.applications.notes.store', $application), ['content' => 'ghi chu admin'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
 
         $this->assertSame(1, ApplicationNote::count());
     }
@@ -105,7 +105,7 @@ class ApplicationNoteTest extends TestCase
             ['content' => 'Nội dung mới']
         );
 
-        $response->assertRedirect(route('hr.applications.index'));
+        $response->assertRedirect(route('hr.applications.show', $application));
         $note->refresh();
         $this->assertSame('Nội dung mới', $note->content);
         $this->assertNotNull($note->edited_at);
@@ -142,7 +142,7 @@ class ApplicationNoteTest extends TestCase
 
         $this->actingAs($admin)
             ->put(route('hr.applications.notes.update', [$application, $note]), ['content' => 'Admin sửa'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
 
         $this->assertSame('Admin sửa', $note->fresh()->content);
     }
@@ -180,7 +180,7 @@ class ApplicationNoteTest extends TestCase
 
         $response = $this->actingAs($staff)->delete(route('hr.applications.notes.destroy', [$application, $note]));
 
-        $response->assertRedirect(route('hr.applications.index'));
+        $response->assertRedirect(route('hr.applications.show', $application));
         $this->assertSoftDeleted('application_notes', ['id' => $note->id]);
     }
 

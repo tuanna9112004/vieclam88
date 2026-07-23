@@ -59,6 +59,12 @@ class ApplicationController extends Controller
         $application->load(['candidate', 'job.company', 'ownerBranch']);
         $timeline = $timelineAction->handle($application);
 
-        return view('hr.applications.show', compact('application', 'timeline'));
+        // Chi Admin thao tac Transfer Branch (ApplicationPolicy::transferBranch) — danh sach co
+        // so dich khong bao gom co so hien tai cua Application.
+        $branches = auth()->user()->isAdmin()
+            ? Branch::where('status', 'active')->where('id', '!=', $application->owner_branch_id)->orderBy('name')->get()
+            : collect();
+
+        return view('hr.applications.show', compact('application', 'timeline', 'branches'));
     }
 }

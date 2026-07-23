@@ -17,7 +17,7 @@ class AppointmentController extends Controller
     {
         $action->handle($application, $request->validated(), $request->user());
 
-        return redirect()->route('hr.applications.index')->with('status', 'Đã đặt lịch.');
+        return redirect()->route('hr.applications.show', $application)->with('status', 'Đã đặt lịch.');
     }
 
     public function update(
@@ -30,6 +30,6 @@ class AppointmentController extends Controller
 
         $action->handle($application, $appointment, $request->validated(), $request->user());
 
-        return redirect()->route('hr.applications.index')->with('status', 'Đã cập nhật lịch hẹn.');
+        return redirect()->route('hr.applications.show', $application)->with('status', 'Đã cập nhật lịch hẹn.');
     }
 }

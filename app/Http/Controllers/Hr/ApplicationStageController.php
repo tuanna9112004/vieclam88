@@ -14,6 +14,6 @@ class ApplicationStageController extends Controller
     {
         $action->handle($application, $request->validated(), $request->user());
 
-        return redirect()->route('hr.applications.index')->with('status', 'Đã cập nhật giai đoạn.');
+        return redirect()->route('hr.applications.show', $application)->with('status', 'Đã cập nhật giai đoạn.');
     }
 }

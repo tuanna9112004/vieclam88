@@ -40,6 +40,26 @@ class ChangeApplicationStageAction
     }
 
     /**
+     * Nguon duy nhat cho UI (hr.applications.show) biet option "tien" hop le tu 1 stage — cung
+     * TRANSITIONS dung de validate o handle(), khong duplicate ma tran o Controller/Blade.
+     *
+     * @return array<int, string>
+     */
+    public static function forwardOptions(string $fromStage): array
+    {
+        return self::TRANSITIONS[$fromStage] ?? [];
+    }
+
+    /**
+     * Stage dang active co the dong duoc (CloseApplicationAction::CLOSABLE_STAGES trung khop tap
+     * key cua TRANSITIONS — ca 2 cung la "6 stage dang active", xem docblock CloseApplicationAction).
+     */
+    public static function isClosable(string $stage): bool
+    {
+        return array_key_exists($stage, self::TRANSITIONS);
+    }
+
+    /**
      * @param  array{to_stage: string, close_reason?: ?string, expected_start_at?: ?string, started_at?: ?string, note?: ?string}  $data
      */
     public function handle(Application $application, array $data, User $actor): Application

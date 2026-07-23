@@ -64,7 +64,7 @@ class AppointmentUpdateTest extends TestCase
 
         $this->actingAs($staff)
             ->put(route('hr.applications.appointments.update', [$application, $appointment]), ['status' => 'completed'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
 
         $fresh = $appointment->fresh();
         $this->assertSame('completed', $fresh->status);
@@ -88,7 +88,7 @@ class AppointmentUpdateTest extends TestCase
                 'status' => 'completed',
                 'outcome' => 'Ứng viên đạt yêu cầu.',
             ])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
 
         $fresh = $appointment->fresh();
         $this->assertSame('completed', $fresh->status);
@@ -104,14 +104,14 @@ class AppointmentUpdateTest extends TestCase
         $cancelled = $this->scheduledAppointment($application, ['type' => 'interview']);
         $this->actingAs($staff)
             ->put(route('hr.applications.appointments.update', [$application, $cancelled]), ['status' => 'cancelled'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
         $this->assertSame('cancelled', $cancelled->fresh()->status);
         $this->assertNull($cancelled->fresh()->completed_by);
 
         $noShow = $this->scheduledAppointment($application, ['type' => 'interview']);
         $this->actingAs($staff)
             ->put(route('hr.applications.appointments.update', [$application, $noShow]), ['status' => 'no_show'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
         $this->assertSame('no_show', $noShow->fresh()->status);
     }
 
@@ -186,11 +186,11 @@ class AppointmentUpdateTest extends TestCase
         $this->actingAs($staff)->put(
             route('hr.applications.appointments.update', [$application, $appointment]),
             ['status' => 'completed', 'outcome' => 'Đạt yêu cầu.']
-        )->assertRedirect(route('hr.applications.index'));
+        )->assertRedirect(route('hr.applications.show', $application));
 
         $this->actingAs($staff)
             ->post(route('hr.applications.stage', $application), ['to_stage' => 'interviewed'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
 
         $this->assertSame('interviewed', $application->fresh()->stage);
     }

@@ -128,7 +128,7 @@ class ApplicationShowTest extends TestCase
         $this->actingAs($staff)->post(route('hr.applications.stage', $application), [
             'to_stage' => 'new',
             'note' => 'Ứng viên liên hệ lại.',
-        ])->assertRedirect(route('hr.applications.index'));
+        ])->assertRedirect(route('hr.applications.show', $application));
 
         $newCycleAttempt = ApplicationContactAttempt::factory()->create([
             'application_id' => $application->id,

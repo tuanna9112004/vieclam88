@@ -63,7 +63,7 @@ class ChangeApplicationStageTest extends TestCase
         ]);
 
         $this->changeStage($admin, $application, ['to_stage' => 'contacting'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
 
         $this->assertSame('contacting', $application->fresh()->stage);
     }
@@ -83,7 +83,7 @@ class ChangeApplicationStageTest extends TestCase
         ]);
 
         $this->changeStage($staff, $application, ['to_stage' => 'contacting'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
         $this->assertSame('contacting', $application->fresh()->stage);
     }
 
@@ -107,7 +107,7 @@ class ChangeApplicationStageTest extends TestCase
         ]);
 
         $this->changeStage($staff, $application, ['to_stage' => 'consulted'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
         $this->assertSame('consulted', $application->fresh()->stage);
     }
 
@@ -127,7 +127,7 @@ class ChangeApplicationStageTest extends TestCase
         ]);
 
         $this->changeStage($staff, $application, ['to_stage' => 'interview_scheduled'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
         $this->assertSame('interview_scheduled', $application->fresh()->stage);
     }
 
@@ -153,7 +153,7 @@ class ChangeApplicationStageTest extends TestCase
         ]);
 
         $this->changeStage($staff, $application, ['to_stage' => 'interviewed'])
-            ->assertRedirect(route('hr.applications.index'));
+            ->assertRedirect(route('hr.applications.show', $application));
         $this->assertSame('interviewed', $application->fresh()->stage);
     }
 
@@ -175,7 +175,7 @@ class ChangeApplicationStageTest extends TestCase
         $this->changeStage($staff, $application, [
             'to_stage' => 'waiting_start',
             'expected_start_at' => now()->addWeek()->toDateString(),
-        ])->assertRedirect(route('hr.applications.index'));
+        ])->assertRedirect(route('hr.applications.show', $application));
 
         $fresh = $application->fresh();
         $this->assertSame('waiting_start', $fresh->stage);
@@ -196,7 +196,7 @@ class ChangeApplicationStageTest extends TestCase
         $this->changeStage($staff, $application, [
             'to_stage' => 'started',
             'started_at' => now()->toDateTimeString(),
-        ])->assertRedirect(route('hr.applications.index'));
+        ])->assertRedirect(route('hr.applications.show', $application));
 
         $fresh = $application->fresh();
         $this->assertSame('started', $fresh->stage);
@@ -214,7 +214,7 @@ class ChangeApplicationStageTest extends TestCase
                 ->assertSessionHasErrors('close_reason');
 
             $this->changeStage($staff, $application, ['to_stage' => 'closed', 'close_reason' => 'unreachable'])
-                ->assertRedirect(route('hr.applications.index'));
+                ->assertRedirect(route('hr.applications.show', $application));
 
             $fresh = $application->fresh();
             $this->assertSame('closed', $fresh->stage);

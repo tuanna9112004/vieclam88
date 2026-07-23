@@ -16,7 +16,7 @@ class ApplicationNoteController extends Controller
     {
         $action->handle($request->validated(), $application, $request->user());
 
-        return redirect()->route('hr.applications.index')->with('status', 'Đã thêm ghi chú.');
+        return redirect()->route('hr.applications.show', $application)->with('status', 'Đã thêm ghi chú.');
     }
 
     public function update(
@@ -29,7 +29,7 @@ class ApplicationNoteController extends Controller
 
         $action->handle($request->validated(), $application, $request->user(), $note);
 
-        return redirect()->route('hr.applications.index')->with('status', 'Đã cập nhật ghi chú.');
+        return redirect()->route('hr.applications.show', $application)->with('status', 'Đã cập nhật ghi chú.');
     }
 
     public function destroy(Application $application, ApplicationNote $note): RedirectResponse
@@ -40,6 +40,6 @@ class ApplicationNoteController extends Controller
 
         $note->delete();
 
-        return redirect()->route('hr.applications.index')->with('status', 'Đã xóa ghi chú.');
+        return redirect()->route('hr.applications.show', $application)->with('status', 'Đã xóa ghi chú.');
     }
 }
