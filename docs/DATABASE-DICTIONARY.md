@@ -366,7 +366,8 @@ khái niệm "primary" ở 2 tầng khác nhau — không tạo cột dự phòn
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 | deleted_at | timestamp | — | có | null | — | — | — | — | Soft delete |
 
-Index bổ sung: `(company_id, status)`, `(owner_branch_id, status)`.
+Index bổ sung: `(company_id, status)`, `(owner_branch_id, status)`, `(status, last_verified_at)` —
+hỗ trợ predicate cảnh báo xác minh (mục 1.3), dùng chung cho danh sách Job và Dashboard.
 
 **Chính sách xóa:** đóng job trước (`status = closed`), soft delete khi cần. **Không hard
 delete job đã có application.** Một job là một đợt tuyển dụng — không tái sử dụng job đã

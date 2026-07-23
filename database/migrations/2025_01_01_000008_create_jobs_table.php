@@ -62,6 +62,9 @@ return new class extends Migration
             $table->index('expires_at');
             $table->index(['company_id', 'status']);
             $table->index(['owner_branch_id', 'status']);
+            // Ho tro predicate canh bao xac minh (docs/CORE-FLOWS.md muc 1.3): loc
+            // status=published + so sanh last_verified_at, dung cho ca danh sach Job va Dashboard.
+            $table->index(['status', 'last_verified_at']);
         });
 
         // Dictionary 9.9: CHECK(min_age <= max_age) va CHECK(salary_min <= salary_max) khi ca hai

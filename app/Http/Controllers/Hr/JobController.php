@@ -9,6 +9,7 @@ use App\Http\Requests\Hr\Job\UpdateJobRequest;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Job;
+use App\Support\JobVerificationWarning;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -20,7 +21,14 @@ class JobController extends Controller
 
         $jobs = Job::query()->with(['company', 'ownerBranch'])->latest()->paginate(20);
 
-        return view('hr.jobs.index', compact('jobs'));
+        // Tinh muc canh bao xac minh tung dong tu 1 lan doc settings duy nhat (khong N+1) —
+        // cung nguon logic voi Dashboard (App\Support\JobVerificationWarning).
+        $verificationThresholds = JobVerificationWarning::thresholds();
+        $verificationLevels = $jobs->getCollection()->mapWithKeys(
+            fn (Job $job) => [$job->id => JobVerificationWarning::level($job, $verificationThresholds)]
+        );
+
+        return view('hr.jobs.index', compact('jobs', 'verificationLevels'));
     }
 
     public function create(): View

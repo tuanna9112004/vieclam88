@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -37,5 +38,15 @@ class Company extends Model
     public function jobs(): HasMany
     {
         return $this->hasMany(Job::class);
+    }
+
+    /**
+     * Application cua Company qua Job (hr.dashboard Companies breakdown — Muc 9.1):
+     * companies -> jobs.company_id -> applications.job_id. Dung cho withCount('applications')
+     * de dem dung so ho so, khong duoc nham voi so Job (bug cu: alias 'jobs as applications_count').
+     */
+    public function applications(): HasManyThrough
+    {
+        return $this->hasManyThrough(Application::class, Job::class, 'company_id', 'job_id');
     }
 }

@@ -173,6 +173,27 @@ class Job extends Model
         return $query->where('status', 'published');
     }
 
+    /**
+     * Job published da qua han xac minh (docs/CORE-FLOWS.md muc 1.3, ADR-042/048): moc tham
+     * chieu la last_verified_at, hoac published_at neu chua tung co lan xac nhan still_open nao.
+     * "Qua han $days ngay" = moc tham chieu cu hon dung $days ngay (cung quy uoc voi
+     * PublishJobAction::verificationStillFresh — gte() la con "fresh", lt() moi la "qua han").
+     * Draft/paused/closed khong thuoc predicate nay (chi ap dung khi van dang published).
+     */
+    public function scopePublishedStale(Builder $query, int $days): Builder
+    {
+        $threshold = now()->subDays($days);
+
+        return $query->where('status', 'published')
+            ->where(function (Builder $q) use ($threshold) {
+                $q->where(function (Builder $q2) use ($threshold) {
+                    $q2->whereNotNull('last_verified_at')->where('last_verified_at', '<', $threshold);
+                })->orWhere(function (Builder $q2) use ($threshold) {
+                    $q2->whereNull('last_verified_at')->where('published_at', '<', $threshold);
+                });
+            });
+    }
+
     public function scopeNotExpired(Builder $query): Builder
     {
         return $query->where(function (Builder $q) {

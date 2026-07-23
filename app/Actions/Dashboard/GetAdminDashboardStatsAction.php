@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Models\Company;
 use App\Models\Job;
 use App\Models\User;
+use App\Support\JobVerificationWarning;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,40 +25,62 @@ class GetAdminDashboardStatsAction
     {
         $today = now()->toDateString();
 
-        $appQuery = Application::query();
-        $jobQuery = Job::query();
-
-        // 1. Áp dụng bộ lọc Branch Isolation / Admin Selected Branches
+        // 1. Branch Isolation / Admin Selected Branches
+        $branchIds = null;
         if ($actor->isStaff()) {
-            $appQuery->where('owner_branch_id', $actor->branch_id);
-            $jobQuery->where('owner_branch_id', $actor->branch_id);
+            $branchIds = [$actor->branch_id];
         } elseif (! empty($filters['owner_branch_id'])) {
             $branchIds = (array) $filters['owner_branch_id'];
-            $appQuery->whereIn('owner_branch_id', $branchIds);
-            $jobQuery->whereIn('owner_branch_id', $branchIds);
         }
+
+        $companyId = ! empty($filters['company_id']) ? (int) $filters['company_id'] : null;
+        $jobId = ! empty($filters['job_id']) ? (int) $filters['job_id'] : null;
+        $dateFrom = $filters['date_from'] ?? null;
+        $dateTo = $filters['date_to'] ?? null;
+
+        /**
+         * Ap dung dung 1 bo dieu kien Application (branch/job/date) cho ca KPI, Top Jobs va
+         * Companies — truoc day date_from/date_to chi ap dung cho KPI, lam Top Jobs/Companies
+         * lech so voi KPI khi co filter ngay. company_id khong dua vao day vi da duoc scope
+         * rieng: whereHas cho $appQuery, hoac tu nhien qua company/job dang duyet o duoi.
+         * Cot phai qualify voi "applications." vi Company::applications() la hasManyThrough
+         * (JOIN voi jobs) — cot khong qualify se bi loi ambiguous do jobs cung co owner_branch_id.
+         */
+        $applyApplicationFilters = function ($query) use ($branchIds, $jobId, $dateFrom, $dateTo) {
+            if ($branchIds !== null) {
+                $query->whereIn('applications.owner_branch_id', $branchIds);
+            }
+            if ($jobId !== null) {
+                $query->where('applications.job_id', $jobId);
+            }
+            if ($dateFrom !== null) {
+                $query->whereDate('applications.created_at', '>=', $dateFrom);
+            }
+            if ($dateTo !== null) {
+                $query->whereDate('applications.created_at', '<=', $dateTo);
+            }
+
+            return $query;
+        };
+
+        $applyJobFilters = function ($query) use ($branchIds, $jobId) {
+            if ($branchIds !== null) {
+                $query->whereIn('jobs.owner_branch_id', $branchIds);
+            }
+            if ($jobId !== null) {
+                $query->where('jobs.id', $jobId);
+            }
+
+            return $query;
+        };
+
+        $appQuery = $applyApplicationFilters(Application::query());
+        $jobQuery = $applyJobFilters(Job::query());
 
         // 2. Bộ lọc Company
-        if (! empty($filters['company_id'])) {
-            $companyId = (int) $filters['company_id'];
+        if ($companyId !== null) {
             $appQuery->whereHas('job', fn ($q) => $q->where('company_id', $companyId));
             $jobQuery->where('company_id', $companyId);
-        }
-
-        // 3. Bộ lọc Job
-        if (! empty($filters['job_id'])) {
-            $jobId = (int) $filters['job_id'];
-            $appQuery->where('job_id', $jobId);
-            $jobQuery->where('id', $jobId);
-        }
-
-        // 4. Bộ lọc Khoảng ngày (Date Range)
-        if (! empty($filters['date_from'])) {
-            $appQuery->whereDate('created_at', '>=', $filters['date_from']);
-        }
-
-        if (! empty($filters['date_to'])) {
-            $appQuery->whereDate('created_at', '<=', $filters['date_to']);
         }
 
         // --- BẮT ĐẦU TÍNH TOÁN KPI METRICS ---
@@ -101,43 +124,42 @@ class GetAdminDashboardStatsAction
         // Tỷ lệ chuyển đổi % (Application -> Started)
         $conversionRate = $totalApplications > 0 ? round(($started / $totalApplications) * 100, 2) : 0.0;
 
-        // Thống kê theo Job (Top Jobs kèm số lượng Application)
+        // Thống kê theo Job (Top Jobs kèm số lượng Application) — applications_count phải theo
+        // dung bo loc branch/job/date nhu KPI, khong duoc dem het moi Application cua Job.
         $topJobs = (clone $jobQuery)
             ->with(['company:id,name', 'ownerBranch:id,name'])
             ->withCount([
-                'applications',
-                'applications as started_applications_count' => fn ($q) => $q->where('stage', 'started'),
+                'applications' => fn ($q) => $applyApplicationFilters($q),
+                'applications as started_applications_count' => fn ($q) => $applyApplicationFilters($q)->where('stage', 'started'),
             ])
             ->orderByDesc('applications_count')
             ->limit(10)
             ->get();
 
-        // Thống kê theo Company
+        // Thống kê theo Company: 'jobs' la so Job, 'applications' la so Ho so qua Job (Company
+        // hasManyThrough Application) — khong dung lai relation 'jobs' lam alias cho ho so.
         $companyQuery = Company::query();
-        if (! empty($filters['company_id'])) {
-            $companyQuery->where('id', $filters['company_id']);
+        if ($companyId !== null) {
+            $companyQuery->where('id', $companyId);
         }
 
         $companiesStats = $companyQuery
             ->withCount([
-                'jobs',
-                'jobs as applications_count' => function ($q) use ($filters, $actor) {
-                    if ($actor->isStaff()) {
-                        $q->where('owner_branch_id', $actor->branch_id);
-                    } elseif (! empty($filters['owner_branch_id'])) {
-                        $q->whereIn('owner_branch_id', (array) $filters['owner_branch_id']);
-                    }
-                },
+                'jobs' => fn ($q) => $applyJobFilters($q),
+                'applications' => fn ($q) => $applyApplicationFilters($q),
             ])
             ->orderByDesc('applications_count')
             ->limit(10)
             ->get();
 
-        // Số việc làm cần xác nhận / xử lý
+        // Số việc làm cần xác nhận / xử lý: Draft (chưa từng publish) hoặc published đã qua hạn
+        // cảnh báo (docs/CORE-FLOWS.md mục 1.3) — cùng logic dùng chung với GetDashboardStatsAction
+        // và danh sách Job (JobVerificationWarning).
+        $warningDays = JobVerificationWarning::thresholds()['warning'];
         $jobsNeedingVerification = (clone $jobQuery)
-            ->where(function ($q) {
+            ->where(function ($q) use ($warningDays) {
                 $q->where('status', 'draft')
-                  ->orWhereNull('last_verified_at');
+                  ->orWhere(fn ($q2) => $q2->publishedStale($warningDays));
             })->count();
 
         return [

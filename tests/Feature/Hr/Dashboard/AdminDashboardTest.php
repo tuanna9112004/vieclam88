@@ -87,6 +87,104 @@ class AdminDashboardTest extends TestCase
         $this->assertSame(2, $statsToday['total_applications']);
     }
 
+    public function test_company_applications_count_is_real_application_count_via_jobs_not_job_count(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $branch = Branch::factory()->create(['status' => 'active']);
+
+        // Company A: nhieu Job (3) nhung it Application (1).
+        $companyA = Company::factory()->create(['name' => 'Cong Ty Nhieu Job']);
+        $jobsA = Job::factory()->count(3)->create(['company_id' => $companyA->id, 'owner_branch_id' => $branch->id]);
+        Application::factory()->create(['job_id' => $jobsA->first()->id, 'owner_branch_id' => $branch->id]);
+
+        // Company B: it Job (1) nhung nhieu Application (4).
+        $companyB = Company::factory()->create(['name' => 'Cong Ty Nhieu Ho So']);
+        $jobB = Job::factory()->create(['company_id' => $companyB->id, 'owner_branch_id' => $branch->id]);
+        Application::factory()->count(4)->create(['job_id' => $jobB->id, 'owner_branch_id' => $branch->id]);
+
+        $stats = (new GetAdminDashboardStatsAction())->handle($admin, []);
+
+        $companyStats = collect($stats['companies_stats'])->keyBy('id');
+        $statsA = $companyStats->get($companyA->id);
+        $statsB = $companyStats->get($companyB->id);
+
+        $this->assertNotNull($statsA);
+        $this->assertNotNull($statsB);
+
+        // Bug cu: applications_count bi alias tu 'jobs' nen luon == jobs_count. Phai khac nhau.
+        $this->assertSame(3, $statsA->jobs_count);
+        $this->assertSame(1, $statsA->applications_count);
+
+        $this->assertSame(1, $statsB->jobs_count);
+        $this->assertSame(4, $statsB->applications_count);
+    }
+
+    public function test_date_range_filter_applies_consistently_to_kpi_top_jobs_and_companies(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $branch = Branch::factory()->create(['status' => 'active']);
+        $company = Company::factory()->create();
+        $job = Job::factory()->create(['company_id' => $company->id, 'owner_branch_id' => $branch->id]);
+
+        Application::factory()->create([
+            'job_id' => $job->id,
+            'owner_branch_id' => $branch->id,
+            'created_at' => now()->subDays(5),
+        ]);
+        Application::factory()->create([
+            'job_id' => $job->id,
+            'owner_branch_id' => $branch->id,
+            'created_at' => now(),
+        ]);
+
+        $today = now()->toDateString();
+        $stats = (new GetAdminDashboardStatsAction())->handle($admin, ['date_from' => $today, 'date_to' => $today]);
+
+        $this->assertSame(1, $stats['total_applications']);
+
+        $topJob = collect($stats['top_jobs'])->firstWhere('id', $job->id);
+        $this->assertNotNull($topJob);
+        $this->assertSame(1, $topJob->applications_count, 'Top Jobs phai loc theo date_from/date_to giong KPI.');
+
+        $companyStat = collect($stats['companies_stats'])->firstWhere('id', $company->id);
+        $this->assertNotNull($companyStat);
+        $this->assertSame(1, $companyStat->applications_count, 'Companies phai loc theo date_from/date_to giong KPI.');
+    }
+
+    public function test_top_jobs_and_companies_application_counts_follow_branch_filter_after_transfer(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $branch1 = Branch::factory()->create(['status' => 'active']);
+        $branch2 = Branch::factory()->create(['status' => 'active']);
+        $company = Company::factory()->create();
+        $job = Job::factory()->create([
+            'company_id' => $company->id,
+            'owner_branch_id' => $branch1->id,
+            'status' => 'published',
+        ]);
+
+        $application = Application::factory()->create(['job_id' => $job->id, 'owner_branch_id' => $branch1->id]);
+
+        (new TransferApplicationBranchAction())->handle($application, $branch2, $admin, 'Test transfer');
+
+        $statsBranch1 = (new GetAdminDashboardStatsAction())->handle($admin, ['owner_branch_id' => $branch1->id]);
+
+        // Job van thuoc branch1 (Transfer khong doi owner_branch_id cua Job) nen van len Top Jobs,
+        // nhung Application da chuyen sang branch2 nen khong con duoc dem trong bo loc branch1.
+        $topJob = collect($statsBranch1['top_jobs'])->firstWhere('id', $job->id);
+        $this->assertNotNull($topJob);
+        $this->assertSame(0, $topJob->applications_count);
+
+        $companyStat = collect($statsBranch1['companies_stats'])->firstWhere('id', $company->id);
+        $this->assertNotNull($companyStat);
+        $this->assertSame(0, $companyStat->applications_count);
+
+        $statsBranch2 = (new GetAdminDashboardStatsAction())->handle($admin, ['owner_branch_id' => $branch2->id]);
+        $companyStatBranch2 = collect($statsBranch2['companies_stats'])->firstWhere('id', $company->id);
+        $this->assertNotNull($companyStatBranch2);
+        $this->assertSame(1, $companyStatBranch2->applications_count);
+    }
+
     public function test_counts_remain_accurate_after_transfer_merge_and_duplicate_actions(): void
     {
         $admin = User::factory()->admin()->create();

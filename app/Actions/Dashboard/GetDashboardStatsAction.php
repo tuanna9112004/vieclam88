@@ -5,6 +5,7 @@ namespace App\Actions\Dashboard;
 use App\Models\Application;
 use App\Models\Job;
 use App\Models\User;
+use App\Support\JobVerificationWarning;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -70,14 +71,17 @@ class GetDashboardStatsAction
         // 9. Đã đóng
         $closed = (int) ($stageCounts['closed'] ?? 0);
 
-        // 10. Việc làm cần xác nhận / xử lý (status = draft hoặc chưa xác nhận gần đây)
+        // 10. Việc làm cần xác nhận / xử lý: Draft (chưa từng publish) hoặc published đã qua hạn
+        // cảnh báo (docs/CORE-FLOWS.md mục 1.3) — 2 nhóm tách biệt, không trộn "chưa verify" của
+        // Draft với "stale" của published (JobVerificationWarning là nguồn logic duy nhất).
         $jobQuery = Job::query();
         if ($targetBranchId !== null) {
             $jobQuery->where('owner_branch_id', $targetBranchId);
         }
-        $jobsNeedingVerification = $jobQuery->where(function ($q) {
+        $warningDays = JobVerificationWarning::thresholds()['warning'];
+        $jobsNeedingVerification = $jobQuery->where(function ($q) use ($warningDays) {
             $q->where('status', 'draft')
-              ->orWhereNull('last_verified_at');
+              ->orWhere(fn ($q2) => $q2->publishedStale($warningDays));
         })->count();
 
         return [
