@@ -14,6 +14,23 @@
         'expired' => 'Đã hết hạn tuyển',
     ];
 
+    $genderLabels = ['male' => 'Nam', 'female' => 'Nữ', 'any' => 'Không yêu cầu'];
+    $employmentTypeLabels = [
+        'full_time' => 'Toàn thời gian',
+        'part_time' => 'Bán thời gian',
+        'seasonal' => 'Thời vụ',
+        'temporary' => 'Tạm thời',
+    ];
+
+    $ageRange = null;
+    if ($job->min_age && $job->max_age) {
+        $ageRange = "{$job->min_age} - {$job->max_age} tuổi";
+    } elseif ($job->min_age) {
+        $ageRange = "Từ {$job->min_age} tuổi";
+    } elseif ($job->max_age) {
+        $ageRange = "Đến {$job->max_age} tuổi";
+    }
+
     $metaDescription = \Illuminate\Support\Str::limit(
         trim(strip_tags($job->job_description ?? $job->salary_description ?? '')),
         155
@@ -104,66 +121,125 @@
                     <span class="badge text-bg-danger text-nowrap">Tuyển gấp</span>
                 @endif
             </div>
-            <p class="text-secondary">{{ $job->company?->name }}</p>
-
-            <p class="fs-5 fw-semibold text-primary mb-2">{{ $job->formattedSalary() }}</p>
+            <p class="text-secondary fs-5">{{ $job->company?->name }}</p>
 
             <p class="mb-2">
                 @if ($primaryLocation)
+                    <span aria-hidden="true">&#128205;</span>
                     {{ $primaryLocation->name }}@if ($primaryLocation->administrativeUnit)
                         , {{ $primaryLocation->administrativeUnit->name }}
                     @endif
                 @endif
             </p>
 
-            @if ($shiftNames)
-                <p class="mb-2 text-secondary">Ca làm việc: {{ $shiftNames }}</p>
-            @endif
+            <p class="fs-4 fw-bold text-primary mb-4">{{ $job->formattedSalary() }}</p>
 
-            <div class="d-flex flex-wrap gap-2 mb-3">
+            <div class="row g-2 mb-4">
+                @if (! empty($genderLabels[$job->gender_requirement]))
+                    <div class="col-6 col-md-4">
+                        <p class="job-meta-item mb-0">
+                            <span class="job-meta-item__icon" aria-hidden="true">&#128100;</span>
+                            <span>Giới tính: {{ $genderLabels[$job->gender_requirement] }}</span>
+                        </p>
+                    </div>
+                @endif
+                @if ($ageRange)
+                    <div class="col-6 col-md-4">
+                        <p class="job-meta-item mb-0">
+                            <span class="job-meta-item__icon" aria-hidden="true">&#127874;</span>
+                            <span>Độ tuổi: {{ $ageRange }}</span>
+                        </p>
+                    </div>
+                @endif
+                @if ($shiftNames)
+                    <div class="col-6 col-md-4">
+                        <p class="job-meta-item mb-0">
+                            <span class="job-meta-item__icon" aria-hidden="true">&#128337;</span>
+                            <span>Ca làm: {{ $shiftNames }}</span>
+                        </p>
+                    </div>
+                @endif
                 @if ($job->has_shuttle_bus)
-                    <span class="badge text-bg-light border">Xe đưa đón</span>
+                    <div class="col-6 col-md-4">
+                        <p class="job-meta-item mb-0">
+                            <span class="job-meta-item__icon" aria-hidden="true">&#128652;</span>
+                            <span>Xe đưa đón</span>
+                        </p>
+                    </div>
                 @endif
                 @if ($job->has_accommodation)
-                    <span class="badge text-bg-light border">Chỗ ở</span>
+                    <div class="col-6 col-md-4">
+                        <p class="job-meta-item mb-0">
+                            <span class="job-meta-item__icon" aria-hidden="true">&#127968;</span>
+                            <span>Chỗ ở</span>
+                        </p>
+                    </div>
                 @endif
                 @if ($job->has_meal_support)
-                    <span class="badge text-bg-light border">Hỗ trợ ăn ở</span>
+                    <div class="col-6 col-md-4">
+                        <p class="job-meta-item mb-0">
+                            <span class="job-meta-item__icon" aria-hidden="true">&#127860;</span>
+                            <span>Hỗ trợ ăn ở</span>
+                        </p>
+                    </div>
+                @endif
+                @if (! empty($employmentTypeLabels[$job->employment_type->value]))
+                    <div class="col-6 col-md-4">
+                        <p class="job-meta-item mb-0">
+                            <span class="job-meta-item__icon" aria-hidden="true">&#128188;</span>
+                            <span>{{ $employmentTypeLabels[$job->employment_type->value] }}</span>
+                        </p>
+                    </div>
                 @endif
             </div>
 
             @if ($job->job_description)
-                <section class="mb-4">
+                <section class="pub-section">
                     <h2 class="h5">Mô tả công việc</h2>
                     <p class="mb-0" style="white-space: pre-line">{{ $job->job_description }}</p>
                 </section>
             @endif
 
             @if ($job->requirements)
-                <section class="mb-4">
+                <section class="pub-section">
                     <h2 class="h5">Yêu cầu</h2>
                     <p class="mb-0" style="white-space: pre-line">{{ $job->requirements }}</p>
                 </section>
             @endif
 
             @if ($job->benefits)
-                <section class="mb-4">
+                <section class="pub-section">
                     <h2 class="h5">Phúc lợi</h2>
                     <p class="mb-0" style="white-space: pre-line">{{ $job->benefits }}</p>
                 </section>
             @endif
 
             @if ($job->application_documents)
-                <section class="mb-4">
+                <section class="pub-section">
                     <h2 class="h5">Hồ sơ cần chuẩn bị</h2>
                     <p class="mb-0" style="white-space: pre-line">{{ $job->application_documents }}</p>
+                </section>
+            @endif
+
+            @if ($primaryLocation)
+                <section class="pub-section">
+                    <h2 class="h5">Địa điểm làm việc</h2>
+                    <p class="mb-0">
+                        {{ $primaryLocation->name }}
+                        @if ($primaryLocation->address_detail)
+                            <br>{{ $primaryLocation->address_detail }}
+                        @endif
+                        @if ($primaryLocation->administrativeUnit)
+                            <br>{{ $primaryLocation->administrativeUnit->name }}
+                        @endif
+                    </p>
                 </section>
             @endif
         </div>
 
         <div class="col-lg-4">
             @if ($isOpen)
-                <div class="card shadow-sm mb-4" style="position: sticky; top: 1rem;">
+                <div class="card shadow-sm mb-4" id="apply-card" style="position: sticky; top: 1rem;">
                     <div class="card-body d-flex flex-column gap-2">
                         <button type="button" class="btn btn-primary btn-lg" style="min-height:48px" data-bs-toggle="collapse" data-bs-target="#apply-form" aria-expanded="{{ $errors->any() ? 'true' : 'false' }}" aria-controls="apply-form">
                             Ứng tuyển ngay
@@ -180,13 +256,13 @@
 
                                 <div class="mb-2">
                                     <label for="full_name" class="form-label">Họ và tên <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('full_name') is-invalid @enderror" style="min-height:44px" id="full_name" name="full_name" value="{{ old('full_name') }}" required>
+                                    <input type="text" class="form-control @error('full_name') is-invalid @enderror" style="min-height:44px" id="full_name" name="full_name" value="{{ old('full_name') }}" placeholder="Nguyễn Văn A" required>
                                     @error('full_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
 
                                 <div class="mb-2">
                                     <label for="phone" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
-                                    <input type="tel" class="form-control @error('phone') is-invalid @enderror" style="min-height:44px" id="phone" name="phone" value="{{ old('phone') }}" required>
+                                    <input type="tel" class="form-control @error('phone') is-invalid @enderror" style="min-height:44px" id="phone" name="phone" value="{{ old('phone') }}" placeholder="09xxxxxxxx" required>
                                     @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
 
@@ -224,27 +300,27 @@
 
                                     <div class="mb-2">
                                         <label for="education_level" class="form-label">Học vấn</label>
-                                        <input type="text" class="form-control @error('education_level') is-invalid @enderror" style="min-height:44px" id="education_level" name="education_level" value="{{ old('education_level') }}">
+                                        <input type="text" class="form-control @error('education_level') is-invalid @enderror" style="min-height:44px" id="education_level" name="education_level" placeholder="VD: 12/12, Trung cấp..." value="{{ old('education_level') }}">
                                         @error('education_level')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
 
                                     <div class="mb-2">
                                         <label for="experience_summary" class="form-label">Kinh nghiệm làm việc</label>
-                                        <textarea class="form-control @error('experience_summary') is-invalid @enderror" id="experience_summary" name="experience_summary" rows="3">{{ old('experience_summary') }}</textarea>
+                                        <textarea class="form-control @error('experience_summary') is-invalid @enderror" id="experience_summary" name="experience_summary" rows="3" placeholder="Mô tả ngắn kinh nghiệm làm việc (nếu có)">{{ old('experience_summary') }}</textarea>
                                         @error('experience_summary')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
                                 </div>
 
                                 <div class="form-check mb-2">
                                     <input class="form-check-input @error('consent') is-invalid @enderror" type="checkbox" id="consent" name="consent" value="1" {{ old('consent') ? 'checked' : '' }} required>
-                                    <label class="form-check-label small" for="consent">
+                                    <label class="form-check-label" for="consent">
                                         {{ \App\Support\ConsentNotice::currentText() }}
                                     </label>
-                                    @error('consent')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    @error('consent')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                                     @error('submission_token')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                                 </div>
 
-                                <button type="submit" class="btn btn-primary w-100" style="min-height:48px">Gửi hồ sơ ứng tuyển</button>
+                                <button type="submit" class="btn btn-primary w-100" style="min-height:48px" data-submit-once>Gửi hồ sơ ứng tuyển</button>
                             </form>
                         </div>
                     </div>
@@ -254,16 +330,18 @@
             <div class="card shadow-sm mb-4" style="position: sticky; top: 1rem;">
                 <div class="card-body d-flex flex-column gap-2">
                     <h2 class="h6 mb-1">Liên hệ</h2>
-                    @if ($job->ownerBranch?->phone)
-                        <a href="tel:{{ $job->ownerBranch->phone }}" class="btn btn-primary" style="min-height:48px">
-                            Gọi {{ $job->ownerBranch->phone }}
-                        </a>
-                    @endif
-                    @if ($job->ownerBranch?->zalo)
-                        <a href="https://zalo.me/{{ $job->ownerBranch->zalo }}" class="btn btn-outline-primary" style="min-height:48px" target="_blank" rel="noopener">
-                            Nhắn Zalo
-                        </a>
-                    @endif
+                    <div class="cta-group">
+                        @if ($job->ownerBranch?->phone)
+                            <a href="tel:{{ $job->ownerBranch->phone }}" class="btn btn-primary flex-grow-1">
+                                Gọi {{ $job->ownerBranch->phone }}
+                            </a>
+                        @endif
+                        @if ($job->ownerBranch?->zalo)
+                            <a href="https://zalo.me/{{ $job->ownerBranch->zalo }}" class="btn btn-outline-primary flex-grow-1" target="_blank" rel="noopener">
+                                Nhắn Zalo
+                            </a>
+                        @endif
+                    </div>
 
                     @if ($publicContact)
                         <hr class="my-2">
@@ -282,14 +360,16 @@
     </div>
 
     @if ($relatedJobs->isNotEmpty())
-        <section class="mt-5">
-            <h2 class="h4 mb-3">Việc làm liên quan</h2>
+        <section class="pub-section mt-5">
+            <div class="pub-section__head">
+                <h2 class="h4 pub-section__title">Việc làm liên quan</h2>
+            </div>
             <div class="row g-3">
                 @foreach ($relatedJobs as $relatedJob)
                     <div class="col-sm-6 col-lg-3">
-                        <a href="{{ route('jobs.show', $relatedJob->slug) }}" class="card h-100 text-decoration-none text-dark shadow-sm">
-                            <div class="card-body">
-                                <h3 class="h6">{{ $relatedJob->title }}</h3>
+                        <a href="{{ route('jobs.show', $relatedJob->slug) }}" class="job-card text-decoration-none text-dark d-block">
+                            <div class="job-card__body">
+                                <h3 class="h6 job-card__title">{{ $relatedJob->title }}</h3>
                                 <p class="text-secondary small mb-1">{{ $relatedJob->company?->name }}</p>
                                 <p class="fw-semibold text-primary mb-0">{{ $relatedJob->formattedSalary() }}</p>
                             </div>
@@ -300,4 +380,27 @@
         </section>
     @endif
 </div>
+
+@if ($isOpen || $job->ownerBranch?->phone || $job->ownerBranch?->zalo)
+    <div class="job-sticky-cta-spacer" aria-hidden="true"></div>
+    <div class="job-sticky-cta d-lg-none">
+        <div class="container">
+            <div class="cta-group">
+                @if ($isOpen)
+                    <a href="#apply-card" class="btn btn-primary flex-grow-1">Ứng tuyển ngay</a>
+                @endif
+                @if ($job->ownerBranch?->phone)
+                    <a href="tel:{{ $job->ownerBranch->phone }}" class="btn btn-outline-primary" aria-label="Gọi {{ $job->ownerBranch->phone }}">
+                        <span aria-hidden="true">&#128222;</span>
+                    </a>
+                @endif
+                @if ($job->ownerBranch?->zalo)
+                    <a href="https://zalo.me/{{ $job->ownerBranch->zalo }}" class="btn btn-outline-primary" target="_blank" rel="noopener" aria-label="Nhắn Zalo">
+                        <span aria-hidden="true">&#128172;</span>
+                    </a>
+                @endif
+            </div>
+        </div>
+    </div>
+@endif
 @endsection
