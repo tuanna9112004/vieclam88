@@ -275,7 +275,7 @@
                                 <button type="button" class="btn btn-link px-0 mb-2" style="min-height:44px" data-bs-toggle="collapse" data-bs-target="#apply-extra" aria-expanded="false" aria-controls="apply-extra">
                                     Thông tin bổ sung
                                 </button>
-                                <div class="collapse @if (old('gender') || old('current_administrative_unit_id') || old('education_level') || old('experience_summary')) show @endif" id="apply-extra">
+                                <div class="collapse @if (old('gender') || old('current_ward_id') || old('education_level') || old('experience_summary')) show @endif" id="apply-extra">
                                     <div class="mb-2">
                                         <label class="form-label d-block">Giới tính</label>
                                         @foreach (['male' => 'Nam', 'female' => 'Nữ', 'other' => 'Khác'] as $value => $label)
@@ -287,16 +287,12 @@
                                         @error('gender')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                                     </div>
 
-                                    <div class="mb-2">
-                                        <label for="current_administrative_unit_id" class="form-label">Nơi ở hiện tại</label>
-                                        <select class="form-select @error('current_administrative_unit_id') is-invalid @enderror" style="min-height:44px" id="current_administrative_unit_id" name="current_administrative_unit_id">
-                                            <option value="">-- Chọn tỉnh/thành phố --</option>
-                                            @foreach ($applicantAdministrativeUnits as $unit)
-                                                <option value="{{ $unit->id }}" {{ (string) old('current_administrative_unit_id') === (string) $unit->id ? 'selected' : '' }}>{{ $unit->name }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('current_administrative_unit_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                    </div>
+                                    <x-province-ward-select
+                                        :provinces="$applicantProvinces"
+                                        :wards="$applicantWards"
+                                        ward-field="current_ward_id"
+                                        ward-label="Nơi ở hiện tại"
+                                    />
 
                                     <div class="mb-2">
                                         <label for="education_level" class="form-label">Học vấn</label>

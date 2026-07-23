@@ -16,7 +16,7 @@ class ProvinceFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => (string) fake()->unique()->numberBetween(1, 99),
+            'code' => (string) fake()->unique()->numberBetween(100000, 999999),
             'name' => fake()->unique()->city(),
             'is_active' => true,
         ];

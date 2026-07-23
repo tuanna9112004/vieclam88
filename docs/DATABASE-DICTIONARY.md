@@ -132,7 +132,8 @@ Phase 1 luôn là guest.
 | full_name_normalized | string(150) | — | không | — | ✓ | — | — | — | **Mới (ADR-063).** Sinh tự động ở tầng Model từ `full_name` (không nhận từ client) theo thuật toán chuẩn hóa `docs/CORE-FLOWS.md` mục 6.2 — giữ dấu tiếng Việt, không fuzzy. Dùng so khớp Duplicate Candidate Contract |
 | date_of_birth | date | — | có | null | — | — | — | — | |
 | gender | enum(male,female,other) | — | có | null | — | — | — | — | |
-| current_administrative_unit_id | bigint | ✓ | có | null | ✓ | — | administrative_units.id | RESTRICT | Tỉnh/xã hiện tại |
+| current_administrative_unit_id | bigint | ✓ | có | null | ✓ | — | administrative_units.id | RESTRICT | Tỉnh/xã hiện tại — không ghi cho candidate mới từ TASK 1.3, chỉ đọc fallback |
+| current_ward_id | bigint | ✓ | có | null | ✓ | — | wards.id | RESTRICT | **TASK 1.3.** Nguồn địa chỉ mới, ưu tiên khi đọc; ghi từ form ứng tuyển công khai |
 | address_detail | string(255) | — | có | null | — | — | — | — | |
 | education_level | string(100) | — | có | null | — | — | — | — | Free text Phase 1 |
 | experience_summary | text | — | có | null | — | — | — | — | |
@@ -282,6 +283,7 @@ input người dùng. Không lưu chuỗi `"Chưa xác định"` — dữ liệu
 | status | enum(active,hidden) | — | không | active | ✓ | — | — | — | |
 | created_by | bigint | ✓ | không | — | — | — | users.id | RESTRICT | |
 | updated_by | bigint | ✓ | có | null | — | — | users.id | SET NULL | |
+| headquarters_ward_id | bigint | ✓ | có | null | ✓ | — | wards.id | RESTRICT | **TASK 1.3:** chỉ thêm cột (Expand), chưa backfill/chưa có form — company chưa có `administrative_unit_id` nguồn để backfill 1:1, chọn HQ candidate từ nhiều `company_locations` là việc của TASK 5.2 (xử lý ambiguous). TASK 5.1 chỉ bổ sung `headquarters_address_detail`/đại diện pháp luật, **không tạo lại cột này** |
 | created_at | timestamp | — | có | now | — | — | — | — | |
 | updated_at | timestamp | — | có | now | — | — | — | — | |
 | deleted_at | timestamp | — | có | null | — | — | — | — | Soft delete |
@@ -329,10 +331,10 @@ khái niệm "primary" ở 2 tầng khác nhau — không tạo cột dự phòn
 
 **Thay đổi mục tiêu Phase 2 (ADR-080, chưa migrate):** PDF liệt bảng này vào nhóm không nên tồn
 tại — địa điểm làm việc chuyển hẳn về `jobs.work_ward_id` (mục 9.9), company chỉ giữ 1 trụ sở
-(`companies.headquarters_ward_id`, chưa thiết kế cột này ở mục 9.6 vì phụ thuộc quyết định chi
-tiết khi thực thi batch 5/7). **Không xóa bảng này cho tới Contract (batch 9)** —
-`job_locations`/`JobLocation` vẫn là cơ chế địa chỉ Job thật đang chạy. Batch 5/7 ở
-`docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`.
+(`companies.headquarters_ward_id` — cột đã thêm ở TASK 1.3, xem mục 9.6; backfill từ
+`company_locations` và chống trùng vẫn là việc của TASK 5.2, chưa làm). **Không xóa bảng này cho
+tới Contract (batch 9)** — `job_locations`/`JobLocation` vẫn là cơ chế địa chỉ Job thật đang chạy.
+Batch 5/7 ở `docs/PHASE-2-ARCHITECTURE-PROPOSAL.md`.
 
 ---
 
@@ -728,7 +730,8 @@ Cơ sở nội bộ của công ty cung ứng lao động (vieclam88) — **khá
 | phone_normalized | string(20) | — | có | null | ✓ | — | — | — | |
 | zalo | string(20) | — | có | null | — | — | — | — | |
 | email | string(191) | — | có | null | — | — | — | — | |
-| administrative_unit_id | bigint | ✓ | không | — | ✓ | — | administrative_units.id | RESTRICT | |
+| administrative_unit_id | bigint | ✓ | **có** | null | ✓ | — | administrative_units.id | RESTRICT | **TASK 1.3:** nới NOT NULL — form mới không còn gửi cột này, chỉ đọc fallback cho bản ghi cũ |
+| ward_id | bigint | ✓ | có | null | ✓ | — | wards.id | RESTRICT | **TASK 1.3.** Nguồn địa chỉ mới, ưu tiên khi đọc; backfill qua `locations:backfill-ward-fk` từ `administrative_unit_mappings` |
 | address_detail | string(255) | — | có | null | — | — | — | — | |
 | status | enum(active,inactive) | — | không | active | ✓ | — | — | — | Phải `active` khi Job của cơ sở publish/reopen |
 | created_at | timestamp | — | có | now | — | — | — | — | |

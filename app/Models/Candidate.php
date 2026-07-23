@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'public_id', 'full_name', 'date_of_birth', 'gender', 'current_administrative_unit_id',
-    'address_detail', 'education_level', 'experience_summary', 'preferred_shift',
+    'current_ward_id', 'address_detail', 'education_level', 'experience_summary', 'preferred_shift',
     'available_from', 'status', 'merged_into_candidate_id', 'merged_at', 'merged_by', 'merge_reason',
     'anonymized_at', 'anonymized_by',
 ])]
@@ -54,6 +54,15 @@ class Candidate extends Model
         return $this->belongsTo(AdministrativeUnit::class, 'current_administrative_unit_id');
     }
 
+    /**
+     * TASK 1.3: nguồn địa chỉ mới, ưu tiên khi đọc — fallback currentAdministrativeUnit() cho dữ
+     * liệu chưa backfill.
+     */
+    public function currentWard(): BelongsTo
+    {
+        return $this->belongsTo(Ward::class, 'current_ward_id');
+    }
+
     public function mergedInto(): BelongsTo
     {
         return $this->belongsTo(self::class, 'merged_into_candidate_id');
@@ -91,6 +100,7 @@ class Candidate extends Model
 
     /**
      * docs/CORE-FLOWS.md mục 6.3 — Lấy danh sách ID toàn bộ candidate trong merged family.
+     *
      * @return array<int, int>
      */
     public function getMergedFamilyIds(): array

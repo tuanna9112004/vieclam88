@@ -35,7 +35,7 @@
                     <tr>
                         <td>{{ $branch->code }}</td>
                         <td>{{ $branch->name }}</td>
-                        <td>{{ $branch->administrativeUnit?->name }}</td>
+                        <td>{{ $branch->ward ? $branch->ward->name.', '.$branch->ward->province?->name : $branch->administrativeUnit?->name }}</td>
                         <td>{{ $branch->phone }}{{ $branch->phone && $branch->zalo ? ' / ' : '' }}{{ $branch->zalo }}</td>
                         <td>{{ $branch->status === 'active' ? 'Hoạt động' : 'Ngừng hoạt động' }}</td>
                         <td class="text-end">

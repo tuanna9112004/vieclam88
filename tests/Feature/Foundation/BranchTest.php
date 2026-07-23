@@ -4,6 +4,7 @@ namespace Tests\Feature\Foundation;
 
 use App\Models\AdministrativeUnit;
 use App\Models\Branch;
+use App\Models\Ward;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -22,11 +23,14 @@ class BranchTest extends TestCase
         Branch::factory()->create(['code' => 'HN-01']);
     }
 
-    public function test_administrative_unit_is_required(): void
+    public function test_administrative_unit_id_and_ward_id_are_both_nullable_at_database_level(): void
     {
-        $this->expectException(QueryException::class);
+        // TASK 1.3 (SWITCH): administrative_unit_id được nới NOT NULL vì form mới không còn gửi
+        // trường này; ward_id cũng nullable ở DB (form HTTP mới ép required, không phải DB).
+        $branch = Branch::factory()->create(['administrative_unit_id' => null, 'ward_id' => null]);
 
-        Branch::factory()->create(['administrative_unit_id' => null]);
+        $this->assertNull($branch->fresh()->administrative_unit_id);
+        $this->assertNull($branch->fresh()->ward_id);
     }
 
     public function test_deleting_administrative_unit_referenced_by_branch_is_restricted(): void
@@ -65,6 +69,14 @@ class BranchTest extends TestCase
         $branch = Branch::factory()->create(['administrative_unit_id' => $unit->id]);
 
         $this->assertTrue($branch->administrativeUnit->is($unit));
+    }
+
+    public function test_belongs_to_ward(): void
+    {
+        $ward = Ward::factory()->create();
+        $branch = Branch::factory()->create(['ward_id' => $ward->id]);
+
+        $this->assertTrue($branch->ward->is($ward));
     }
 
     public function test_name_is_required(): void

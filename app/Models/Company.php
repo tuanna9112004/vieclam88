@@ -5,13 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'public_id', 'name', 'slug', 'short_name', 'description', 'logo_path', 'cover_path',
-    'industry', 'website', 'is_verified', 'status', 'created_by', 'updated_by',
+    'industry', 'website', 'is_verified', 'status', 'created_by', 'updated_by', 'headquarters_ward_id',
 ])]
 class Company extends Model
 {
@@ -23,6 +24,14 @@ class Company extends Model
             'is_verified' => 'boolean',
             'status' => 'string',
         ];
+    }
+
+    /**
+     * TASK 1.3: cột thêm trước (Expand), chưa backfill/chưa có form — xem TASK 5.1/5.2.
+     */
+    public function headquartersWard(): BelongsTo
+    {
+        return $this->belongsTo(Ward::class, 'headquarters_ward_id');
     }
 
     public function companyLocations(): HasMany

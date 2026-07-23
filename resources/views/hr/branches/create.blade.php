@@ -44,15 +44,12 @@
             <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}">
         </div>
 
-        <div class="mb-3">
-            <label for="administrative_unit_id" class="form-label">Đơn vị hành chính</label>
-            <select class="form-select" id="administrative_unit_id" name="administrative_unit_id" required>
-                <option value="">-- Chọn --</option>
-                @foreach ($administrativeUnits as $unit)
-                    <option value="{{ $unit->id }}" @selected(old('administrative_unit_id') == $unit->id)>{{ $unit->name }}</option>
-                @endforeach
-            </select>
-        </div>
+        <x-province-ward-select
+            :provinces="$provinces"
+            :wards="$wards"
+            ward-field="ward_id"
+            :required="true"
+        />
 
         <div class="mb-3">
             <label for="address_detail" class="form-label">Địa chỉ</label>

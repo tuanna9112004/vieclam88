@@ -33,24 +33,6 @@ class AdministrativeUnitController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $editingUnit = isset($filters['edit'])
-            ? AdministrativeUnit::query()->findOrFail($filters['edit'])
-            : null;
-
-        $createParentOptions = AdministrativeUnit::query()
-            ->orderBy('name')
-            ->get();
-
-        $editParentOptions = collect();
-
-        if ($editingUnit) {
-            $excludedIds = [$editingUnit->id, ...$editingUnit->descendantIds()];
-            $editParentOptions = AdministrativeUnit::query()
-                ->whereNotIn('id', $excludedIds)
-                ->orderBy('name')
-                ->get();
-        }
-
         $typeLabels = [
             'province' => 'Tỉnh',
             'city' => 'Thành phố',
@@ -60,13 +42,7 @@ class AdministrativeUnitController extends Controller
             'legacy_district' => 'Cấp huyện cũ',
         ];
 
-        return view('hr.administrative-units.index', compact(
-            'administrativeUnits',
-            'createParentOptions',
-            'editParentOptions',
-            'editingUnit',
-            'typeLabels'
-        ));
+        return view('hr.administrative-units.index', compact('administrativeUnits', 'typeLabels'));
     }
 
     public function store(

@@ -45,14 +45,20 @@
             <input type="email" class="form-control" id="email" name="email" value="{{ old('email', $branch->email) }}">
         </div>
 
-        <div class="mb-3">
-            <label for="administrative_unit_id" class="form-label">Đơn vị hành chính</label>
-            <select class="form-select" id="administrative_unit_id" name="administrative_unit_id" required>
-                @foreach ($administrativeUnits as $unit)
-                    <option value="{{ $unit->id }}" @selected(old('administrative_unit_id', $branch->administrative_unit_id) == $unit->id)>{{ $unit->name }}</option>
-                @endforeach
-            </select>
-        </div>
+        @if (! $branch->ward_id && $branch->administrativeUnit)
+            <div class="alert alert-warning" role="alert">
+                Cơ sở đang lưu địa chỉ cũ (<strong>{{ $branch->administrativeUnit->name }}</strong>) — chọn
+                tỉnh/thành và phường/xã bên dưới để chuyển sang dữ liệu mới.
+            </div>
+        @endif
+
+        <x-province-ward-select
+            :provinces="$provinces"
+            :wards="$wards"
+            ward-field="ward_id"
+            :selected-ward-id="$branch->ward_id"
+            :required="true"
+        />
 
         <div class="mb-3">
             <label for="address_detail" class="form-label">Địa chỉ</label>

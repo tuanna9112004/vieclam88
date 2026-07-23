@@ -4,9 +4,9 @@ namespace Tests\Feature\Foundation;
 
 use App\Http\Requests\Branch\StoreBranchRequest;
 use App\Http\Requests\Branch\UpdateBranchRequest;
-use App\Models\AdministrativeUnit;
 use App\Models\Branch;
 use App\Models\User;
+use App\Models\Ward;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -16,6 +16,8 @@ use Tests\TestCase;
  * contract "code unique; name; địa chỉ; phone; Zalo; status" (CTA dùng phone/zalo, phải
  * nullable nhưng không được vượt max length). Route dùng ở đây chỉ tồn tại trong test,
  * không đăng ký vào routes/hr.php — chưa có Controller thật (ngoài phạm vi /db-task).
+ *
+ * TASK 1.3: form mới chỉ gửi `ward_id` (không còn `administrative_unit_id`).
  */
 class BranchRequestValidationTest extends TestCase
 {
@@ -34,53 +36,53 @@ class BranchRequestValidationTest extends TestCase
         });
     }
 
-    public function test_store_requires_code_name_and_administrative_unit(): void
+    public function test_store_requires_code_name_and_ward(): void
     {
         $admin = User::factory()->admin()->create();
 
         $response = $this->actingAs($admin)->from('/dummy')->post('test/hr/co-so', []);
 
-        $response->assertSessionHasErrors(['code', 'name', 'administrative_unit_id']);
+        $response->assertSessionHasErrors(['code', 'name', 'ward_id']);
     }
 
     public function test_store_rejects_duplicate_code(): void
     {
         $admin = User::factory()->admin()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
         Branch::factory()->create(['code' => 'HN-01']);
 
         $response = $this->actingAs($admin)->from('/dummy')->post('test/hr/co-so', [
             'code' => 'HN-01',
             'name' => 'Chi nhánh mới',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ]);
 
         $response->assertSessionHasErrors('code');
     }
 
-    public function test_store_rejects_inactive_administrative_unit(): void
+    public function test_store_rejects_inactive_ward(): void
     {
         $admin = User::factory()->admin()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => false]);
+        $ward = Ward::factory()->create(['is_active' => false]);
 
         $response = $this->actingAs($admin)->from('/dummy')->post('test/hr/co-so', [
             'code' => 'HN-02',
             'name' => 'Chi nhánh mới',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ]);
 
-        $response->assertSessionHasErrors('administrative_unit_id');
+        $response->assertSessionHasErrors('ward_id');
     }
 
     public function test_store_allows_valid_payload_with_optional_phone_and_zalo_omitted(): void
     {
         $admin = User::factory()->admin()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
 
         $response = $this->actingAs($admin)->from('/dummy')->post('test/hr/co-so', [
             'code' => 'HN-03',
             'name' => 'Chi nhánh mới',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ]);
 
         $response->assertSessionDoesntHaveErrors();
@@ -89,12 +91,12 @@ class BranchRequestValidationTest extends TestCase
     public function test_store_rejects_phone_and_zalo_exceeding_max_length(): void
     {
         $admin = User::factory()->admin()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
 
         $response = $this->actingAs($admin)->from('/dummy')->post('test/hr/co-so', [
             'code' => 'HN-04',
             'name' => 'Chi nhánh mới',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
             'phone' => str_repeat('9', 21),
             'zalo' => str_repeat('9', 21),
         ]);
@@ -106,12 +108,12 @@ class BranchRequestValidationTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $branch = Branch::factory()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
 
         $response = $this->actingAs($admin)->from('/dummy')->put("test/hr/co-so/{$branch->id}", [
             'code' => $branch->code,
             'name' => $branch->name,
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
             'status' => 'archived',
         ]);
 
@@ -122,12 +124,12 @@ class BranchRequestValidationTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $branch = Branch::factory()->create(['code' => 'HN-05']);
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
 
         $response = $this->actingAs($admin)->from('/dummy')->put("test/hr/co-so/{$branch->id}", [
             'code' => 'HN-05',
             'name' => 'Ten moi',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
             'status' => 'active',
         ]);
 

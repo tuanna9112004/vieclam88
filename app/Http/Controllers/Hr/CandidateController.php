@@ -22,6 +22,8 @@ class CandidateController extends Controller
             return redirect()->route('hr.candidates.show', $root);
         }
 
+        $root->load(['currentWard.province', 'currentAdministrativeUnit']);
+
         $user = auth()->user();
         $familyIds = $root->getMergedFamilyIds();
 

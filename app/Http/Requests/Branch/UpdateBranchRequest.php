@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Branch;
 
-use App\Models\AdministrativeUnit;
 use App\Models\Branch;
+use App\Models\Ward;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,9 +32,10 @@ class UpdateBranchRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:20'],
             'zalo' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:191'],
-            'administrative_unit_id' => [
+            // TASK 1.3: xem StoreBranchRequest — form mới chỉ ghi ward_id.
+            'ward_id' => [
                 'required',
-                Rule::exists(AdministrativeUnit::class, 'id')->where('is_active', true),
+                Rule::exists(Ward::class, 'id')->where('is_active', true),
             ],
             'address_detail' => ['nullable', 'string', 'max:255'],
             'status' => ['required', Rule::in(['active', 'inactive'])],

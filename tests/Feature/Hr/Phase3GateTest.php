@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Hr;
 
-use App\Models\AdministrativeUnit;
 use App\Models\Branch;
 use App\Models\User;
+use App\Models\Ward;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,19 +20,19 @@ class Phase3GateTest extends TestCase
     public function test_phase_3_gate_end_to_end_scenario(): void
     {
         $admin = User::factory()->admin()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
 
         // 1-2. Admin tạo Branch A và Branch B qua route thật.
         $this->actingAs($admin)->post(route('hr.branches.store'), [
             'code' => 'BR-A',
             'name' => 'Chi nhánh A',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ])->assertRedirect(route('hr.branches.index'));
 
         $this->actingAs($admin)->post(route('hr.branches.store'), [
             'code' => 'BR-B',
             'name' => 'Chi nhánh B',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ])->assertRedirect(route('hr.branches.index'));
 
         $branchA = Branch::where('code', 'BR-A')->firstOrFail();

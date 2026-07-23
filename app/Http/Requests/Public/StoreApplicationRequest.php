@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Public;
 
 use App\Actions\Application\IssueSubmissionTokenAction;
+use App\Models\Ward;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,11 +25,11 @@ class StoreApplicationRequest extends FormRequest
             'phone' => ['required', 'string', 'max:20', 'regex:/^[0-9+\-\s()]{8,20}$/'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'gender' => ['nullable', 'in:male,female,other'],
-            // ADR-070 (docs/DATABASE-DICTIONARY.md muc 9.4): don vi is_active=false khong duoc
-            // chon cho du lieu moi — kiem tra o Form Request.
-            'current_administrative_unit_id' => [
+            // TASK 1.3: form moi chi chon province -> ward, chi ghi current_ward_id — ward
+            // is_active=false khong duoc chon cho du lieu moi (tiep noi nguyen tac ADR-070).
+            'current_ward_id' => [
                 'nullable', 'integer',
-                Rule::exists('administrative_units', 'id')->where('is_active', true),
+                Rule::exists(Ward::class, 'id')->where('is_active', true),
             ],
             'education_level' => ['nullable', 'string', 'max:100'],
             'experience_summary' => ['nullable', 'string', 'max:2000'],

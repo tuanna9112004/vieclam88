@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['code', 'name', 'phone', 'phone_normalized', 'zalo', 'email', 'administrative_unit_id', 'address_detail', 'status'])]
+#[Fillable(['code', 'name', 'phone', 'phone_normalized', 'zalo', 'email', 'administrative_unit_id', 'ward_id', 'address_detail', 'status'])]
 class Branch extends Model
 {
     use HasFactory, SoftDeletes;
@@ -24,6 +24,15 @@ class Branch extends Model
     public function administrativeUnit(): BelongsTo
     {
         return $this->belongsTo(AdministrativeUnit::class);
+    }
+
+    /**
+     * TASK 1.3: nguồn địa chỉ mới, ưu tiên khi đọc — fallback administrativeUnit() cho dữ liệu
+     * chưa backfill.
+     */
+    public function ward(): BelongsTo
+    {
+        return $this->belongsTo(Ward::class);
     }
 
     public function users(): HasMany

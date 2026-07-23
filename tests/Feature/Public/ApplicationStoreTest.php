@@ -14,6 +14,7 @@ use App\Models\CandidateDuplicateReview;
 use App\Models\CompanyLocation;
 use App\Models\Job;
 use App\Models\JobLocation;
+use App\Models\Ward;
 use App\Support\ConsentNotice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -182,7 +183,7 @@ class ApplicationStoreTest extends TestCase
 
         $candidate = Candidate::firstOrFail();
         $this->assertNull($candidate->gender);
-        $this->assertNull($candidate->current_administrative_unit_id);
+        $this->assertNull($candidate->current_ward_id);
         $this->assertNull($candidate->education_level);
         $this->assertNull($candidate->experience_summary);
         $this->assertSame(1, CandidateContact::where('candidate_id', $candidate->id)->count());
@@ -192,33 +193,33 @@ class ApplicationStoreTest extends TestCase
     {
         $job = $this->createJob();
         $token = $this->issueTokenFor($job);
-        $residenceUnit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $residenceWard = Ward::factory()->create(['is_active' => true]);
 
         $this->post(route('applications.store', $job->slug), $this->validPayload($token, [
             'gender' => 'female',
-            'current_administrative_unit_id' => $residenceUnit->id,
+            'current_ward_id' => $residenceWard->id,
             'education_level' => '12/12',
             'experience_summary' => '2 nam lam cong nhan',
         ]))->assertRedirect();
 
         $candidate = Candidate::firstOrFail();
         $this->assertSame('female', $candidate->gender);
-        $this->assertSame($residenceUnit->id, $candidate->current_administrative_unit_id);
+        $this->assertSame($residenceWard->id, $candidate->current_ward_id);
         $this->assertSame('12/12', $candidate->education_level);
         $this->assertSame('2 nam lam cong nhan', $candidate->experience_summary);
     }
 
-    public function test_inactive_administrative_unit_for_residence_is_rejected(): void
+    public function test_inactive_ward_for_residence_is_rejected(): void
     {
         $job = $this->createJob();
         $token = $this->issueTokenFor($job);
-        $inactiveUnit = AdministrativeUnit::factory()->create(['is_active' => false]);
+        $inactiveWard = Ward::factory()->create(['is_active' => false]);
 
         $response = $this->post(route('applications.store', $job->slug), $this->validPayload($token, [
-            'current_administrative_unit_id' => $inactiveUnit->id,
+            'current_ward_id' => $inactiveWard->id,
         ]));
 
-        $response->assertSessionHasErrors('current_administrative_unit_id');
+        $response->assertSessionHasErrors('current_ward_id');
         $this->assertSame(0, Application::count());
     }
 

@@ -139,7 +139,9 @@ class CreateApplicationAction
     {
         $optional = array_filter([
             'gender' => $data['gender'] ?? null,
-            'current_administrative_unit_id' => $data['current_administrative_unit_id'] ?? null,
+            // TASK 1.3: du lieu moi chi ghi current_ward_id, khong con ghi
+            // current_administrative_unit_id (cot cu giu NULL, doc fallback qua model cu).
+            'current_ward_id' => $data['current_ward_id'] ?? null,
             'education_level' => $data['education_level'] ?? null,
             'experience_summary' => $data['experience_summary'] ?? null,
         ], fn ($value) => $value !== null);
@@ -177,7 +179,7 @@ class CreateApplicationAction
                 'phone' => $data['phone'],
                 'date_of_birth' => $data['date_of_birth'] ?? null,
                 'gender' => $data['gender'] ?? null,
-                'current_administrative_unit_id' => $data['current_administrative_unit_id'] ?? null,
+                'current_ward_id' => $data['current_ward_id'] ?? null,
                 'education_level' => $data['education_level'] ?? null,
                 'experience_summary' => $data['experience_summary'] ?? null,
             ],

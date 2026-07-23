@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Hr;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Branch\StoreBranchRequest;
 use App\Http\Requests\Branch\UpdateBranchRequest;
-use App\Models\AdministrativeUnit;
 use App\Models\Branch;
+use App\Models\Province;
+use App\Models\Ward;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -17,7 +19,7 @@ class BranchController extends Controller
     {
         $this->authorize('viewAny', Branch::class);
 
-        $branches = Branch::query()->orderBy('name')->paginate(20);
+        $branches = Branch::query()->with(['ward.province', 'administrativeUnit'])->orderBy('name')->paginate(20);
         $trashedBranches = Branch::onlyTrashed()->orderBy('name')->get();
 
         return view('hr.branches.index', compact('branches', 'trashedBranches'));
@@ -27,9 +29,9 @@ class BranchController extends Controller
     {
         $this->authorize('create', Branch::class);
 
-        $administrativeUnits = AdministrativeUnit::where('is_active', true)->orderBy('name')->get();
+        [$provinces, $wards] = $this->wardSelectOptions();
 
-        return view('hr.branches.create', compact('administrativeUnits'));
+        return view('hr.branches.create', compact('provinces', 'wards'));
     }
 
     public function store(StoreBranchRequest $request): RedirectResponse
@@ -43,9 +45,9 @@ class BranchController extends Controller
     {
         $this->authorize('update', $branch);
 
-        $administrativeUnits = AdministrativeUnit::where('is_active', true)->orderBy('name')->get();
+        [$provinces, $wards] = $this->wardSelectOptions();
 
-        return view('hr.branches.edit', compact('branch', 'administrativeUnits'));
+        return view('hr.branches.edit', compact('branch', 'provinces', 'wards'));
     }
 
     public function update(UpdateBranchRequest $request, Branch $branch): RedirectResponse
@@ -77,6 +79,19 @@ class BranchController extends Controller
         $branch->restore();
 
         return redirect()->route('hr.branches.index')->with('status', 'Đã khôi phục cơ sở.');
+    }
+
+    /**
+     * TASK 1.3: nguồn cho component province-ward-select ở form create/edit.
+     *
+     * @return array{0: Collection, 1: Collection}
+     */
+    protected function wardSelectOptions(): array
+    {
+        return [
+            Province::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            Ward::where('is_active', true)->orderBy('name')->get(['id', 'name', 'province_id']),
+        ];
     }
 
     /**

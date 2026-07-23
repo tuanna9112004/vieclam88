@@ -63,7 +63,16 @@
                         <tr><th class="text-secondary">Giới tính</th><td>{{ $genderLabels[$candidate->gender] ?? '—' }}</td></tr>
                         <tr><th class="text-secondary">Học vấn</th><td>{{ $candidate->education_level ?? '—' }}</td></tr>
                         <tr><th class="text-secondary">Kinh nghiệm</th><td>{{ $candidate->experience_summary ?? '—' }}</td></tr>
-                        <tr><th class="text-secondary">Nơi ở hiện tại</th><td>{{ $candidate->currentAdministrativeUnit?->name ?? '—' }}</td></tr>
+                        <tr>
+                            <th class="text-secondary">Nơi ở hiện tại</th>
+                            <td>
+                                @if ($candidate->currentWard)
+                                    {{ $candidate->currentWard->name }}, {{ $candidate->currentWard->province?->name }}
+                                @else
+                                    {{ $candidate->currentAdministrativeUnit?->name ?? '—' }}
+                                @endif
+                            </td>
+                        </tr>
                     </table>
                 </div>
             </div>

@@ -45,6 +45,7 @@ class AnonymizeCandidateAction
                 'full_name_normalized' => '[DA AN DANH]',
                 'date_of_birth' => null,
                 'current_administrative_unit_id' => null,
+                'current_ward_id' => null,
                 'address_detail' => null,
                 'status' => 'anonymized',
                 'anonymized_at' => now(),

@@ -102,7 +102,8 @@ erDiagram
     branches {
         bigint id PK
         string code UK
-        bigint administrative_unit_id FK
+        bigint administrative_unit_id FK "nullable — TASK 1.3, chỉ đọc fallback"
+        bigint ward_id FK "nullable — TASK 1.3, nguồn mới ưu tiên (wards, sơ đồ target bên dưới)"
         string phone "bắt buộc có phone hoặc zalo trước khi Job của cơ sở publish"
         string zalo
         enum status "active, inactive"
@@ -112,7 +113,8 @@ erDiagram
     candidates {
         bigint id PK
         string public_id UK
-        bigint current_administrative_unit_id FK "nullable"
+        bigint current_administrative_unit_id FK "nullable, chỉ đọc fallback"
+        bigint current_ward_id FK "nullable — TASK 1.3, nguồn mới ưu tiên (wards, sơ đồ target bên dưới)"
         enum status "active, merged, anonymized"
         string full_name_normalized "sinh tự động từ full_name, giữ dấu — ADR-063"
         bigint merged_into_candidate_id FK "nullable, self"
@@ -149,6 +151,7 @@ erDiagram
         string public_id UK
         string slug UK
         enum status "active, hidden"
+        bigint headquarters_ward_id FK "nullable — TASK 1.3, chỉ thêm cột, chưa backfill/form (xem TASK 5.1/5.2)"
         timestamp deleted_at "soft delete"
     }
 
@@ -348,6 +351,11 @@ erDiagram
         string key UK
     }
 ```
+
+**`branches.ward_id`/`candidates.current_ward_id`/`companies.headquarters_ward_id` (TASK 1.3):**
+FK tới `wards` — bảng này đã migrate thật ở TASK 1.1 nhưng để trong khối "Sơ đồ mục tiêu Phase 2"
+bên dưới (không thuộc 28 bảng Phase 1). Không vẽ lại quan hệ ở đây vì hai khối mermaid tách biệt;
+chi tiết đầy đủ ở `docs/DATABASE-DICTIONARY.md` mục 9.2/9.6/9.23.
 
 ## Sơ đồ mục tiêu Phase 2 (ADR-080)
 

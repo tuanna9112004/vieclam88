@@ -2,9 +2,10 @@
 
 namespace Tests\Feature\Hr\Branch;
 
-use App\Models\AdministrativeUnit;
 use App\Models\Branch;
+use App\Models\Province;
 use App\Models\User;
+use App\Models\Ward;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -31,31 +32,51 @@ class BranchManagementTest extends TestCase
         $this->get(route('hr.branches.index'))->assertRedirect(route('hr.login'));
     }
 
+    public function test_admin_can_view_create_branch_form_with_province_ward_select(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $province = Province::factory()->create(['name' => 'Vĩnh Phúc']);
+        Ward::factory()->create(['name' => 'Khai Quang', 'province_id' => $province->id]);
+
+        $this->actingAs($admin)->get(route('hr.branches.create'))
+            ->assertOk()
+            ->assertSee('Vĩnh Phúc')
+            ->assertSee('Khai Quang');
+    }
+
+    public function test_admin_can_view_edit_branch_form_with_province_ward_select(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $branch = Branch::factory()->create();
+
+        $this->actingAs($admin)->get(route('hr.branches.edit', $branch))->assertOk();
+    }
+
     public function test_admin_can_create_branch(): void
     {
         $admin = User::factory()->admin()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
 
         $response = $this->actingAs($admin)->post(route('hr.branches.store'), [
             'code' => 'HN-01',
             'name' => 'Chi nhánh Hà Nội',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ]);
 
         $response->assertRedirect(route('hr.branches.index'));
-        $this->assertDatabaseHas('branches', ['code' => 'HN-01', 'name' => 'Chi nhánh Hà Nội', 'status' => 'active']);
+        $this->assertDatabaseHas('branches', ['code' => 'HN-01', 'name' => 'Chi nhánh Hà Nội', 'status' => 'active', 'ward_id' => $ward->id]);
     }
 
     public function test_admin_can_create_a_second_branch_with_different_code(): void
     {
         $admin = User::factory()->admin()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
-        Branch::factory()->create(['code' => 'HN-01', 'administrative_unit_id' => $unit->id]);
+        $ward = Ward::factory()->create(['is_active' => true]);
+        Branch::factory()->create(['code' => 'HN-01', 'ward_id' => $ward->id]);
 
         $response = $this->actingAs($admin)->post(route('hr.branches.store'), [
             'code' => 'HCM-01',
             'name' => 'Chi nhánh Hồ Chí Minh',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ]);
 
         $response->assertRedirect(route('hr.branches.index'));
@@ -66,13 +87,13 @@ class BranchManagementTest extends TestCase
     public function test_creating_branch_requires_unique_code(): void
     {
         $admin = User::factory()->admin()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
         Branch::factory()->create(['code' => 'HN-01']);
 
         $response = $this->actingAs($admin)->post(route('hr.branches.store'), [
             'code' => 'HN-01',
             'name' => 'Chi nhánh trùng mã',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ]);
 
         $response->assertSessionHasErrors('code');
@@ -81,11 +102,11 @@ class BranchManagementTest extends TestCase
     public function test_creating_branch_requires_name(): void
     {
         $admin = User::factory()->admin()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
 
         $response = $this->actingAs($admin)->post(route('hr.branches.store'), [
             'code' => 'HN-02',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ]);
 
         $response->assertSessionHasErrors('name');
@@ -94,12 +115,12 @@ class BranchManagementTest extends TestCase
     public function test_staff_cannot_create_branch(): void
     {
         $staff = User::factory()->create();
-        $unit = AdministrativeUnit::factory()->create(['is_active' => true]);
+        $ward = Ward::factory()->create(['is_active' => true]);
 
         $response = $this->actingAs($staff)->post(route('hr.branches.store'), [
             'code' => 'HN-01',
             'name' => 'Chi nhánh Hà Nội',
-            'administrative_unit_id' => $unit->id,
+            'ward_id' => $ward->id,
         ]);
 
         $response->assertForbidden();
@@ -109,12 +130,12 @@ class BranchManagementTest extends TestCase
     public function test_admin_can_update_branch(): void
     {
         $admin = User::factory()->admin()->create();
-        $branch = Branch::factory()->create(['status' => 'active']);
+        $branch = Branch::factory()->create(['status' => 'active', 'ward_id' => Ward::factory()]);
 
         $response = $this->actingAs($admin)->put(route('hr.branches.update', $branch), [
             'code' => $branch->code,
             'name' => 'Tên mới',
-            'administrative_unit_id' => $branch->administrative_unit_id,
+            'ward_id' => $branch->ward_id,
             'status' => 'active',
         ]);
 
@@ -125,12 +146,12 @@ class BranchManagementTest extends TestCase
     public function test_admin_can_deactivate_branch_without_staff(): void
     {
         $admin = User::factory()->admin()->create();
-        $branch = Branch::factory()->create(['status' => 'active']);
+        $branch = Branch::factory()->create(['status' => 'active', 'ward_id' => Ward::factory()]);
 
         $response = $this->actingAs($admin)->put(route('hr.branches.update', $branch), [
             'code' => $branch->code,
             'name' => $branch->name,
-            'administrative_unit_id' => $branch->administrative_unit_id,
+            'ward_id' => $branch->ward_id,
             'status' => 'inactive',
         ]);
 
@@ -141,13 +162,13 @@ class BranchManagementTest extends TestCase
     public function test_cannot_deactivate_branch_with_staff_assigned(): void
     {
         $admin = User::factory()->admin()->create();
-        $branch = Branch::factory()->create(['status' => 'active']);
+        $branch = Branch::factory()->create(['status' => 'active', 'ward_id' => Ward::factory()]);
         User::factory()->create(['branch_id' => $branch->id]);
 
         $response = $this->actingAs($admin)->put(route('hr.branches.update', $branch), [
             'code' => $branch->code,
             'name' => $branch->name,
-            'administrative_unit_id' => $branch->administrative_unit_id,
+            'ward_id' => $branch->ward_id,
             'status' => 'inactive',
         ]);
 
@@ -158,12 +179,12 @@ class BranchManagementTest extends TestCase
     public function test_staff_cannot_update_branch(): void
     {
         $staff = User::factory()->create();
-        $branch = Branch::factory()->create(['status' => 'active']);
+        $branch = Branch::factory()->create(['status' => 'active', 'ward_id' => Ward::factory()]);
 
         $response = $this->actingAs($staff)->put(route('hr.branches.update', $branch), [
             'code' => $branch->code,
             'name' => 'Tên mới',
-            'administrative_unit_id' => $branch->administrative_unit_id,
+            'ward_id' => $branch->ward_id,
             'status' => 'active',
         ]);
 
@@ -231,7 +252,7 @@ class BranchManagementTest extends TestCase
     public function test_soft_deleted_branch_cannot_be_used_to_assign_new_staff(): void
     {
         $admin = User::factory()->admin()->create();
-        $branch = Branch::factory()->create(['status' => 'active']);
+        $branch = Branch::factory()->create(['status' => 'active', 'ward_id' => Ward::factory()]);
         $branch->delete();
 
         $response = $this->actingAs($admin)->post(route('hr.staff.store'), [

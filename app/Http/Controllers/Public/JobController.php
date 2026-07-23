@@ -8,6 +8,8 @@ use App\Http\Requests\Public\JobIndexRequest;
 use App\Models\AdministrativeUnit;
 use App\Models\IndustrialPark;
 use App\Models\Job;
+use App\Models\Province;
+use App\Models\Ward;
 use App\Models\WorkShift;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -65,10 +67,13 @@ class JobController extends Controller
         $isOpen = $job->isOpenForApplication();
         $submissionToken = $isOpen ? $issueSubmissionToken->handle($request->session(), $job->id) : null;
 
-        // "Nơi ở hiện tại" trong form ứng tuyển — 1 dropdown đơn dùng chung administrative_units
-        // đang active (chỉ cần khi Job còn mở, giống filter administrativeUnits ở jobs.index).
-        $applicantAdministrativeUnits = $isOpen
-            ? AdministrativeUnit::where('is_active', true)->orderBy('name')->get(['id', 'name'])
+        // "Nơi ở hiện tại" trong form ứng tuyển — province -> ward (TASK 1.3), chỉ cần khi Job
+        // còn mở.
+        $applicantProvinces = $isOpen
+            ? Province::where('is_active', true)->orderBy('name')->get(['id', 'name'])
+            : collect();
+        $applicantWards = $isOpen
+            ? Ward::where('is_active', true)->orderBy('name')->get(['id', 'name', 'province_id'])
             : collect();
 
         $job->load([
@@ -100,7 +105,8 @@ class JobController extends Controller
             'job' => $job,
             'relatedJobs' => $relatedJobs,
             'submissionToken' => $submissionToken,
-            'applicantAdministrativeUnits' => $applicantAdministrativeUnits,
+            'applicantProvinces' => $applicantProvinces,
+            'applicantWards' => $applicantWards,
         ]);
     }
 }
