@@ -10,6 +10,12 @@ Ngày lập baseline: 2026-07-23. Commit HEAD tại thời điểm lập: `97e97
 (branch `main`, **chưa push** — xem `docs/PROJECT-STATUS.md`). Working tree có thay đổi
 chưa commit (ADR-079 + `PHASE-2-ARCHITECTURE-PROPOSAL.md`, xem `git status` mục "Rollback").
 
+**Re-verify 2026-07-24** (HEAD `138308d1168629e659e77aeb1c865f8adb09d01d`, branch `main`, working
+tree sạch ngoại trừ `resources/banner.png` untracked): đối chiếu lại toàn bộ số liệu với source thật
+— migration/bảng (28), workflow (6 luồng), test (`php artisan test` → 817/811/6, không đổi) khớp
+nguyên; riêng **route sai lệch, đã sửa 106 → 102** (`php artisan route:list` đếm trực tiếp, không
+đổi do thay đổi code — route đã là 102 từ trước, số 106 là ghi sai ở bản gốc).
+
 ## 1. Version môi trường mục tiêu
 
 Theo `CLAUDE.md`/`.claude/rules/architecture.md`:
@@ -17,7 +23,10 @@ Theo `CLAUDE.md`/`.claude/rules/architecture.md`:
 | Thành phần | Mục tiêu | Xác nhận thực tế trong môi trường lập baseline |
 |---|---|---|
 | PHP | 8.4.x | `PHP 8.4.23 (cli)` — đạt |
-| Laravel | 13.x | theo `composer.json` (không đổi ở task này) |
+| Laravel | 13.x | `Laravel Framework 13.20.0` — đạt |
+| Composer | không khóa version cụ thể | `Composer version 2.10.2` |
+| Node | không khóa version cụ thể | `v24.18.0` |
+| npm | không khóa version cụ thể | `11.16.0` |
 | MariaDB | 11.4 LTS | không xác nhận được version server thật ở đây (không đọc `.env`); xem mục 4 — client binary `mariadb-dump`/`mariadb` **không có** trên PATH của máy lập baseline này |
 | Blade/Bootstrap/Alpine/Vite | cố định, không đổi | không đổi |
 
@@ -43,7 +52,8 @@ Các bảng `provinces`/`wards`/`industrial_park_wards`/`industries`/`employment
 
 ## 3. Route hiện tại (source of truth: `docs/ROUTE-MAP.md`)
 
-`php artisan route:list` xác nhận **106 route** đã đăng ký, gồm:
+`php artisan route:list` xác nhận **102 route** đã đăng ký (8 DELETE, 44 GET|HEAD, 35 POST, 15 PUT),
+gồm:
 
 - **Public** (không đăng nhập): `home`, `jobs.index`/`jobs.show`, `applications.store`,
   `companies.index`/`companies.show`, `industrial-parks.show`, `faqs.index`,

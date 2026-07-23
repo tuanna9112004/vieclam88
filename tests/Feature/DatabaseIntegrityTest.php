@@ -14,6 +14,7 @@ use App\Models\Job;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoSeeder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -89,20 +90,35 @@ class DatabaseIntegrityTest extends TestCase
         ];
 
         foreach ($historyModels as $modelClass) {
-            /** @var \Illuminate\Database\Eloquent\Model $model */
-            $model = new $modelClass();
+            /** @var Model $model */
+            $model = new $modelClass;
             $this->assertFalse($model->usesTimestamps(), "Model {$modelClass} phải tắt timestamps để giữ tính append-only");
         }
     }
 
-    public function test_demo_seeder_runs_successfully_and_populates_realistic_jobs(): void
+    public function test_demo_seeder_is_a_no_op_and_preserves_existing_data(): void
     {
+        $job = Job::factory()->create(['code' => 'KEEP-JOB-001']);
+        $countsBefore = [
+            'users' => User::count(),
+            'branches' => Branch::count(),
+            'companies' => Company::count(),
+            'jobs' => Job::count(),
+            'candidates' => Candidate::count(),
+            'applications' => Application::count(),
+        ];
+
         $this->seed(DemoSeeder::class);
 
-        $this->assertDatabaseHas('jobs', ['code' => 'JOB-FOX-01']);
-        $this->assertGreaterThanOrEqual(5, Job::count());
-        $this->assertGreaterThanOrEqual(3, Company::count());
-        $this->assertGreaterThanOrEqual(2, Branch::count());
+        $this->assertDatabaseHas('jobs', ['id' => $job->id, 'code' => 'KEEP-JOB-001']);
+        $this->assertSame($countsBefore, [
+            'users' => User::count(),
+            'branches' => Branch::count(),
+            'companies' => Company::count(),
+            'jobs' => Job::count(),
+            'candidates' => Candidate::count(),
+            'applications' => Application::count(),
+        ]);
     }
 
     public function test_default_database_seeder_does_not_create_any_demo_or_test_account(): void
