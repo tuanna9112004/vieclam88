@@ -62,7 +62,14 @@ npm run build
 - **CSV Export & Audit Log (Mục 9):** `ExportApplicationsCsvAction` & `hr.applications.export` (Stream CSV dòng theo dòng, `CsvSanitizer` chống Formula Injection, Staff Branch isolation, ghi `export_logs`).
 - **Staff & Admin Dashboard Phase 1 (Mục 9.1 / ADR-058):** `GetDashboardStatsAction` & `GetAdminDashboardStatsAction` & `hr.dashboard` (11 thẻ KPI cards có link filter, Tỷ lệ chuyển đổi % Application->Started, bộ lọc Khoảng ngày/Cơ sở/Công ty/Job, Top Jobs & Companies breakdown, đếm chuẩn sau transfer/merge/duplicate).
 - **Database Baseline Audit (Mục DB):** `DatabaseIntegrityTest` (Audit 26 bảng schema, FK `restrictOnDelete`, unique `(candidate_id, job_id)`, append-only history models, rollback & migrate lifecycle, production seed `DemoSeeder`).
-- **MariaDB Backup & Restore Runbook (Mục Vận Hành):** `MARIADB-BACKUP-RESTORE.md` & `DatabaseBackupCommand` (`php artisan db:backup`) & `DatabaseRestoreTestCommand` (`php artisan db:restore-test`) (Export SQL theo topological order, loại trừ cột STORED GENERATED, SHA256 checksum verification, retention 30 ngày, restore test an toàn vào database thử nghiệm độc lập).
+
+## Remediation Playbook GD 0-11 — R01/R02/R03/R04 DONE (PASS 708/708 tests)
+
+- **R01 — Production-safe DatabaseSeeder:** `DatabaseSeeder` mặc định chỉ seed danh mục (WorkShift/RecruitmentSource/Setting), không còn `User::factory()` tạo `test@example.com`. `DemoSeeder` fail-closed ngoài `local`/`testing`. Admin production vẫn tạo qua `php artisan app:create-admin`.
+- **R02 — db:restore-test fail-closed:** `DatabaseRestoreTestCommand` validate `--target-db` bằng regex identifier an toàn, bắt buộc suffix/prefix `_restore_test`, so khớp mọi CSDL đã cấu hình (chặn trùng nguồn/dev/test/staging/production), fail-closed tuyệt đối khi `APP_ENV=production`, cleanup qua try/finally chỉ đụng đúng DB target đã xác minh.
+- **R03 — MariaDB backup/restore production-safe:** `DatabaseBackupCommand`/`DatabaseRestoreTestCommand` đổi engine sang `mariadb-dump`/`mariadb` client thật qua `proc_open` (không còn tự ghép SQL bằng `DB::table()->get()`), stream/nén gzip theo chunk 256KB (bộ nhớ không phụ thuộc kích thước DB), credential qua `defaults-extra-file` tạm (chmod 0600, không log), filename `vieclam88_backup_*.sql.gz` (chmod 0600/0700), retention chỉ xóa đúng file khớp pattern. Runbook `MARIADB-BACKUP-RESTORE.md` đã đồng bộ.
+- **R04 — Public Job JSON-LD XSS:** thêm `JSON_HEX_TAG/AMP/APOS/QUOT` vào `json_encode` structured data trang `jobs.show`, chặn payload `</script>` trong title/description/company đóng sớm thẻ script; giữ Unicode/dấu tiếng Việt đúng.
+- Commit: `1faace1` (R01), `6ce701d` (R02+R03), `4d3fc5a` (R04).
 
 ## Compact
 
