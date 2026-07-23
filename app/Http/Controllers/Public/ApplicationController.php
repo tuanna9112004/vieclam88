@@ -23,7 +23,6 @@ class ApplicationController extends Controller
 
         try {
             $action->handle($job, $data, $data['submission_token'], [
-                'version' => 'v1',
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);

@@ -14,6 +14,7 @@ use App\Models\CandidateDuplicateReview;
 use App\Models\CompanyLocation;
 use App\Models\Job;
 use App\Models\JobLocation;
+use App\Support\ConsentNotice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -113,6 +114,29 @@ class ApplicationStoreTest extends TestCase
         foreach (['Giới tính', 'Nơi ở hiện tại', 'Học vấn', 'Kinh nghiệm làm việc'] as $label) {
             $response->assertSee($label);
         }
+    }
+
+    public function test_apply_form_displays_current_consent_text_from_single_source(): void
+    {
+        $job = $this->createJob();
+
+        $response = $this->get(route('jobs.show', $job->slug))->assertOk();
+
+        $response->assertSee(ConsentNotice::currentText());
+    }
+
+    public function test_valid_submission_stores_consent_version_and_hash_matching_published_text(): void
+    {
+        $job = $this->createJob();
+        $token = $this->issueTokenFor($job);
+
+        $this->post(route('applications.store', $job->slug), $this->validPayload($token))->assertRedirect();
+
+        $application = Application::where('submission_token', $token)->firstOrFail();
+
+        $this->assertSame(ConsentNotice::currentVersion(), $application->consent_version);
+        $this->assertSame(ConsentNotice::currentHash(), $application->consent_text_hash);
+        $this->assertNotNull($application->consented_at);
     }
 
     public function test_valid_submission_creates_application_with_status_and_branch_history(): void

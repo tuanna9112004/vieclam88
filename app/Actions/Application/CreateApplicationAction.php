@@ -10,6 +10,7 @@ use App\Models\ApplicationStatusHistory;
 use App\Models\Candidate;
 use App\Models\CandidateDuplicateReview;
 use App\Models\Job;
+use App\Support\ConsentNotice;
 use App\Support\PhoneNormalizer;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
@@ -37,7 +38,8 @@ class CreateApplicationAction
 
     /**
      * @param  array<string, mixed>  $data  Du lieu da validate tu StoreApplicationRequest.
-     * @param  array{version: string, ip: ?string, user_agent: ?string}  $consent
+     * @param  array{ip: ?string, user_agent: ?string}  $consent  Chi ip/user_agent tu request —
+     *   version va text luon lay tu ConsentNotice, khong nhan tu caller (khong tin client).
      */
     public function handle(Job $job, array $data, string $submissionToken, array $consent): Application
     {
@@ -67,7 +69,7 @@ class CreateApplicationAction
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  array{version: string, ip: ?string, user_agent: ?string}  $consent
+     * @param  array{ip: ?string, user_agent: ?string}  $consent
      */
     private function createWithinLock(Job $job, array $data, string $submissionToken, array $consent, string $phoneNormalized): Application
     {
@@ -149,7 +151,7 @@ class CreateApplicationAction
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  array{version: string, ip: ?string, user_agent: ?string}  $consent
+     * @param  array{ip: ?string, user_agent: ?string}  $consent
      */
     private function createApplication(Job $job, Candidate $candidate, array $data, string $submissionToken, array $consent): Application
     {
@@ -187,8 +189,8 @@ class CreateApplicationAction
                 'salary_max' => $job->salary_max,
                 'salary_period' => $job->salary_period,
             ],
-            'consent_version' => $consent['version'],
-            'consent_text_hash' => hash('sha256', $consent['version']),
+            'consent_version' => ConsentNotice::currentVersion(),
+            'consent_text_hash' => ConsentNotice::currentHash(),
             'consented_at' => $now,
             'consent_ip' => $consent['ip'],
             'consent_user_agent' => $consent['user_agent'],

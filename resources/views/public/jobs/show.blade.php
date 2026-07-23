@@ -238,8 +238,7 @@
                                 <div class="form-check mb-2">
                                     <input class="form-check-input @error('consent') is-invalid @enderror" type="checkbox" id="consent" name="consent" value="1" {{ old('consent') ? 'checked' : '' }} required>
                                     <label class="form-check-label small" for="consent">
-                                        Tôi đồng ý cho phép thu thập và sử dụng thông tin trên để công ty liên hệ tư
-                                        vấn việc làm phù hợp.
+                                        {{ \App\Support\ConsentNotice::currentText() }}
                                     </label>
                                     @error('consent')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     @error('submission_token')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
