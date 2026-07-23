@@ -12,6 +12,7 @@ use App\Models\Company;
 use App\Models\ExportLog;
 use App\Models\Job;
 use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -102,6 +103,26 @@ class DatabaseIntegrityTest extends TestCase
         $this->assertGreaterThanOrEqual(5, Job::count());
         $this->assertGreaterThanOrEqual(3, Company::count());
         $this->assertGreaterThanOrEqual(2, Branch::count());
+    }
+
+    public function test_default_database_seeder_does_not_create_any_demo_or_test_account(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertSame(0, User::count());
+        $this->assertSame(0, Branch::count());
+        $this->assertSame(0, Company::count());
+        $this->assertSame(0, Job::count());
+        $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
+    }
+
+    public function test_demo_seeder_is_fail_closed_outside_local_and_testing_environments(): void
+    {
+        $this->app['env'] = 'production';
+
+        $this->expectException(\RuntimeException::class);
+
+        $this->app->make(DemoSeeder::class)->run();
     }
 
     public function test_migration_rollback_and_re_migrate_cycle_runs_cleanly(): void

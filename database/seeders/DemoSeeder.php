@@ -22,8 +22,17 @@ use Illuminate\Support\Str;
 
 class DemoSeeder extends Seeder
 {
+    /**
+     * Seeder demo/test-only; không được chạy trên staging/production dù được gọi tường minh.
+     */
     public function run(): void
     {
+        if (! app()->environment('local', 'testing')) {
+            throw new \RuntimeException(
+                'DemoSeeder chỉ được phép chạy trong môi trường local hoặc testing. APP_ENV hiện tại: '.app()->environment()
+            );
+        }
+
         // 1. Seed Work Shifts
         $this->call(WorkShiftSeeder::class);
 
@@ -37,9 +46,10 @@ class DemoSeeder extends Seeder
             ['email' => 'admin@vieclam88.vn'],
             [
                 'name' => 'Quản trị viên Hệ thống',
-                'password' => bcrypt('password'),
+                'password' => bcrypt('Password123!'),
                 'role' => 'admin',
                 'status' => 'active',
+                'password_changed_at' => now(),
             ]
         );
 
