@@ -739,6 +739,11 @@ Cơ sở nội bộ của công ty cung ứng lao động (vieclam88) — **khá
 **Chính sách xóa:** soft delete; không hard delete cơ sở đã có `users`/`jobs`/`applications`
 tham chiếu. Ngừng hoạt động → `status = inactive` trước, soft delete sau nếu cần.
 
+**TASK 2.2:** `BranchSeeder` dùng `code` làm natural key và bảo đảm bốn cơ sở chuẩn:
+`VP`, `PT`, `HB`, `BGBN`. Seeder không hardcode ID/ward, không xóa hoặc tự merge branch cũ,
+không ghi đè trạng thái/CTA/địa chỉ đã có; mỗi lần chạy xuất report JSON/CSV branch legacy/gần giống vào
+`storage/app/reports` để rà soát thủ công.
+
 ---
 
 ## 9.24. `application_branch_histories`

@@ -121,6 +121,15 @@ viết test cho các phần này.
 - [ ] Sau khi đổi cơ sở, publish lại Job phải re-check toàn bộ điều kiện publish
       (`docs/CORE-FLOWS.md` mục 1.2).
 
+### 1.4a. Branch seed contract (TASK 2.2)
+
+- [ ] `DatabaseSeeder` chạy lặp vẫn chỉ có một branch cho mỗi code `VP`, `PT`, `HB`, `BGBN`.
+- [ ] Bốn branch có đúng tên chuẩn; record mới không được gán `ward_id` giả hoặc hardcode ID.
+- [ ] Re-seed không kích hoạt lại branch inactive và không làm mất `phone`, `phone_normalized`,
+      `zalo`, email, ward hoặc địa chỉ đã có.
+- [ ] Branch legacy không bị xóa/merge; report JSON/CSV phân loại legacy và bản ghi gần giống
+      canonical để người vận hành merge thủ công.
+
 ### 1.5. Hiển thị Job `closed`/`paused`
 
 - [ ] Job `closed`/`paused` không xuất hiện trong danh sách/tìm kiếm/sitemap công khai.

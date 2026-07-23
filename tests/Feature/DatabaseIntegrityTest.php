@@ -121,15 +121,23 @@ class DatabaseIntegrityTest extends TestCase
         ]);
     }
 
-    public function test_default_database_seeder_does_not_create_any_demo_or_test_account(): void
+    public function test_default_database_seeder_creates_only_reference_data_and_no_demo_account(): void
     {
         $this->seed(DatabaseSeeder::class);
 
         $this->assertSame(0, User::count());
-        $this->assertSame(0, Branch::count());
+        $this->assertSameCanonicalBranchCodes();
         $this->assertSame(0, Company::count());
         $this->assertSame(0, Job::count());
         $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
+    }
+
+    private function assertSameCanonicalBranchCodes(): void
+    {
+        $this->assertSame(
+            ['BGBN', 'HB', 'PT', 'VP'],
+            Branch::query()->orderBy('code')->pluck('code')->all()
+        );
     }
 
     public function test_demo_seeder_is_fail_closed_outside_local_and_testing_environments(): void
